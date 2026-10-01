@@ -57,7 +57,7 @@ export function readPreferences(): {
       presets.push(v);
     }
     return { settings: s, presets, warning: "" };
-  } catch (e) {
+  } catch {
     try {
       const raw = localStorage.getItem(preferenceStorageKey);
       if (raw) localStorage.setItem(corruptPreferenceBackupKey, raw);
