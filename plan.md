@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, dan B04 selesai. Setelah B04 ditutup, pengguna memerintahkan **lanjut**, sehingga B05 sekarang DOING. Scope aktif hanya settings/preset storage produksi dan command terkait. B06 dan integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, B04, dan B05 selesai. B05 menutup settings/preset storage produksi, persistence versioned, atomic write, dan proteksi corrupt/newer-version. B06 dan integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -48,7 +48,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
 | 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | User kemudian mengizinkan B04 |
 | 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
-| 2026-10-01 | B05 | DOING | Izin diterima; model versioned settings/preset + persistence native dimulai | Implement atomic storage, corrupt/newer-version protection, preset CRUD, commands |
+| 2026-10-01 | B05 | DONE | Settings/preset storage produksi lulus; 58/58 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; tidak ada package/version baru di luar graph dependency yang sudah diaudit | B06 belum diizinkan; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 
 ## Catatan izin fase
 
@@ -239,3 +239,33 @@ Verifikasi final pengguna:
 Dengan bukti ini, **B04 = DONE**.
 
 Catatan lintas fase sebelum G2: `release_files` saat ini menghapus source dari registry, tetapi pencabutan grant pada Tauri asset-protocol scope perlu diverifikasi terhadap API Tauri 2.12 dan diperbaiki bila belum dicabut. Ini technical debt boundary B02, bukan blocker acceptance B04, namun wajib diselesaikan sebelum backend review G2.
+
+
+### B05 ditutup — 1 Oktober 2026
+
+Verifikasi final pengguna:
+- `cargo check`: PASS pada rangkaian verifikasi B05;
+- `cargo test`: PASS, 58/58;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS tanpa output;
+- settings memakai wrapper versioned `SettingsFile { version: 1, settings }`;
+- preset user memakai wrapper versioned `PresetsFile { version: 1, presets }`;
+- file tidak ada menghasilkan default/daftar built-in tanpa menulis file baru secara diam-diam;
+- empat preset built-in memakai ID stabil dan tidak pernah ditulis sebagai user preset;
+- nama preset user divalidasi 1–40 Unicode code points dan unik case-insensitive terhadap built-in maupun user preset;
+- built-in preset read-only; delete user preset memakai ID UUID opaque;
+- `createdAt` user preset dibuat sebagai RFC3339 UTC;
+- settings dan preset memakai app data dir dari resolver Tauri, bukan hardcode path OS;
+- seluruh I/O storage command dijalankan melalui `spawn_blocking` dan satu writer mutex;
+- write memakai temporary file same-directory lalu atomic commit/replace;
+- JSON corrupt menghasilkan `DATA_CORRUPT`, byte file asli dipertahankan dan mutation diblokir;
+- versi data yang tidak didukung menghasilkan `DATA_VERSION_UNSUPPORTED`, file asli dipertahankan dan mutation diblokir;
+- tidak ada auto-reset destructive tanpa persetujuan eksplisit;
+- command native `list_presets`, `save_preset`, `delete_preset`, `get_settings`, dan `save_settings` terdaftar;
+- `src-tauri/Cargo.lock` dikomit pada `81c31ef`;
+- `serde_json 1.0.149` dan `time 0.3.55` sudah ada pada graph dependency sebelum B05 dan B05 tidak menambah package/version baru di luar graph yang telah diaudit;
+- working tree pengguna clean dan sinkron dengan `origin/main`.
+
+Dengan bukti ini, **B05 = DONE**.
+
+B06 belum dimulai. Catatan lintas fase tetap berlaku: sebelum G2, `release_files` wajib diverifikasi terhadap Tauri 2.12 agar grant asset-protocol scope benar-benar dicabut ketika referensi sumber terakhir dilepas.
