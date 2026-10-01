@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useProject } from "../../stores/project.store";
+
 import { api } from "../../services/api";
+import { appErrorMessage } from "../../services/errors";
+import { useProject } from "../../stores/project.store";
+
 export function usePreview(manual: number) {
-  const fileId = useProject((s) => s.activeId);
-  const params = useProject((s) => s.params);
-  const auto = useProject((s) => s.settings.autoPreview);
-  const maxSide = useProject((s) => s.settings.previewMaxSide);
+  const fileId = useProject((state) => state.activeId);
+  const params = useProject((state) => state.params);
+  const auto = useProject((state) => state.settings.autoPreview);
+  const maxSide = useProject((state) => state.settings.previewMaxSide);
+  const language = useProject((state) => state.settings.language);
   const [result, setResult] = useState<{
     url: string;
     fileId: string;
@@ -15,51 +19,62 @@ export function usePreview(manual: number) {
   const [error, setError] = useState("");
   const signature = JSON.stringify(params);
   const lastManual = useRef(manual);
+
   useEffect(
     () => () => {
       if (result?.url) URL.revokeObjectURL(result.url);
     },
     [result?.url],
   );
+
   useEffect(() => {
     const requested = lastManual.current !== manual;
     lastManual.current = manual;
     if (!fileId || (!auto && !requested)) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
+
+    const requestId = crypto.randomUUID();
+    let disposed = false;
+    let submitted = false;
+
+    const timer = window.setTimeout(() => {
+      submitted = true;
       setBusy(true);
       setError("");
-      api
-        .generatePreview(
-          {
-            fileId,
-            params: JSON.parse(signature),
-            maxSide,
-            requestId: crypto.randomUUID(),
-          },
-          controller.signal,
-        )
-        .then((r) => {
-          if (controller.signal.aborted) return;
+
+      void api
+        .generatePreview({
+          fileId,
+          params: JSON.parse(signature),
+          maxSide,
+          requestId,
+        })
+        .then((response) => {
+          if (disposed) return;
           const url = URL.createObjectURL(
-            new Blob([r.svg], { type: "image/svg+xml" }),
+            new Blob([response.svg], { type: "image/svg+xml" }),
           );
           setResult({ url, fileId, signature });
         })
-        .catch((e) => {
-          if (!controller.signal.aborted)
-            setError(e instanceof Error ? e.message : "Preview error");
+        .catch((reason) => {
+          if (!disposed) setError(appErrorMessage(reason, language));
         })
         .finally(() => {
-          if (!controller.signal.aborted) setBusy(false);
+          if (!disposed) setBusy(false);
         });
     }, 300);
+
     return () => {
-      clearTimeout(timer);
-      controller.abort();
+      disposed = true;
+      window.clearTimeout(timer);
       setBusy(false);
+      if (submitted) {
+        void api.cancelPreview(requestId).catch(() => {
+          // Cleanup cancellation is best-effort; stale results are discarded locally.
+        });
+      }
     };
-  }, [fileId, signature, auto, maxSide, manual]);
+  }, [fileId, signature, auto, maxSide, manual, language]);
+
   return {
     url: result?.fileId === fileId ? result.url : "",
     busy,
