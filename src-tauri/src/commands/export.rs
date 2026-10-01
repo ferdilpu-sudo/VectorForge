@@ -54,7 +54,6 @@ pub async fn export_file(
     })
 }
 
-
 #[tauri::command]
 pub async fn open_output_folder(
     state: State<'_, AppState>,
@@ -69,9 +68,7 @@ pub async fn open_output_folder(
 
     tauri::async_runtime::spawn_blocking(move || open_parent_folder(&path))
         .await
-        .map_err(|error| {
-            AppError::invalid_state("Explorer gagal dijalankan.", error.to_string())
-        })?
+        .map_err(|error| AppError::invalid_state("Explorer gagal dijalankan.", error.to_string()))?
 }
 
 #[cfg(target_os = "windows")]
