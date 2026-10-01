@@ -49,11 +49,18 @@ fn partial_alpha(width: u32, height: u32) -> ColorImage {
     }))
 }
 
-fn contains_alpha_encoding(svg: &str) -> bool {
-    svg.contains("fill-opacity=")
-        || svg.contains("opacity=")
-        || svg.contains("fill:rgba(")
-        || svg.contains("fill=\"rgba(")
+fn same_rgb_alpha_split(width: u32, height: u32) -> ColorImage {
+    rgba_image_to_color(RgbaImage::from_fn(width, height, |x, _| {
+        let alpha = if x < width / 2 { 128 } else { 255 };
+        Rgba([40, 120, 220, alpha])
+    }))
+}
+
+fn is_fully_transparent(image: &ColorImage) -> bool {
+    image
+        .pixels
+        .chunks_exact(4)
+        .all(|pixel| pixel[3] == 0)
 }
 
 fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
@@ -66,21 +73,122 @@ fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
     }
 }
 
-fn trace_svg_catching_dependency_panic(
+fn run_doc_catching_dependency_panic(
     image: ColorImage,
-) -> Result<Result<String, Error>, String> {
+) -> Result<Result<VectorDoc, Error>, String> {
     let previous_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));
 
     let result = std::panic::catch_unwind(move || {
         Config::default()
             .build()
-            .and_then(|pipeline| pipeline.to_svg(&image))
+            .and_then(|pipeline| pipeline.run(&image))
     });
 
     std::panic::set_hook(previous_hook);
-
     result.map_err(panic_message)
+}
+
+fn fmt_number(value: f64) -> String {
+    let mut text = format!("{value:.3}");
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
+}
+
+fn path_data(commands: &[PathCmd]) -> String {
+    let mut data = String::new();
+
+    for command in commands {
+        match command {
+            PathCmd::MoveTo(point) => {
+                let _ = write!(
+                    data,
+                    "M{},{}",
+                    fmt_number(point.x),
+                    fmt_number(point.y)
+                );
+            }
+            PathCmd::LineTo(point) => {
+                let _ = write!(
+                    data,
+                    "L{},{}",
+                    fmt_number(point.x),
+                    fmt_number(point.y)
+                );
+            }
+            PathCmd::CubicTo(control1, control2, end) => {
+                let _ = write!(
+                    data,
+                    "C{},{} {},{} {},{}",
+                    fmt_number(control1.x),
+                    fmt_number(control1.y),
+                    fmt_number(control2.x),
+                    fmt_number(control2.y),
+                    fmt_number(end.x),
+                    fmt_number(end.y)
+                );
+            }
+            PathCmd::Close => data.push('Z'),
+        }
+    }
+
+    data
+}
+
+fn vector_doc_to_alpha_svg(doc: &VectorDoc) -> String {
+    let mut output = String::new();
+    let _ = writeln!(
+        output,
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\">",
+        doc.width, doc.height, doc.width, doc.height
+    );
+
+    for shape in &doc.shapes {
+        let color = shape.paint.color();
+        if color.a == 0 {
+            continue;
+        }
+
+        let mut data = String::new();
+        for subpath in &shape.path.subpaths {
+            data.push_str(&path_data(&subpath.commands));
+        }
+        if data.is_empty() {
+            continue;
+        }
+
+        if color.a == 255 {
+            let _ = writeln!(
+                output,
+                "<path d=\"{}\" fill=\"{}\"/>",
+                data,
+                color.to_hex_string()
+            );
+        } else {
+            let opacity = f64::from(color.a) / 255.0;
+            let _ = writeln!(
+                output,
+                "<path d=\"{}\" fill=\"{}\" fill-opacity=\"{}\"/>",
+                data,
+                color.to_hex_string(),
+                fmt_number(opacity)
+            );
+        }
+    }
+
+    output.push_str("</svg>\n");
+    output
+}
+
+fn empty_svg(width: usize, height: usize) -> String {
+    format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\"></svg>\n"
+    )
 }
 
 fn color_to_rgb(hex: &str) -> Result<(f64, f64, f64), String> {
@@ -118,8 +226,8 @@ fn vector_doc_to_eps(doc: &VectorDoc) -> Result<String, String> {
     let _ = writeln!(output, "1 -1 scale");
 
     for shape in &doc.shapes {
-        let color = shape.paint.color().to_hex_string();
-        let (red, green, blue) = color_to_rgb(&color)?;
+        let color = shape.paint.color();
+        let (red, green, blue) = color_to_rgb(&color.to_hex_string())?;
         let _ = writeln!(output, "{red:.6} {green:.6} {blue:.6} setrgbcolor");
         output.push_str("newpath\n");
 
@@ -149,12 +257,34 @@ fn vector_doc_to_eps(doc: &VectorDoc) -> Result<String, String> {
             }
         }
 
-        // SVG and PostScript both use the nonzero winding rule by default.
         output.push_str("fill\n");
     }
 
     output.push_str("grestore\nshowpage\n%%EOF\n");
     Ok(output)
+}
+
+fn pdf_from_svg(svg: &str) -> Result<Vec<u8>, String> {
+    let tree = svg2pdf::usvg::Tree::from_str(svg, &svg2pdf::usvg::Options::default())
+        .map_err(|error| format!("SVG parse failed: {error}"))?;
+
+    svg2pdf::to_pdf(
+        &tree,
+        ConversionOptions::default(),
+        PageOptions { dpi: 96.0 },
+    )
+    .map_err(|error| format!("SVG -> PDF failed: {error}"))
+}
+
+fn distinct_alphas(doc: &VectorDoc) -> Vec<u8> {
+    let mut values: Vec<u8> = doc
+        .shapes
+        .iter()
+        .map(|shape| shape.paint.color().a)
+        .collect();
+    values.sort_unstable();
+    values.dedup();
+    values
 }
 
 fn run() -> Result<(), String> {
@@ -172,14 +302,7 @@ fn run() -> Result<(), String> {
     }
     println!("[PASS] opaque raster -> VectorDoc -> SVG");
 
-    let tree = svg2pdf::usvg::Tree::from_str(&svg, &svg2pdf::usvg::Options::default())
-        .map_err(|error| format!("SVG parse failed: {error}"))?;
-    let pdf = svg2pdf::to_pdf(
-        &tree,
-        ConversionOptions::default(),
-        PageOptions { dpi: 96.0 },
-    )
-    .map_err(|error| format!("SVG -> PDF failed: {error}"))?;
+    let pdf = pdf_from_svg(&svg)?;
     if !pdf.starts_with(b"%PDF-") {
         return Err("PDF output is missing the PDF signature".to_owned());
     }
@@ -214,35 +337,39 @@ fn run() -> Result<(), String> {
     }
     println!("[PASS] phase progress + cooperative cancellation");
 
-    match trace_svg_catching_dependency_panic(fully_transparent(48, 48)) {
-        Ok(Ok(transparent_svg)) if !transparent_svg.contains("<path") => {
-            println!("[PASS] fully transparent source produces no visible path");
-        }
-        Ok(Ok(_)) => {
-            println!(
-                "[BLOCKED] fully transparent source produced a visible path; inspect before D10"
-            );
-        }
-        Ok(Err(error)) => {
-            println!(
-                "[BLOCKED] fully transparent source returned tracer error: {error}"
-            );
-        }
-        Err(message) => {
-            println!(
-                "[BLOCKED] fully transparent source panicked inside VTracer/visioncortex: {message}"
-            );
-        }
+    let transparent = fully_transparent(48, 48);
+    if !is_fully_transparent(&transparent) {
+        return Err("fully-transparent precheck failed".to_owned());
     }
+    let transparent_svg = empty_svg(transparent.width, transparent.height);
+    if transparent_svg.contains("<path") {
+        return Err("fully-transparent precheck produced a visible path".to_owned());
+    }
+    println!("[PASS] fully transparent precheck -> empty SVG without tracer");
 
-    match trace_svg_catching_dependency_panic(partial_alpha(64, 64)) {
-        Ok(Ok(alpha_svg)) if contains_alpha_encoding(&alpha_svg) => {
-            println!("[PASS] partial alpha is represented in stock SVG output");
-        }
-        Ok(Ok(_)) => {
-            println!(
-                "[BLOCKED] partial alpha is not represented by stock VTracer SVG output"
-            );
+    match run_doc_catching_dependency_panic(partial_alpha(64, 64)) {
+        Ok(Ok(alpha_doc)) => {
+            let alphas = distinct_alphas(&alpha_doc);
+            if !alphas.iter().any(|&alpha| alpha > 0 && alpha < 255) {
+                println!(
+                    "[BLOCKED] partial alpha was lost before VectorDoc; IR alphas = {alphas:?}"
+                );
+            } else {
+                println!("[PASS] partial alpha survives in VectorDoc: {alphas:?}");
+
+                let alpha_svg = vector_doc_to_alpha_svg(&alpha_doc);
+                if !alpha_svg.contains("fill-opacity=") {
+                    println!("[BLOCKED] VectorForge alpha SVG writer emitted no fill-opacity");
+                } else {
+                    println!("[PASS] alpha-aware SVG writer emits fill-opacity");
+                    let alpha_pdf = pdf_from_svg(&alpha_svg)?;
+                    if alpha_pdf.starts_with(b"%PDF-") {
+                        println!("[PASS] alpha-aware SVG -> PDF conversion");
+                    } else {
+                        println!("[BLOCKED] alpha-aware PDF output has no PDF signature");
+                    }
+                }
+            }
         }
         Ok(Err(error)) => {
             println!("[BLOCKED] partial-alpha trace returned tracer error: {error}");
@@ -250,6 +377,29 @@ fn run() -> Result<(), String> {
         Err(message) => {
             println!(
                 "[BLOCKED] partial-alpha trace panicked inside VTracer/visioncortex: {message}"
+            );
+        }
+    }
+
+    match run_doc_catching_dependency_panic(same_rgb_alpha_split(64, 32)) {
+        Ok(Ok(split_doc)) => {
+            let alphas = distinct_alphas(&split_doc);
+            if alphas.contains(&128) && alphas.contains(&255) {
+                println!(
+                    "[PASS] same-RGB alpha boundary survives segmentation: {alphas:?}"
+                );
+            } else {
+                println!(
+                    "[BLOCKED] same-RGB alpha boundary merged by segmentation; IR alphas = {alphas:?}"
+                );
+            }
+        }
+        Ok(Err(error)) => {
+            println!("[BLOCKED] alpha-boundary trace returned tracer error: {error}");
+        }
+        Err(message) => {
+            println!(
+                "[BLOCKED] alpha-boundary trace panicked inside VTracer/visioncortex: {message}"
             );
         }
     }

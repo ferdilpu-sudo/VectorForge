@@ -55,7 +55,8 @@ Harness menghasilkan status tekstual untuk:
 3. `VectorDoc` → EPS solid path, nonzero fill rule, bounding box dan pembalikan sumbu Y;
 4. progress fase + cooperative cancellation;
 5. sumber alpha nol;
-6. sumber alpha parsial.
+6. sumber alpha parsial;
+7. boundary dengan RGB identik tetapi alpha berbeda, untuk membuktikan apakah segmentasi mempertahankan batas transparansi.
 
 Harness tidak menulis output ke disk dan tidak menguji atomic replace Windows. Uji filesystem nyata tetap item B01 terpisah.
 
@@ -102,11 +103,13 @@ Implikasi untuk desain:
 
 Ini cocok dengan D10 bahwa alpha nol harus tetap kosong pada SVG/PDF. Pre-check alpha nol adalah validasi semantik, bukan fallback raster atau flatten.
 
-### BLOCKER — alpha parsial SVG/PDF
+### Investigasi alpha parsial SVG/PDF
 
-Stock SVG writer vtracer 1.0.0-alpha.4 saat ini menulis `Paint::Solid(Color)` sebagai fill RGB. IR `Paint` juga hanya memiliki varian solid; writer tidak menulis `opacity` atau `fill-opacity`.
+Stock SVG writer vtracer 1.0.0-alpha.4 saat ini menulis `Paint::Solid(Color)` sebagai fill RGB dan tidak menulis `opacity` atau `fill-opacity`. Namun `visioncortex::Color` sendiri memiliki channel `a`, `ColorSum` menghitung rata-rata alpha, dan `Paint::Solid(Color)` membawa objek Color tersebut ke `VectorDoc`.
 
-Artinya kontrak D10 untuk **alpha parsial pada SVG/PDF belum terbukti dan secara source inspection tampak tidak dipertahankan oleh stock writer**. B01 tidak boleh mengubah D10 diam-diam.
+Harness berikutnya karena itu tidak langsung menyimpulkan IR kehilangan alpha. Ia memeriksa alpha pada `VectorDoc`, lalu memakai writer SVG karakterisasi milik VectorForge yang menyerialisasi `fill-opacity` bila alpha 1–254 dan menguji SVG itu melalui svg2pdf.
+
+Kontrak D10 tetap belum terbukti sampai dua hal lolos: channel alpha bertahan sampai `VectorDoc`, dan segmentasi tidak menggabungkan area yang RGB-nya sama tetapi alpha-nya berbeda. Kasus kedua penting karena clustering VTracer terutama berbasis RGB. B01 tidak boleh mengubah D10 diam-diam.
 
 Pilihan yang nanti memerlukan keputusan eksplisit bila run lokal mengonfirmasi blocker:
 1. pertahankan D10 dan buat strategi alpha-aware di atas/di sekitar tracer;
@@ -126,3 +129,13 @@ Belum ada pilihan yang diambil.
 - setelah itu baru lock versi dan izinkan B02.
 
 Jangan membuat `src-tauri` produksi atau menghubungkan adapter frontend sebelum daftar ini selesai.
+
+
+### Karakterisasi lanjutan alpha
+
+Commit spike berikutnya menambahkan:
+- pre-check seluruh alpha=0 → SVG kosong tanpa memanggil tracer, sesuai D10 sekaligus menghindari panic dependency;
+- inspeksi nilai alpha di `VectorDoc` untuk fixture alpha parsial;
+- writer SVG karakterisasi yang menulis `fill-opacity` dari `Paint::Solid(Color).a`;
+- konversi SVG alpha-aware tersebut ke PDF;
+- fixture dua bidang dengan RGB identik dan alpha 128/255. Fixture terakhir menentukan apakah alpha bisa dipertahankan hanya dengan writer sendiri atau membutuhkan frontend/segmentasi alpha-aware.

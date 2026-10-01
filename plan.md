@@ -79,3 +79,8 @@ User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa d
 - Harness terisolasi berada di `spikes/b01-engine`; tidak boleh diimpor frontend atau dianggap backend produksi.
 - Run Windows membuktikan opaque SVG, PDF, EPS dan cooperative cancellation bekerja. Fixture alpha nol memicu panic `attempt to divide by zero` di `visioncortex 0.9.3`; harness menangkap panic fixture agar pengujian alpha parsial dapat lanjut. Source inspection juga menunjukkan stock writer memakai paint/fill RGB solid dan tidak menyerialisasi alpha parsial.
 - Detail versi, lisensi awal, langkah run, dan kriteria keluar ada di `b01-engine-spike.md`.
+
+
+### B01 karakterisasi alpha lanjutan
+
+Setelah run Windows membuktikan panic pada gambar alpha nol dan stock writer menghilangkan opacity, inspeksi upstream menunjukkan `visioncortex::Color` tetap membawa channel alpha sampai tipe paint. Spike diperluas untuk memeriksa alpha pada `VectorDoc`, menulis `fill-opacity` sendiri, menguji PDF dari SVG tersebut, serta menguji boundary RGB-sama/alpha-berbeda. Pre-check gambar seluruhnya transparan diperlakukan sebagai solusi semantik yang valid: hasilnya dokumen kosong dan tracer tidak dipanggil.
