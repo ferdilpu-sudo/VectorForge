@@ -80,10 +80,7 @@ pub async fn start_batch(
 }
 
 #[tauri::command]
-pub fn get_batch(
-    state: State<'_, AppState>,
-    batch_id: String,
-) -> Result<BatchProgress, AppError> {
+pub fn get_batch(state: State<'_, AppState>, batch_id: String) -> Result<BatchProgress, AppError> {
     state.batch.get(&batch_id)
 }
 

@@ -95,9 +95,7 @@ mod tests {
     #[test]
     fn gate_blocks_work_above_capacity_until_permit_is_released() -> Result<(), String> {
         let gate = Arc::new(WorkGate::new(1));
-        let first = gate
-            .acquire_normal()
-            .map_err(|error| error.message)?;
+        let first = gate.acquire_normal().map_err(|error| error.message)?;
 
         let (sent, received) = mpsc::sync_channel(1);
         let gate_for_thread = Arc::clone(&gate);
@@ -115,9 +113,7 @@ mod tests {
         received
             .recv_timeout(Duration::from_secs(1))
             .map_err(|error| error.to_string())?;
-        worker
-            .join()
-            .map_err(|_| "worker panicked".to_owned())??;
+        worker.join().map_err(|_| "worker panicked".to_owned())??;
         Ok(())
     }
 }

@@ -85,10 +85,7 @@ pub fn reserve_batch_output(
             }
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(error) => {
-                return Err(write_error(
-                    "Nama output batch gagal direservasi.",
-                    error,
-                ));
+                return Err(write_error("Nama output batch gagal direservasi.", error));
             }
         }
     }
@@ -299,11 +296,10 @@ mod tests {
     #[test]
     fn batch_reservation_uses_suffix_without_racing_existing_file() -> Result<(), String> {
         let dir = TempDir::create()?;
-        fs::write(dir.path.join("logo.svg"), b"existing")
-            .map_err(|error| error.to_string())?;
+        fs::write(dir.path.join("logo.svg"), b"existing").map_err(|error| error.to_string())?;
 
-        let reservation = reserve_batch_output(&dir.path, "logo", "svg", false)
-            .map_err(|error| error.message)?;
+        let reservation =
+            reserve_batch_output(&dir.path, "logo", "svg", false).map_err(|error| error.message)?;
         assert_eq!(
             reservation
                 .path()

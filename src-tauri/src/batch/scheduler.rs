@@ -105,21 +105,16 @@ impl BatchScheduler {
                 }
 
                 StoredItem {
-                view: BatchItem {
-                    id: Uuid::new_v4().to_string(),
-                    file_id: work.file_id.clone(),
-                    name: work.name.clone(),
-                    status: ItemStatus::Queued,
-                    stage: JobStage::Waiting,
-                    outputs: work
-                        .formats
-                        .iter()
-                        .copied()
-                        .map(queued_output)
-                        .collect(),
-                    error: None,
-                    elapsed_ms: None,
-                },
+                    view: BatchItem {
+                        id: Uuid::new_v4().to_string(),
+                        file_id: work.file_id.clone(),
+                        name: work.name.clone(),
+                        status: ItemStatus::Queued,
+                        stage: JobStage::Waiting,
+                        outputs: work.formats.iter().copied().map(queued_output).collect(),
+                        error: None,
+                        elapsed_ms: None,
+                    },
                     work,
                 }
             })
@@ -179,12 +174,7 @@ impl BatchScheduler {
         Ok(snapshot(batch))
     }
 
-    pub fn cancel(
-        &self,
-        app: &AppHandle,
-        batch_id: &str,
-        run_id: &str,
-    ) -> Result<(), AppError> {
+    pub fn cancel(&self, app: &AppHandle, batch_id: &str, run_id: &str) -> Result<(), AppError> {
         validate_batch_id(batch_id, "ID batch")?;
         validate_batch_id(run_id, "ID run")?;
 
@@ -197,10 +187,7 @@ impl BatchScheduler {
                 .ok_or_else(|| AppError::new(ErrorCode::NotFound, "Batch tidak ditemukan."))?;
 
             if batch.run_id != run_id {
-                return Err(AppError::new(
-                    ErrorCode::NotFound,
-                    "Run batch tidak aktif.",
-                ));
+                return Err(AppError::new(ErrorCode::NotFound, "Run batch tidak aktif."));
             }
             if batch.status == BatchStatus::Finished {
                 return Ok(());
@@ -334,12 +321,7 @@ fn spawn_workers(
     }
 }
 
-fn worker_loop(
-    shared: Arc<SchedulerShared>,
-    app: AppHandle,
-    batch_id: String,
-    run_id: String,
-) {
+fn worker_loop(shared: Arc<SchedulerShared>, app: AppHandle, batch_id: String, run_id: String) {
     while let Some(claimed) = claim_next(&shared, &app, &batch_id, &run_id) {
         let item_id = claimed.item_id.clone();
         let shared_for_stage = Arc::clone(&shared);
@@ -366,14 +348,7 @@ fn worker_loop(
             },
         );
 
-        complete_item(
-            &shared,
-            &app,
-            &batch_id,
-            &run_id,
-            &item_id,
-            result,
-        );
+        complete_item(&shared, &app, &batch_id, &run_id, &item_id, result);
     }
 
     worker_finished(&shared, &app, &batch_id, &run_id);
@@ -474,7 +449,11 @@ fn update_stage(
             return;
         }
 
-        let Some(stored) = batch.items.iter_mut().find(|stored| stored.view.id == item_id) else {
+        let Some(stored) = batch
+            .items
+            .iter_mut()
+            .find(|stored| stored.view.id == item_id)
+        else {
             return;
         };
         if stored.view.status != ItemStatus::Processing {
@@ -520,7 +499,11 @@ fn complete_item(
         }
 
         batch.active.remove(item_id);
-        let Some(stored) = batch.items.iter_mut().find(|stored| stored.view.id == item_id) else {
+        let Some(stored) = batch
+            .items
+            .iter_mut()
+            .find(|stored| stored.view.id == item_id)
+        else {
             return;
         };
 
@@ -538,18 +521,18 @@ fn complete_item(
         stored.view.stage = JobStage::Finished;
         stored.view.elapsed_ms = Some(result.elapsed_ms);
         stored.view.status = derive_item_status(&stored.view.outputs, result.cancelled);
-        stored.view.error = if matches!(stored.view.status, ItemStatus::Failed | ItemStatus::Partial)
-        {
-            result.item_error.or_else(|| {
-                stored
-                    .view
-                    .outputs
-                    .iter()
-                    .find_map(|output| output.error.clone())
-            })
-        } else {
-            None
-        };
+        stored.view.error =
+            if matches!(stored.view.status, ItemStatus::Failed | ItemStatus::Partial) {
+                result.item_error.or_else(|| {
+                    stored
+                        .view
+                        .outputs
+                        .iter()
+                        .find_map(|output| output.error.clone())
+                })
+            } else {
+                None
+            };
 
         batch.sequence = batch.sequence.saturating_add(1);
         throttled_snapshot(batch, false)
@@ -560,12 +543,7 @@ fn complete_item(
     }
 }
 
-fn worker_finished(
-    shared: &Arc<SchedulerShared>,
-    app: &AppHandle,
-    batch_id: &str,
-    run_id: &str,
-) {
+fn worker_finished(shared: &Arc<SchedulerShared>, app: &AppHandle, batch_id: &str, run_id: &str) {
     let terminal = {
         let Ok(mut state) = shared.state.lock() else {
             return;
@@ -750,7 +728,11 @@ fn snapshot(batch: &BatchRecord) -> BatchProgress {
         run_id: batch.run_id.clone(),
         sequence: batch.sequence,
         status: batch.status,
-        items: batch.items.iter().map(|stored| stored.view.clone()).collect(),
+        items: batch
+            .items
+            .iter()
+            .map(|stored| stored.view.clone())
+            .collect(),
         completed_count: done_count + partial_count + failed_count + cancelled_count,
         done_count,
         partial_count,

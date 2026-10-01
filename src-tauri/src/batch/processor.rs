@@ -115,13 +115,7 @@ where
                                         })
                                 }
                                 ExportFormat::Pdf => svg_to_pdf(&svg.svg).and_then(|payload| {
-                                    commit_payload(
-                                        &work,
-                                        &stem,
-                                        *format,
-                                        &payload,
-                                        registry,
-                                    )
+                                    commit_payload(&work, &stem, *format, &payload, registry)
                                 }),
                                 ExportFormat::Eps => Err(AppError::new(
                                     ErrorCode::InvalidState,
@@ -170,13 +164,7 @@ where
                     Ok(Some(document)) => {
                         on_stage(JobStage::Exporting, Some(ExportFormat::Eps));
                         let result = write_eps(&document).and_then(|payload| {
-                            commit_payload(
-                                &work,
-                                &stem,
-                                ExportFormat::Eps,
-                                &payload,
-                                registry,
-                            )
+                            commit_payload(&work, &stem, ExportFormat::Eps, &payload, registry)
                         });
                         apply_output_result(&mut outputs, ExportFormat::Eps, result);
                     }
@@ -185,11 +173,7 @@ where
                             ErrorCode::ExportFailed,
                             "Trace EPS tidak menghasilkan dokumen.",
                         );
-                        apply_output_result(
-                            &mut outputs,
-                            ExportFormat::Eps,
-                            Err(error.clone()),
-                        );
+                        apply_output_result(&mut outputs, ExportFormat::Eps, Err(error.clone()));
                         item_error.get_or_insert(error);
                     }
                     Err(error) if error.code == ErrorCode::Cancelled => {
@@ -198,11 +182,7 @@ where
                         return finish(outputs, item_error, true, started);
                     }
                     Err(error) => {
-                        apply_output_result(
-                            &mut outputs,
-                            ExportFormat::Eps,
-                            Err(error.clone()),
-                        );
+                        apply_output_result(&mut outputs, ExportFormat::Eps, Err(error.clone()));
                         item_error.get_or_insert(error);
                     }
                 }
@@ -244,12 +224,8 @@ fn commit_payload(
     payload: &[u8],
     registry: &Arc<Mutex<FileRegistry>>,
 ) -> Result<BatchOutput, AppError> {
-    let reservation = reserve_batch_output(
-        &work.output_dir,
-        stem,
-        format.extension(),
-        work.overwrite,
-    )?;
+    let reservation =
+        reserve_batch_output(&work.output_dir, stem, format.extension(), work.overwrite)?;
     let path = reservation.path().to_path_buf();
     let output_id = {
         let mut registry = registry.lock().map_err(|error| {
@@ -328,10 +304,12 @@ fn fail_queued(outputs: &mut [BatchOutput], error: AppError) {
 }
 
 fn cancel_queued(outputs: &mut [BatchOutput]) {
-    for output in outputs
-        .iter_mut()
-        .filter(|output| matches!(output.status, OutputStatus::Queued | OutputStatus::Processing))
-    {
+    for output in outputs.iter_mut().filter(|output| {
+        matches!(
+            output.status,
+            OutputStatus::Queued | OutputStatus::Processing
+        )
+    }) {
         output.status = OutputStatus::Cancelled;
         output.error = None;
     }

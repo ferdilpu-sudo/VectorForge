@@ -289,8 +289,7 @@ mod tests {
             }
             Ok(success(work))
         });
-        let scheduler =
-            PreviewScheduler::with_processor(Arc::new(WorkGate::new(1)), processor);
+        let scheduler = PreviewScheduler::with_processor(Arc::new(WorkGate::new(1)), processor);
 
         let a = scheduler.submit(work(A)).map_err(|error| error.message)?;
         thread::sleep(Duration::from_millis(10));
