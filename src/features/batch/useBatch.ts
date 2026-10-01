@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../../services/api";
 import { appErrorMessage } from "../../services/errors";
@@ -20,15 +20,16 @@ export function useBatch() {
   const sequence = useRef(0);
   const alive = useRef(true);
   const listenerReady = useRef<Promise<void>>(Promise.resolve());
+  const listenerError = useRef<unknown>(null);
 
-  const finishRun = () => {
+  const finishRun = useCallback(() => {
     if (!alive.current) return;
     setBusy(false);
     setCancelling(false);
     useProject.setState({ batchBusy: false });
-  };
+  }, []);
 
-  const applyProgress = (progress: BatchProgress) => {
+  const applyProgress = useCallback((progress: BatchProgress) => {
     const current = handle.current;
     if (
       !current ||
@@ -46,9 +47,9 @@ export function useBatch() {
     setBusy(running);
     setCancelling(progress.status === "cancelling");
     useProject.setState({ batchBusy: running });
-  };
+  }, []);
 
-  const applyDone = (summary: BatchSummary) => {
+  const applyDone = useCallback((summary: BatchSummary) => {
     const current = handle.current;
     if (
       !current ||
@@ -61,7 +62,7 @@ export function useBatch() {
 
     sequence.current = summary.sequence;
     finishRun();
-  };
+  }, [finishRun]);
 
   useEffect(() => {
     alive.current = true;
@@ -75,6 +76,7 @@ export function useBatch() {
         else stop = unlisten;
       })
       .catch((error) => {
+        listenerError.current = error;
         if (!disposed) {
           useProject.setState({
             notice: appErrorMessage(
@@ -83,9 +85,9 @@ export function useBatch() {
             ),
           });
         }
-        throw error;
       });
 
+    listenerError.current = null;
     listenerReady.current = pending;
 
     return () => {
@@ -94,7 +96,7 @@ export function useBatch() {
       stop?.();
       useProject.setState({ batchBusy: false });
     };
-  }, []);
+  }, [applyDone, applyProgress]);
 
   const resync = async (active: BatchHandle) => {
     const progress = await api.getBatch(active.batchId);
@@ -115,6 +117,7 @@ export function useBatch() {
 
       try {
         await listenerReady.current;
+        if (listenerError.current) throw listenerError.current;
         const active = await api.startBatch({
           fileIds: state.files.map((file) => file.id),
           params: { ...state.params },
@@ -161,6 +164,7 @@ export function useBatch() {
 
       try {
         await listenerReady.current;
+        if (listenerError.current) throw listenerError.current;
         const active = await api.retryBatchItem(current.batchId, itemId);
         handle.current = active;
         sequence.current = 0;

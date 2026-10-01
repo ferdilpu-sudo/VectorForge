@@ -1,50 +1,26 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from "vitest";
-import {
-  corruptPreferenceBackupKey,
-  defaultSettings,
-  preferenceStorageKey,
-  readPreferences,
-  writePreferences,
-} from "../services/preferences";
-import {
-  ImportFileError,
-  importFileErrorMessage,
-} from "../services/import-files";
+import { describe, expect, it } from "vitest";
 
-beforeEach(() => {
-  localStorage.clear();
-});
+import { appErrorMessage } from "../services/errors";
+import { defaultSettings } from "../services/preferences";
 
-describe("preference recovery", () => {
-  it("backs up corrupt preferences and allows a clean local rewrite", () => {
-    const corrupt = "{not-json";
-    localStorage.setItem(preferenceStorageKey, corrupt);
-
-    const recovered = readPreferences();
-
-    expect(recovered.settings).toEqual(defaultSettings);
-    expect(localStorage.getItem(corruptPreferenceBackupKey)).toBe(corrupt);
-    expect(recovered.warning).toContain("reset");
-
-    expect(writePreferences(defaultSettings, [])).toBe("");
-    expect(JSON.parse(localStorage.getItem(preferenceStorageKey) ?? "{}")).toMatchObject({
-      version: 1,
-      settings: defaultSettings,
-      presets: [],
-    });
+describe("native preference defaults", () => {
+  it("keeps canonical settings inside Rust-validated bounds", () => {
+    expect(defaultSettings.workerCount).toBeGreaterThanOrEqual(1);
+    expect(defaultSettings.workerCount).toBeLessThanOrEqual(4);
+    expect(defaultSettings.previewMaxSide).toBe(1024);
+    expect(defaultSettings.autoPreview).toBe(true);
   });
 });
 
-describe("import error localization", () => {
-  it("returns one locale instead of bilingual error copy", () => {
-    const error = new ImportFileError("ANIMATED_UNSUPPORTED");
+describe("native error localization", () => {
+  it("maps a canonical AppError code to one active locale", () => {
+    const error = {
+      code: "IMAGE_TOO_LARGE",
+      message: "Gambar melebihi batas.",
+    };
 
-    expect(importFileErrorMessage(error, "id")).toBe(
-      "Gambar animasi tidak didukung",
-    );
-    expect(importFileErrorMessage(error, "en")).toBe(
-      "Animated images are unsupported",
-    );
+    expect(appErrorMessage(error, "id")).toBe("Gambar melebihi 30 MP");
+    expect(appErrorMessage(error, "en")).toBe("Image exceeds 30 MP");
   });
 });
