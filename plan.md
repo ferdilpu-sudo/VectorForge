@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, B01 dan B02 selesai. Setelah B02 ditutup, pengguna memerintahkan **lanjut B03**, sehingga B03 sekarang DOING. Scope aktif: decode/normalize preview, bounded latest-wins scheduler, VTracer adapter alpha-aware, preview stats/resource guard, serta command generate/cancel preview. B04–B06 dan integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, dan B03 selesai. B03 menutup decode/normalize preview, bounded latest-wins scheduler, VTracer adapter alpha-aware, preview stats/resource guard, serta command generate/cancel preview. B04–B06 dan integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -46,7 +46,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
-| 2026-10-01 | B03 | DOING | Core preview backend compile bersih; 24/24 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS | Lanjut fixture preview nyata end-to-end + resource-limit verification |
+| 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | B04 menunggu izin fase berikutnya |
 
 ## Catatan izin fase
 
@@ -183,3 +183,27 @@ Verifikasi lokal Windows setelah implementasi awal B03:
 - `cargo fmt -- --check`: PASS tanpa output.
 
 Bukti unit yang sudah lulus meliputi decode tanpa upscale, resize aspect-ratio, orientation-before-resize, alpha split 128/255, alpha mask budget, fully-transparent bypass, schema-to-VTracer mapping, production adapter partial alpha, PreviewRequest validation, dan scheduler latest-wins. B03 tetap DOING sampai fixture preview nyata end-to-end dan resource-limit verification selesai.
+
+
+### B03 ditutup — 1 Oktober 2026
+
+Verifikasi final pengguna:
+- `cargo check`: PASS;
+- `cargo test`: PASS, 28/28;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS tanpa output;
+- fixture PNG nyata melewati jalur production `probe/fingerprint → decode/orientation → resize → VTracer → SVG`;
+- hasil preview terbukti menghasilkan path vektor nyata dan tidak menyisipkan raster `<image>`;
+- alpha 128/255 tetap dipertahankan melalui adapter split-mask produksi;
+- fully-transparent source melewati tracer dengan hasil SVG kosong yang valid;
+- scheduler terbukti latest-wins: active lama dibatalkan/stale, pending lama diganti, request terbaru diproses;
+- source yang berubah sejak import menghasilkan `SOURCE_CHANGED`;
+- batas 30 MP diuji tepat di boundary dan di atas boundary;
+- batas SVG preview 50 MiB diuji tepat di boundary dan +1 byte;
+- `src-tauri/Cargo.lock` produksi dikomit pada `3e8ebcd`;
+- seluruh 16 dependency baru B03 pada lockfile produksi identik dengan package/version yang sudah ada pada lockfile spike B01 yang sebelumnya lolos audit lisensi transitif. Tidak ada dependency delta B03 di luar graph ter-audit tersebut;
+- working tree pengguna dilaporkan clean dan sinkron dengan `origin/main`.
+
+Dengan bukti ini, **B03 = DONE**.
+
+B04 belum dimulai. Scope berikutnya adalah export SVG/PDF/EPS produksi, tetapi tetap menunggu instruksi user untuk lanjut fase berikutnya.
