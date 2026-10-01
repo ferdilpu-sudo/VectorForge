@@ -153,6 +153,10 @@ impl FileRegistry {
         Ok(id)
     }
 
+    pub fn unregister_output(&mut self, output_id: &str) {
+        self.outputs.remove(output_id);
+    }
+
     pub fn register_output(&mut self, path: PathBuf) -> Result<String, AppError> {
         if path.as_os_str().is_empty() {
             return Err(AppError::new(
