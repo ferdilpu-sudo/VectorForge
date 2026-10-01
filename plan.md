@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, dan B04 selesai. B04 menutup export SVG/PDF/EPS produksi, full-resolution trace, output registry, dan disk-safe commit. B05/B06 dan integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, dan B04 selesai. Setelah B04 ditutup, pengguna memerintahkan **lanjut**, sehingga B05 sekarang DOING. Scope aktif hanya settings/preset storage produksi dan command terkait. B06 dan integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -47,7 +47,8 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
 | 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | User kemudian mengizinkan B04 |
-| 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | B05/B06 belum diizinkan; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
+| 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
+| 2026-10-01 | B05 | DOING | Izin diterima; model versioned settings/preset + persistence native dimulai | Implement atomic storage, corrupt/newer-version protection, preset CRUD, commands |
 
 ## Catatan izin fase
 
@@ -56,6 +57,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 1 Oktober 2026: setelah B01 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B02 saja**. B03/B04/B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - 1 Oktober 2026: setelah B02 resmi DONE, user memerintahkan **lanjut b03**. Ini menjadi izin mengerjakan **B03 saja**. B04/B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - 1 Oktober 2026: setelah B03 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B04 saja**. B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
+- 1 Oktober 2026: setelah B04 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B05 saja**. B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - G2 belum disetujui.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
