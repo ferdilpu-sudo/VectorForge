@@ -7,7 +7,7 @@ use crate::models::{AppError, ErrorCode, PreviewRequest, PreviewResult, TraceSta
 
 use super::decode::decode_preview;
 use super::svg::{empty_svg, write_alpha_svg};
-use super::tracer::trace_preview;
+use super::tracer::trace_image;
 
 const MAX_PREVIEW_SVG_BYTES: usize = 50 * 1024 * 1024;
 
@@ -31,7 +31,7 @@ pub fn render_preview(work: PreviewWork, cancel: &CancelToken) -> Result<Preview
     let height = image.height();
 
     check_cancel(cancel)?;
-    let output = match trace_preview(image, &work.request.params, cancel)? {
+    let output = match trace_image(image, &work.request.params, cancel)? {
         Some(doc) => write_alpha_svg(&doc),
         None => empty_svg(width, height),
     };

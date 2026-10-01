@@ -10,7 +10,7 @@ use crate::models::{AppError, ErrorCode, HierarchicalMode, TraceMode, TraceParam
 
 use super::alpha::split_by_source_alpha;
 
-pub fn trace_preview(
+pub fn trace_image(
     image: RgbaImage,
     params: &TraceParams,
     cancel: &CancelToken,
@@ -108,7 +108,7 @@ mod tests {
 
     use crate::models::{HierarchicalMode, TraceMode, TraceParams};
 
-    use super::{config_from_params, trace_preview};
+    use super::{config_from_params, trace_image};
 
     fn params() -> TraceParams {
         TraceParams {
@@ -138,7 +138,7 @@ mod tests {
     fn fully_transparent_preview_skips_tracer() -> Result<(), String> {
         let image = RgbaImage::from_pixel(16, 16, Rgba([10, 20, 30, 0]));
         let result =
-            trace_preview(image, &params(), &CancelToken::new()).map_err(|error| error.message)?;
+            trace_image(image, &params(), &CancelToken::new()).map_err(|error| error.message)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -149,7 +149,7 @@ mod tests {
             let alpha = if x < 16 { 128 } else { 255 };
             Rgba([40, 120, 220, alpha])
         });
-        let doc = trace_preview(image, &params(), &CancelToken::new())
+        let doc = trace_image(image, &params(), &CancelToken::new())
             .map_err(|error| error.message)?
             .ok_or_else(|| "trace unexpectedly empty".to_owned())?;
 
