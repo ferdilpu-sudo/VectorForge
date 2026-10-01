@@ -45,7 +45,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
-| 2026-10-01 | B02 | DOING | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy all-targets dengan -D warnings PASS | Tinggal rustfmt, smoke-run shell Windows, lalu lockfile/audit dependency sebelum B02 DONE |
+| 2026-10-01 | B02 | DOING | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy PASS; smoke-run native window + frontend PASS dengan Vite dev server aktif | Tinggal rustfmt confirmation, lockfile dan audit dependency/license sebelum B02 DONE |
 
 ## Catatan izin fase
 
@@ -139,3 +139,10 @@ Verifikasi lokal Windows setelah cleanup scope B02:
 - `cargo clippy --all-targets -- -D warnings`: PASS.
 
 Cleanup sebelum hasil ini menghapus model tracing B03 yang terlalu dini dan resolver registry yang belum dipakai, lalu menggantinya dengan invariant validation pada registrasi source/destination. Tidak ada `allow(dead_code)` atau pelonggaran lint. B02 masih DOING sampai rustfmt, smoke-run Tauri Windows, dan lockfile/dependency audit selesai.
+
+
+### B02 smoke-run Windows
+
+Pengguna menjalankan shell Tauri di Windows dan mengonfirmasi window VectorForge muncul serta UI frontend tampil setelah `npm run dev` dijalankan. Ini sesuai konfigurasi development karena `tauri.conf.json` memakai `devUrl = http://127.0.0.1:5173`. Startup shell tidak crash pada smoke-run ini.
+
+Smoke-run dev **PASS**. Ini bukan klaim installer production atau frontend production adapter sudah terintegrasi.
