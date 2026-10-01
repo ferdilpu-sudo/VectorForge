@@ -44,7 +44,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 |---|---|---|---|---|
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
-| 2026-10-01 | B01 | DOING | Harness Windows: SVG, PDF, EPS dan cancellation PASS; fixture alpha nol memicu panic divide-by-zero di visioncortex 0.9.3 | Harness diperkeras untuk lanjut karakterisasi alpha parsial; alpha support tetap blocker |
+| 2026-10-01 | B01 | DOING | Engine/export/alpha/filesystem Windows PASS pada release spike; split-mask mempertahankan alpha dan ReplaceFileW semantics terbukti | Tinggal exact dependency tree, lisensi transitif, dan commit Cargo.lock sebelum B01 DONE |
 
 ## Catatan izin fase
 
@@ -101,3 +101,10 @@ Correctness split-mask lulus pada Windows untuk alpha parsial dan boundary RGB-s
 Release benchmark Windows: smooth 512×256 dengan 255 level menghasilkan 16 KiB lower-bound mask (8 ms segment, 6 ms split); fragmented 256×256 dengan 255 level menghasilkan 1913 KiB (2 ms segment, 4 ms split). Guard tidak boleh berbasis jumlah alpha level. Candidate split-mask budget ditetapkan 128 MiB berdasarkan bounding-box mask sebelum alokasi, dengan error eksplisit jika terlampaui.
 
 Spike berikutnya menguji filesystem Windows nyata: create_new collision, same-directory commit target baru, ReplaceFileW overwrite, dan kegagalan aman saat target dikunci deny-share.
+
+
+### B01 Windows release gate — engine/filesystem PASS
+
+Run pengguna pada commit `2ce516d` lulus seluruh karakterisasi engine, alpha dan filesystem. Stock VTracer tetap tercatat merata-ratakan fixture RGB-sama menjadi alpha 191, tetapi adapter split-mask VectorForge mempertahankan 128/255. Filesystem Windows lulus reservation collision, same-directory new-file commit, `ReplaceFileW` overwrite, dan locked-target safe failure.
+
+Status B01 tetap DOING hanya untuk penutupan dependency graph/lisensi dan lockfile spike. Tidak ada blocker engine/export/filesystem tersisa dari hasil run ini.

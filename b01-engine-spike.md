@@ -184,3 +184,43 @@ B01 kini juga menguji langsung filesystem Windows:
 - handle target yang dibuka dengan deny-share harus membuat replace gagal, isi lama tetap utuh, dan temp masih tersedia untuk cleanup.
 
 Harness menggunakan FFI Win32 hanya untuk karakterisasi B01. Implementasi produksi B04 boleh membungkus API ini dalam modul Windows yang lebih rapi, tetapi harus mempertahankan semantik bukti yang sama.
+
+
+## Hasil filesystem Windows — PASS
+
+Run release Windows pengguna pada commit `2ce516d` membuktikan:
+- `create_new` menolak collision nama output;
+- same-directory rename berhasil commit file baru;
+- Win32 `ReplaceFileW` berhasil mengganti target existing tanpa unlink target lama lebih dulu;
+- target yang dipegang dengan deny-share membuat replacement gagal aman;
+- isi target lama tetap utuh setelah lock dilepas;
+- temp file replacement tetap ada setelah kegagalan dan dapat dibersihkan.
+
+Output yang dilaporkan:
+- `[PASS] Windows create_new prevents output-name collision`
+- `[PASS] Windows same-directory rename commits a new output`
+- `[PASS] Windows ReplaceFileW atomically replaces existing output`
+- `[PASS] Windows locked target fails safely; original survives and temp is cleanable`
+
+Dengan ini item filesystem nyata pada D10/D11/B01 tidak lagi menjadi blocker.
+
+## Ringkasan bukti teknis B01 saat ini
+
+PASS pada Windows release:
+- opaque raster → VectorDoc → SVG;
+- SVG → PDF pada 96 DPI mapping;
+- VectorDoc → EPS solid-path;
+- cooperative cancellation + phase progress;
+- alpha nol → SVG kosong tanpa tracer;
+- alpha parsial bertahan di VectorDoc;
+- split-mask mempertahankan alpha parsial;
+- custom SVG writer menulis `fill-opacity`;
+- SVG alpha-aware → PDF;
+- RGB sama / alpha 128 dan 255 tetap terpisah setelah split-mask;
+- collision reservation, new-file commit, atomic replace existing, dan locked-target safe failure.
+
+Resource characterization release:
+- smooth 512×256, 255 level: 16 KiB lower-bound mask, segment 4 ms, split 3 ms;
+- fragmented 256×256, 255 level: 1913 KiB lower-bound mask, segment 4 ms, split 4 ms.
+
+B01 belum DONE hanya karena exact dependency graph, lisensi transitif, dan lockfile spike belum dicatat/committed. Engine/export/alpha/filesystem tidak lagi blocker.
