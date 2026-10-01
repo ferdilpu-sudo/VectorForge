@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use crate::models::{
-    AppError, AppSettings, ErrorCode, SETTINGS_VERSION, SettingsFile,
-};
+use crate::models::{AppError, AppSettings, ErrorCode, SETTINGS_VERSION, SettingsFile};
 
 use super::fs::{read_versioned, write_json_atomic};
 
@@ -16,10 +14,7 @@ pub fn get_settings(app_data_dir: &Path) -> Result<AppSettings, AppError> {
     }
 }
 
-pub fn save_settings(
-    app_data_dir: &Path,
-    settings: AppSettings,
-) -> Result<AppSettings, AppError> {
+pub fn save_settings(app_data_dir: &Path, settings: AppSettings) -> Result<AppSettings, AppError> {
     settings.validate()?;
     let path = app_data_dir.join(FILE_NAME);
 
@@ -36,8 +31,7 @@ pub fn save_settings(
 }
 
 fn read_settings_file(path: &Path) -> Result<Option<SettingsFile>, AppError> {
-    let file: Option<SettingsFile> =
-        read_versioned(path, SETTINGS_VERSION, "Pengaturan")?;
+    let file: Option<SettingsFile> = read_versioned(path, SETTINGS_VERSION, "Pengaturan")?;
 
     if let Some(file) = file.as_ref() {
         file.settings.validate().map_err(|error| {
@@ -59,7 +53,8 @@ mod tests {
 
     use uuid::Uuid;
 
-    use crate::models::{AppSettings, ErrorCode, Language, Theme};
+    use crate::models::{AppSettings, ErrorCode};
+    use crate::models::preferences::{Language, Theme};
 
     use super::{get_settings, save_settings};
 
@@ -126,10 +121,7 @@ mod tests {
             save_settings(&dir.0, settings()),
             Err(error) if error.code == ErrorCode::DataCorrupt
         ));
-        assert_eq!(
-            fs::read(path).map_err(|error| error.to_string())?,
-            original
-        );
+        assert_eq!(fs::read(path).map_err(|error| error.to_string())?, original);
         Ok(())
     }
 

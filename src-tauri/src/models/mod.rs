@@ -1,14 +1,14 @@
 mod error;
 mod export;
 mod files;
-mod preferences;
+pub(crate) mod preferences;
 mod trace;
 
 pub use error::{AppError, ErrorCode};
 pub use export::{ExportRequest, ExportResult};
 pub use preferences::{
-    AppSettings, Language, Preset, PresetsFile, SavePresetRequest, SettingsFile, Theme,
-    PRESETS_VERSION, SETTINGS_VERSION,
+    AppSettings, PRESETS_VERSION, Preset, PresetsFile, SETTINGS_VERSION, SavePresetRequest,
+    SettingsFile,
 };
 pub use files::{
     Destination, DestinationKind, DestinationRequest, ExportFormat, ImportRejection, ImportRequest,

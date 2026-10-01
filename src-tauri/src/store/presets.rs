@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 use uuid::Uuid;
 
 use crate::models::{
-    AppError, ErrorCode, HierarchicalMode, PRESETS_VERSION, Preset, PresetsFile,
-    SavePresetRequest, TraceMode, TraceParams,
+    AppError, ErrorCode, HierarchicalMode, PRESETS_VERSION, Preset, PresetsFile, SavePresetRequest,
+    TraceMode, TraceParams,
 };
 
 use super::fs::{read_versioned, write_json_atomic};
@@ -21,17 +21,16 @@ pub fn list_presets(app_data_dir: &Path) -> Result<Vec<Preset>, AppError> {
     Ok(presets)
 }
 
-pub fn save_preset(
-    app_data_dir: &Path,
-    request: SavePresetRequest,
-) -> Result<Preset, AppError> {
+pub fn save_preset(app_data_dir: &Path, request: SavePresetRequest) -> Result<Preset, AppError> {
     let name = request.validate()?;
     let mut users = load_user_presets(app_data_dir)?;
     ensure_unique_name(&name, &users)?;
 
     let created_at = OffsetDateTime::now_utc()
         .format(&Rfc3339)
-        .map_err(|error| AppError::invalid_state("Waktu preset gagal dibuat.", error.to_string()))?;
+        .map_err(|error| {
+            AppError::invalid_state("Waktu preset gagal dibuat.", error.to_string())
+        })?;
     let preset = Preset {
         id: Uuid::new_v4().to_string(),
         name,
@@ -158,8 +157,8 @@ fn validate_user_presets(presets: &[Preset]) -> Result<(), AppError> {
     let mut names = HashSet::new();
 
     for preset in presets {
-        let valid_name = preset.name.trim() == preset.name
-            && (1..=40).contains(&preset.name.chars().count());
+        let valid_name =
+            preset.name.trim() == preset.name && (1..=40).contains(&preset.name.chars().count());
         let valid_id = Uuid::parse_str(&preset.id).is_ok();
         let valid_date = OffsetDateTime::parse(&preset.created_at, &Rfc3339).is_ok();
 
@@ -214,9 +213,7 @@ mod tests {
 
     use uuid::Uuid;
 
-    use crate::models::{
-        ErrorCode, HierarchicalMode, SavePresetRequest, TraceMode, TraceParams,
-    };
+    use crate::models::{ErrorCode, HierarchicalMode, SavePresetRequest, TraceMode, TraceParams};
 
     use super::{built_in_presets, delete_preset, list_presets, save_preset};
 
@@ -327,10 +324,7 @@ mod tests {
             save_preset(&dir.0, request("New")),
             Err(error) if error.code == ErrorCode::DataCorrupt
         ));
-        assert_eq!(
-            fs::read(path).map_err(|error| error.to_string())?,
-            original
-        );
+        assert_eq!(fs::read(path).map_err(|error| error.to_string())?, original);
         Ok(())
     }
 

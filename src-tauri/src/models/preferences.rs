@@ -53,9 +53,7 @@ impl AppSettings {
     }
 
     pub fn validate(&self) -> Result<(), AppError> {
-        if !(1..=4).contains(&self.worker_count)
-            || !(512..=2048).contains(&self.preview_max_side)
-        {
+        if !(1..=4).contains(&self.worker_count) || !(512..=2048).contains(&self.preview_max_side) {
             return Err(AppError::new(
                 ErrorCode::InvalidParams,
                 "Pengaturan aplikasi tidak valid.",

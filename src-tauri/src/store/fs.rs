@@ -2,8 +2,8 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
 use crate::models::{AppError, ErrorCode};
@@ -34,8 +34,8 @@ pub fn read_versioned<T: DeserializeOwned>(
         Err(error) => return Err(read_error(label, error)),
     };
 
-    let value: serde_json::Value = serde_json::from_slice(&bytes)
-        .map_err(|error| corrupt_error(label, error.to_string()))?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|error| corrupt_error(label, error.to_string()))?;
     let version = value
         .get("version")
         .and_then(serde_json::Value::as_u64)
@@ -49,8 +49,8 @@ pub fn read_versioned<T: DeserializeOwned>(
         ));
     }
 
-    let parsed = serde_json::from_value(value)
-        .map_err(|error| corrupt_error(label, error.to_string()))?;
+    let parsed =
+        serde_json::from_value(value).map_err(|error| corrupt_error(label, error.to_string()))?;
     Ok(Some(parsed))
 }
 
@@ -69,10 +69,7 @@ pub fn write_json_atomic<T: Serialize>(
         .map_err(|error| write_error(&format!("Folder {label} gagal dibuat."), error))?;
 
     let bytes = serde_json::to_vec_pretty(value).map_err(|error| {
-        AppError::invalid_state(
-            format!("{label} gagal diserialisasi."),
-            error.to_string(),
-        )
+        AppError::invalid_state(format!("{label} gagal diserialisasi."), error.to_string())
     })?;
 
     let (mut temp, temp_path) = create_temp(parent, label)?;

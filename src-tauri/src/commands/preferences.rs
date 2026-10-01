@@ -12,10 +12,7 @@ pub async fn list_presets(app: AppHandle) -> Result<Vec<Preset>, AppError> {
 }
 
 #[tauri::command]
-pub async fn save_preset(
-    app: AppHandle,
-    request: SavePresetRequest,
-) -> Result<Preset, AppError> {
+pub async fn save_preset(app: AppHandle, request: SavePresetRequest) -> Result<Preset, AppError> {
     run_storage(app, move |dir| store::save_preset(dir, request)).await
 }
 
@@ -30,10 +27,7 @@ pub async fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
 }
 
 #[tauri::command]
-pub async fn save_settings(
-    app: AppHandle,
-    settings: AppSettings,
-) -> Result<AppSettings, AppError> {
+pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, AppError> {
     run_storage(app, move |dir| store::save_settings(dir, settings)).await
 }
 
@@ -58,7 +52,5 @@ where
         task(&app_data_dir)
     })
     .await
-    .map_err(|error| {
-        AppError::invalid_state("Proses storage internal gagal.", error.to_string())
-    })?
+    .map_err(|error| AppError::invalid_state("Proses storage internal gagal.", error.to_string()))?
 }
