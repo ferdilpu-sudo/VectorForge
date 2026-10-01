@@ -45,7 +45,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
-| 2026-10-01 | B02 | DOING | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy PASS; smoke-run native window + frontend PASS dengan Vite dev server aktif | Tinggal rustfmt confirmation, lockfile dan audit dependency/license sebelum B02 DONE |
+| 2026-10-01 | B02 | DOING | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy PASS; smoke-run PASS; Cargo.lock committed; audit lisensi dependency eksternal/transitif PASS | Tinggal konfirmasi rustfmt bersih sebelum B02 DONE |
 
 ## Catatan izin fase
 
@@ -146,3 +146,10 @@ Cleanup sebelum hasil ini menghapus model tracing B03 yang terlalu dini dan reso
 Pengguna menjalankan shell Tauri di Windows dan mengonfirmasi window VectorForge muncul serta UI frontend tampil setelah `npm run dev` dijalankan. Ini sesuai konfigurasi development karena `tauri.conf.json` memakai `devUrl = http://127.0.0.1:5173`. Startup shell tidak crash pada smoke-run ini.
 
 Smoke-run dev **PASS**. Ini bukan klaim installer production atau frontend production adapter sudah terintegrasi.
+
+
+### B02 lockfile dan lisensi
+
+`src-tauri/Cargo.lock` dikomit pengguna pada commit `1034cb9`. Audit `cargo metadata --locked` menunjukkan satu-satunya package tanpa field `license` adalah package lokal `vectorforge 0.1.0`; seluruh dependency eksternal/transitif memiliki deklarasi license. Lisensi aplikasi VectorForge belum diputuskan dan tidak diisi secara asumtif.
+
+Folder `src-tauri/gen/` adalah output generated Tauri dan di-ignore dari repository; source capability tetap berada di `src-tauri/capabilities/`.
