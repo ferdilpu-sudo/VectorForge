@@ -57,7 +57,7 @@ fn probe_source_inner(path: &Path) -> Result<SourceProbe, AppError> {
         SourceFormat::Png => {
             let reader = BufReader::new(File::open(path).map_err(file_io_error)?);
             let decoder = PngDecoder::new(reader).map_err(image_error)?;
-            if decoder.is_apng() {
+            if decoder.is_apng().map_err(image_error)? {
                 return Err(animated_error());
             }
             decoder_metadata(decoder)?

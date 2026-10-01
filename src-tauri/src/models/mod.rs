@@ -7,4 +7,3 @@ pub use files::{
     Destination, DestinationKind, DestinationRequest, ExportFormat, ImportRejection, ImportRequest,
     ImportResult, SourceFile, SourceFormat,
 };
-pub use trace::TraceParams;
