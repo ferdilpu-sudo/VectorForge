@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, dan B03 selesai. Setelah B03 ditutup, pengguna memerintahkan **lanjut**, sehingga B04 sekarang DOING. Scope aktif hanya export SVG/PDF/EPS produksi, full-resolution trace, output registry, dan disk-safe commit. B05/B06 dan integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, dan B04 selesai. B04 menutup export SVG/PDF/EPS produksi, full-resolution trace, output registry, dan disk-safe commit. B05/B06 dan integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -47,7 +47,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
 | 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | User kemudian mengizinkan B04 |
-| 2026-10-01 | B04 | DOING | Export SVG/PDF/EPS produksi + atomic Windows commit terimplementasi; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS | Kunci Cargo.lock produksi + audit dependency/license B04 |
+| 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | B05/B06 belum diizinkan; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 
 ## Catatan izin fase
 
@@ -209,3 +209,31 @@ Verifikasi final pengguna:
 Dengan bukti ini, **B03 = DONE**.
 
 B04 belum dimulai. Scope berikutnya adalah export SVG/PDF/EPS produksi, tetapi tetap menunggu instruksi user untuk lanjut fase berikutnya.
+
+
+### B04 ditutup — 1 Oktober 2026
+
+Verifikasi final pengguna:
+- `cargo check`: PASS;
+- `cargo test`: PASS, 44/44;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS tanpa output;
+- SVG export memakai trace resolusi penuh dan mempertahankan alpha parsial;
+- PDF dihasilkan dari SVG vektor melalui `svg2pdf 0.13.0`, bukan raster fallback;
+- EPS tetap vektor dan transparansi dikomposit ke putih sebelum tracing sesuai D11;
+- output bounds/statistik mengikuti sumber penuh;
+- source fingerprint diverifikasi sebelum dan setelah decode;
+- source file tidak dapat dipilih sebagai target overwrite;
+- output baru memakai temporary file same-directory lalu commit aman;
+- overwrite terkonfirmasi memakai `ReplaceFileW` di Windows;
+- collision tanpa izin dan locked target gagal aman tanpa merusak output lama;
+- SVG >50 MiB membutuhkan `allowLargeOutput=true`;
+- `outputId` diregistrasikan secara opaque di Rust;
+- `src-tauri/Cargo.lock` dikomit pada `d2df21f`;
+- audit `cargo metadata --locked` menunjukkan satu-satunya package tanpa field license adalah package lokal `vectorforge 0.1.0`;
+- dependency export utama terverifikasi: `svg2pdf 0.13.0`, `usvg 0.45.1`, `pdf-writer 0.12.1`, `image 0.25.10`, `visioncortex 0.9.3`, `vtracer 1.0.0-alpha.4`, semuanya memiliki deklarasi license dan seluruh versi tersebut ada pada graph spike B01 yang telah diaudit;
+- working tree pengguna clean dan sinkron dengan `origin/main`.
+
+Dengan bukti ini, **B04 = DONE**.
+
+Catatan lintas fase sebelum G2: `release_files` saat ini menghapus source dari registry, tetapi pencabutan grant pada Tauri asset-protocol scope perlu diverifikasi terhadap API Tauri 2.12 dan diperbaiki bila belum dicabut. Ini technical debt boundary B02, bukan blocker acceptance B04, namun wajib diselesaikan sebelum backend review G2.
