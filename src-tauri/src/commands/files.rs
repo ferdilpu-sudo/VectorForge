@@ -24,12 +24,7 @@ pub async fn import_files(
         import_files_blocking(&app_for_task, &window_for_task, request)
     })
     .await
-    .map_err(|error| {
-        AppError::invalid_state(
-            "Proses import internal gagal.",
-            error.to_string(),
-        )
-    })
+    .map_err(|error| AppError::invalid_state("Proses import internal gagal.", error.to_string()))
 }
 
 fn import_files_blocking(
@@ -89,20 +84,14 @@ fn import_one(
     let preview_url = window
         .convert_file_src(&canonical, None)
         .map_err(|error| {
-            AppError::invalid_state(
-                "URL preview lokal gagal dibuat.",
-                error.to_string(),
-            )
+            AppError::invalid_state("URL preview lokal gagal dibuat.", error.to_string())
         })?
         .to_string();
 
     let state = app.state::<AppState>();
     let id = {
         let mut registry = state.registry.lock().map_err(|error| {
-            AppError::invalid_state(
-                "Registry file tidak dapat dikunci.",
-                error.to_string(),
-            )
+            AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
         })?;
         registry.register_source(canonical, probe.fingerprint.clone())?
     };
@@ -121,15 +110,9 @@ fn import_one(
 }
 
 #[tauri::command]
-pub fn release_files(
-    state: State<'_, AppState>,
-    file_ids: Vec<String>,
-) -> Result<(), AppError> {
+pub fn release_files(state: State<'_, AppState>, file_ids: Vec<String>) -> Result<(), AppError> {
     let mut registry = state.registry.lock().map_err(|error| {
-        AppError::invalid_state(
-            "Registry file tidak dapat dikunci.",
-            error.to_string(),
-        )
+        AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
     })?;
 
     registry.release_sources(&file_ids)
@@ -157,9 +140,10 @@ pub async fn choose_destination(
                 Some(value) => value,
                 None => return None,
             };
-            let mut builder = dialog
-                .set_title("Simpan hasil VectorForge")
-                .add_filter(selected_format.filter_name(), &[selected_format.extension()]);
+            let mut builder = dialog.set_title("Simpan hasil VectorForge").add_filter(
+                selected_format.filter_name(),
+                &[selected_format.extension()],
+            );
             if let Some(name) = suggested_name {
                 builder = builder.set_file_name(name);
             }
@@ -168,10 +152,7 @@ pub async fn choose_destination(
     })
     .await
     .map_err(|error| {
-        AppError::invalid_state(
-            "Dialog tujuan gagal dijalankan.",
-            error.to_string(),
-        )
+        AppError::invalid_state("Dialog tujuan gagal dijalankan.", error.to_string())
     })?;
 
     let Some(file_path) = selected else {
@@ -184,17 +165,9 @@ pub async fn choose_destination(
 
     let id = {
         let mut registry = state.registry.lock().map_err(|error| {
-            AppError::invalid_state(
-                "Registry tujuan tidak dapat dikunci.",
-                error.to_string(),
-            )
+            AppError::invalid_state("Registry tujuan tidak dapat dikunci.", error.to_string())
         })?;
-        registry.register_destination(
-            normalized,
-            kind,
-            format,
-            overwrite_confirmed,
-        )?
+        registry.register_destination(normalized, kind, format, overwrite_confirmed)?
     };
 
     Ok(Some(Destination {
@@ -206,10 +179,7 @@ pub async fn choose_destination(
 
 fn file_path_to_path(file_path: FilePath) -> Result<PathBuf, AppError> {
     file_path.into_path().map_err(|error| {
-        AppError::invalid_state(
-            "Path dari dialog native tidak valid.",
-            error.to_string(),
-        )
+        AppError::invalid_state("Path dari dialog native tidak valid.", error.to_string())
     })
 }
 
@@ -228,10 +198,7 @@ fn normalize_destination(path: &Path, kind: DestinationKind) -> Result<PathBuf, 
         }
         DestinationKind::File => {
             let parent = path.parent().ok_or_else(|| {
-                AppError::new(
-                    ErrorCode::InvalidParams,
-                    "Folder tujuan file tidak valid.",
-                )
+                AppError::new(ErrorCode::InvalidParams, "Folder tujuan file tidak valid.")
             })?;
             let canonical_parent = fs::canonicalize(parent).map_err(destination_io_error)?;
             if !canonical_parent.is_dir() {
@@ -241,10 +208,7 @@ fn normalize_destination(path: &Path, kind: DestinationKind) -> Result<PathBuf, 
                 ));
             }
             let file_name = path.file_name().ok_or_else(|| {
-                AppError::new(
-                    ErrorCode::InvalidParams,
-                    "Nama file tujuan tidak valid.",
-                )
+                AppError::new(ErrorCode::InvalidParams, "Nama file tujuan tidak valid.")
             })?;
             Ok(canonical_parent.join(file_name))
         }

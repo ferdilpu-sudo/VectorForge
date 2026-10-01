@@ -278,8 +278,7 @@ mod tests {
         ];
 
         for (path, expected) in cases {
-            let actual =
-                format_from_extension(Path::new(path)).map_err(|error| error.message)?;
+            let actual = format_from_extension(Path::new(path)).map_err(|error| error.message)?;
             if actual != expected {
                 return Err(format!("unexpected format for {path}: {actual:?}"));
             }

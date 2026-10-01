@@ -126,9 +126,7 @@ pub struct Destination {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        DestinationKind, DestinationRequest, ExportFormat, SourceFile, SourceFormat,
-    };
+    use super::{DestinationKind, DestinationRequest, ExportFormat, SourceFile, SourceFormat};
 
     #[test]
     fn source_file_serializes_canonical_field_names() -> Result<(), String> {
@@ -145,9 +143,7 @@ mod tests {
         };
         let json = serde_json::to_value(source).map_err(|error| error.to_string())?;
 
-        if json["format"] != "jpeg"
-            || json["hasAlpha"] != false
-            || json.get("previewUrl").is_none()
+        if json["format"] != "jpeg" || json["hasAlpha"] != false || json.get("previewUrl").is_none()
         {
             return Err(format!("unexpected SourceFile JSON: {json}"));
         }
