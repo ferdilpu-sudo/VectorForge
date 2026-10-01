@@ -10,8 +10,8 @@ mod store;
 
 use commands::{
     cancel_batch, cancel_preview, choose_destination, delete_preset, export_file, generate_preview,
-    get_batch, get_settings, import_files, list_presets, release_files, retry_batch_item,
-    save_preset, save_settings, start_batch,
+    get_batch, get_settings, import_files, list_presets, open_output_folder, release_files,
+    retry_batch_item, save_preset, save_settings, start_batch,
 };
 use state::AppState;
 
@@ -29,6 +29,7 @@ pub fn run() {
             generate_preview,
             cancel_preview,
             export_file,
+            open_output_folder,
             list_presets,
             save_preset,
             delete_preset,

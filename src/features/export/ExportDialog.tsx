@@ -165,6 +165,19 @@ export function ExportDialog({
             )
           : ""}
       </p>
+
+      {status === "done" && result && (
+        <button
+          className="wide"
+          onClick={() => {
+            void api.openOutputFolder(result.outputId).catch((reason) => {
+              setError(appErrorMessage(reason, language));
+            });
+          }}
+        >
+          {t("Buka folder output", "Open output folder")}
+        </button>
+      )}
     </Modal>
   );
 }

@@ -136,6 +136,8 @@ export const api = {
     call<void>("cancel_preview", { requestId }),
   exportFile: (request: ExportRequest) =>
     call<ExportResult>("export_file", { request }),
+  openOutputFolder: (outputId: string) =>
+    call<void>("open_output_folder", { outputId }),
   startBatch: (request: BatchRequest) =>
     call<BatchHandle>("start_batch", { request }),
   getBatch: (batchId: string) =>

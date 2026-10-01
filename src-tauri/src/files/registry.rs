@@ -157,6 +157,14 @@ impl FileRegistry {
         self.outputs.remove(output_id);
     }
 
+    pub fn resolve_output(&self, output_id: &str) -> Result<PathBuf, AppError> {
+        validate_uuid(output_id)?;
+        self.outputs
+            .get(output_id)
+            .cloned()
+            .ok_or_else(|| AppError::new(ErrorCode::NotFound, "Output tidak terdaftar."))
+    }
+
     pub fn register_output(&mut self, path: PathBuf) -> Result<String, AppError> {
         if path.as_os_str().is_empty() {
             return Err(AppError::new(
@@ -285,8 +293,10 @@ mod tests {
 
         uuid::Uuid::parse_str(&id).map_err(|error| error.to_string())?;
         assert_eq!(
-            registry.outputs.get(&id).map(PathBuf::as_path),
-            Some(Path::new("result.svg"))
+            registry
+                .resolve_output(&id)
+                .map_err(|error| error.message)?,
+            PathBuf::from("result.svg")
         );
         Ok(())
     }
