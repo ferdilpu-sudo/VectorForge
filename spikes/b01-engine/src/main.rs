@@ -53,7 +53,7 @@ fn contains_alpha_encoding(svg: &str) -> bool {
     svg.contains("fill-opacity=")
         || svg.contains("opacity=")
         || svg.contains("fill:rgba(")
-        || svg.contains("fill="rgba(")
+        || svg.contains("fill=\"rgba(")
 }
 
 fn color_to_rgb(hex: &str) -> Result<(f64, f64, f64), String> {
