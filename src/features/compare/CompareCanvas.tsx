@@ -43,6 +43,29 @@ export function CompareCanvas({
     observer.observe(el);
     return () => observer.disconnect();
   }, [file]);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || !file) return;
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const next = Math.max(
+        10,
+        Math.min(800, zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1)),
+      );
+      const ratio = next / zoom;
+      const x = event.clientX - rect.left - rect.width / 2;
+      const y = event.clientY - rect.top - rect.height / 2;
+      setPan((current) => ({
+        x: x - (x - current.x) * ratio,
+        y: y - (y - current.y) * ratio,
+      }));
+      setZoom(next);
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [file, zoom]);
   const zoomTo = (n: number) => setZoom(Math.max(10, Math.min(800, n)));
   const fit = () => {
     const el = canvasRef.current;
@@ -91,23 +114,6 @@ export function CompareCanvas({
       </div>
       <div
         ref={canvasRef}
-        onWheel={(e) => {
-          if (!file) return;
-          e.preventDefault();
-          const rect = e.currentTarget.getBoundingClientRect();
-          const next = Math.max(
-            10,
-            Math.min(800, zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)),
-          );
-          const ratio = next / zoom;
-          const x = e.clientX - rect.left - rect.width / 2;
-          const y = e.clientY - rect.top - rect.height / 2;
-          setPan((p) => ({
-            x: x - (x - p.x) * ratio,
-            y: y - (y - p.y) * ratio,
-          }));
-          setZoom(next);
-        }}
         className={`canvas ${file ? bg : "empty-canvas"}`}
         tabIndex={0}
         aria-label={t(
