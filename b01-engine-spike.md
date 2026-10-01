@@ -139,3 +139,19 @@ Commit spike berikutnya menambahkan:
 - writer SVG karakterisasi yang menulis `fill-opacity` dari `Paint::Solid(Color).a`;
 - konversi SVG alpha-aware tersebut ke PDF;
 - fixture dua bidang dengan RGB identik dan alpha 128/255. Fixture terakhir menentukan apakah alpha bisa dipertahankan hanya dengan writer sendiri atau membutuhkan frontend/segmentasi alpha-aware.
+
+
+### Kandidat strategi tanpa fork engine: split mask berdasarkan alpha
+
+Hasil Windows menunjukkan stock VTracer menggabungkan dua area yang RGB-nya identik tetapi alpha-nya 128 dan 255 menjadi satu paint dengan alpha rata-rata 191. Karena `Segmentation`, `Layer`, dan `RegionMask` public, spike berikutnya menguji strategi yang lebih terarah:
+
+1. jalankan color clustering VTracer satu kali;
+2. untuk setiap layer/mask hasil clustering, baca alpha asli pada pixel sumber;
+3. pecah mask menjadi sub-mask per nilai alpha yang hadir;
+4. pertahankan RGB paint VTracer, tetapi set alpha paint sesuai sub-mask;
+5. baru jalankan `Pipeline::finish` untuk curve fitting/compose/optimize;
+6. serialize dengan writer SVG alpha-aware VectorForge.
+
+Spike menambah dependency langsung `visioncortex = 0.9.3` hanya karena `BinaryImage` diperlukan untuk membangun sub-mask. Ini penggunaan API nyata, bukan dependency transitif yang ditambahkan tanpa alasan.
+
+Versi karakterisasi memakai nilai alpha exact agar correctness mudah dibuktikan. Itu **belum** keputusan produksi: gambar dengan banyak level alpha dapat memperbanyak layer/mask dan perlu benchmark/resource budget sebelum B01 ditutup.

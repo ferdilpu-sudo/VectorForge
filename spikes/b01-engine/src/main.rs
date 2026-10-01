@@ -1,9 +1,11 @@
 use std::cell::Cell;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use image::{Rgba, RgbaImage};
 use svg2pdf::{ConversionOptions, PageOptions};
-use vtracer::ir::PathCmd;
+use visioncortex::BinaryImage;
+use vtracer::ir::{Layer, Paint, PathCmd, RegionMask, Segmentation};
 use vtracer::progress::{CancelToken, Phase, Progress};
 use vtracer::{ColorImage, Config, Error, VectorDoc};
 
@@ -287,6 +289,77 @@ fn distinct_alphas(doc: &VectorDoc) -> Vec<u8> {
     values
 }
 
+
+fn split_segmentation_by_source_alpha(
+    segmentation: Segmentation,
+    source: &ColorImage,
+) -> Result<Segmentation, String> {
+    let mut result = Segmentation::new(segmentation.width, segmentation.height);
+
+    for layer in segmentation.layers {
+        let base_color = layer.paint.color();
+        let mut masks: BTreeMap<u8, BinaryImage> = BTreeMap::new();
+
+        for local_y in 0..layer.mask.image.height {
+            for local_x in 0..layer.mask.image.width {
+                if !layer.mask.image.get_pixel(local_x, local_y) {
+                    continue;
+                }
+
+                let global_x = layer.mask.offset.x + local_x as i32;
+                let global_y = layer.mask.offset.y + local_y as i32;
+                if global_x < 0
+                    || global_y < 0
+                    || global_x as usize >= source.width
+                    || global_y as usize >= source.height
+                {
+                    return Err("segmentation mask escaped source bounds".to_owned());
+                }
+
+                let alpha = source
+                    .get_pixel(global_x as usize, global_y as usize)
+                    .a;
+                if alpha == 0 {
+                    continue;
+                }
+
+                let mask = masks.entry(alpha).or_insert_with(|| {
+                    BinaryImage::new_w_h(
+                        layer.mask.image.width,
+                        layer.mask.image.height,
+                    )
+                });
+                mask.set_pixel(local_x, local_y, true);
+            }
+        }
+
+        for (alpha, mask) in masks {
+            result.layers.push(Layer {
+                paint: Paint::Solid(vtracer::Color::new_rgba(
+                    base_color.r,
+                    base_color.g,
+                    base_color.b,
+                    alpha,
+                )),
+                mask: RegionMask::new(mask, layer.mask.offset),
+            });
+        }
+    }
+
+    Ok(result)
+}
+
+fn trace_alpha_split(
+    pipeline: &vtracer::Pipeline,
+    source: &ColorImage,
+) -> Result<VectorDoc, String> {
+    let segmentation = pipeline
+        .segment(source)
+        .map_err(|error| error.to_string())?;
+    let split = split_segmentation_by_source_alpha(segmentation, source)?;
+    pipeline.finish(&split).map_err(|error| error.to_string())
+}
+
 fn run() -> Result<(), String> {
     let pipeline = Config::default().build().map_err(|error| error.to_string())?;
 
@@ -347,7 +420,8 @@ fn run() -> Result<(), String> {
     }
     println!("[PASS] fully transparent precheck -> empty SVG without tracer");
 
-    match run_doc_catching_dependency_panic(partial_alpha(64, 64)) {
+    let partial = partial_alpha(64, 64);
+    match run_doc_catching_dependency_panic(partial.clone()) {
         Ok(Ok(alpha_doc)) => {
             let alphas = distinct_alphas(&alpha_doc);
             if !alphas.iter().any(|&alpha| alpha > 0 && alpha < 255) {
@@ -356,19 +430,6 @@ fn run() -> Result<(), String> {
                 );
             } else {
                 println!("[PASS] partial alpha survives in VectorDoc: {alphas:?}");
-
-                let alpha_svg = vector_doc_to_alpha_svg(&alpha_doc);
-                if !alpha_svg.contains("fill-opacity=") {
-                    println!("[BLOCKED] VectorForge alpha SVG writer emitted no fill-opacity");
-                } else {
-                    println!("[PASS] alpha-aware SVG writer emits fill-opacity");
-                    let alpha_pdf = pdf_from_svg(&alpha_svg)?;
-                    if alpha_pdf.starts_with(b"%PDF-") {
-                        println!("[PASS] alpha-aware SVG -> PDF conversion");
-                    } else {
-                        println!("[BLOCKED] alpha-aware PDF output has no PDF signature");
-                    }
-                }
             }
         }
         Ok(Err(error)) => {
@@ -381,27 +442,58 @@ fn run() -> Result<(), String> {
         }
     }
 
-    match run_doc_catching_dependency_panic(same_rgb_alpha_split(64, 32)) {
-        Ok(Ok(split_doc)) => {
-            let alphas = distinct_alphas(&split_doc);
-            if alphas.contains(&128) && alphas.contains(&255) {
-                println!(
-                    "[PASS] same-RGB alpha boundary survives segmentation: {alphas:?}"
-                );
+    let split_partial_doc = trace_alpha_split(&pipeline, &partial)?;
+    let split_partial_alphas = distinct_alphas(&split_partial_doc);
+    if !split_partial_alphas.contains(&128) {
+        println!(
+            "[BLOCKED] alpha-split segmentation lost partial alpha; IR alphas = {split_partial_alphas:?}"
+        );
+    } else {
+        println!(
+            "[PASS] alpha-split segmentation preserves partial alpha: {split_partial_alphas:?}"
+        );
+        let alpha_svg = vector_doc_to_alpha_svg(&split_partial_doc);
+        if !alpha_svg.contains("fill-opacity=") {
+            println!("[BLOCKED] VectorForge alpha SVG writer emitted no fill-opacity");
+        } else {
+            println!("[PASS] alpha-aware SVG writer emits fill-opacity");
+            let alpha_pdf = pdf_from_svg(&alpha_svg)?;
+            if alpha_pdf.starts_with(b"%PDF-") {
+                println!("[PASS] alpha-aware SVG -> PDF conversion");
             } else {
-                println!(
-                    "[BLOCKED] same-RGB alpha boundary merged by segmentation; IR alphas = {alphas:?}"
-                );
+                println!("[BLOCKED] alpha-aware PDF output has no PDF signature");
             }
         }
+    }
+
+    let same_rgb = same_rgb_alpha_split(64, 32);
+    match run_doc_catching_dependency_panic(same_rgb.clone()) {
+        Ok(Ok(merged_doc)) => {
+            println!(
+                "[INFO] stock segmentation same-RGB alpha result: {:?}",
+                distinct_alphas(&merged_doc)
+            );
+        }
         Ok(Err(error)) => {
-            println!("[BLOCKED] alpha-boundary trace returned tracer error: {error}");
+            println!("[BLOCKED] stock alpha-boundary trace returned tracer error: {error}");
         }
         Err(message) => {
             println!(
-                "[BLOCKED] alpha-boundary trace panicked inside VTracer/visioncortex: {message}"
+                "[BLOCKED] stock alpha-boundary trace panicked inside VTracer/visioncortex: {message}"
             );
         }
+    }
+
+    let split_doc = trace_alpha_split(&pipeline, &same_rgb)?;
+    let split_alphas = distinct_alphas(&split_doc);
+    if split_alphas.contains(&128) && split_alphas.contains(&255) {
+        println!(
+            "[PASS] alpha-split segmentation preserves same-RGB boundary: {split_alphas:?}"
+        );
+    } else {
+        println!(
+            "[BLOCKED] alpha-split segmentation failed same-RGB boundary; IR alphas = {split_alphas:?}"
+        );
     }
 
     println!(

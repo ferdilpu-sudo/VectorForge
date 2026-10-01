@@ -84,3 +84,8 @@ User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa d
 ### B01 karakterisasi alpha lanjutan
 
 Setelah run Windows membuktikan panic pada gambar alpha nol dan stock writer menghilangkan opacity, inspeksi upstream menunjukkan `visioncortex::Color` tetap membawa channel alpha sampai tipe paint. Spike diperluas untuk memeriksa alpha pada `VectorDoc`, menulis `fill-opacity` sendiri, menguji PDF dari SVG tersebut, serta menguji boundary RGB-sama/alpha-berbeda. Pre-check gambar seluruhnya transparan diperlakukan sebagai solusi semantik yang valid: hasilnya dokumen kosong dan tracer tidak dipanggil.
+
+
+### B01 split-mask alpha spike
+
+Stock segmentation meratakan fixture RGB-sama dengan alpha 128/255 menjadi alpha 191. Karena IR segmentation VTracer public, B01 menguji split-mask per alpha setelah clustering namun sebelum curve fitting. Tujuannya mempertahankan engine VTracer tanpa fork dan tanpa multi-pass tracing. Dependency `visioncortex 0.9.3` ditambahkan langsung pada spike hanya untuk konstruksi `BinaryImage`. Correctness diuji dengan alpha exact; biaya layer/memory pada gambar nyata belum dianggap lulus.
