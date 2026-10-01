@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0 selesai, implementasi awal P1 tersedia. F01 selesai dengan build/lint; F02–F05 terimplementasi sebagian dan menunggu visual/manual review serta item backlog README. G1 belum lulus. Backend P2 dan seterusnya TODO.
+Status 1 Oktober 2026: P0 dan frontend P1 selesai untuk gate G1. UI terbaru telah ditinjau pengguna di Windows; lint, 10 tes dan build frontend lulus lokal. Pengguna kemudian memerintahkan lanjut, sehingga G1 dicatat DONE dan B01 mulai sebagai spike terisolasi. B02 dan backend produksi belum diizinkan sampai B01 selesai.
 
 ## Backlog dan gate
 
@@ -43,26 +43,39 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | Tanggal | Task | Status TODO/DOING/BLOCKED/DONE | Perubahan & bukti | Blocker / next task |
 |---|---|---|---|---|
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
+| 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
+| 2026-10-01 | B01 | DOING | Kandidat dependency diteliti; harness `spikes/b01-engine` ditambahkan untuk trace/cancel/PDF/EPS/alpha | Jalankan Cargo di Windows; alpha parsial stock VTracer masih blocker |
 
 ## Catatan izin fase
 
-- 1 Oktober 2026: user memerintahkan eksekusi ke repository ferdilpu-sudo/VectorForge; izin meliputi memasukkan pedoman dan memulai frontend P1. Tidak ada persetujuan melampaui checkpoint G1/G2.
-- Tidak ada izin tercatat melewati G1/G2.
+- 1 Oktober 2026: user memerintahkan eksekusi ke repository ferdilpu-sudo/VectorForge; izin meliputi memasukkan pedoman dan memulai frontend P1.
+- 1 Oktober 2026: setelah review screenshot Windows, polish, dan verifikasi lokal sukses, user memerintahkan **lanjut**. Ini dicatat sebagai persetujuan melewati G1 dan izin mengerjakan **B01 saja**. Tidak ada izin melewati G2 atau menganggap B01 otomatis mengizinkan B02.
+- G2 belum disetujui.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
 ## Target performa
 
 Target PRD adalah sasaran, bukan fakta: startup <2 s, preview tipikal 1024 px <1,5 s, installer <25 MB tanpa WebView2 runtime, memori <500 MB untuk skenario satu sumber 20 MP. Ukur dengan hardware, dataset, build release dan metode di testing. Batch paralel tidak dianggap otomatis memenuhi target memori single. Kebenaran output dan stabilitas lebih tinggi prioritas daripada angka target; kegagalan target harus dilaporkan, bukan disembunyikan dengan menurunkan kualitas.
 
-## Hasil eksekusi P1 awal — 1 Oktober 2026
+## Hasil eksekusi P1 — 1 Oktober 2026
 
-- F01 DONE: scaffold React 18/TypeScript/Tailwind/Zustand; package-lock; dev/build/lint/test.
-- F02–F05 DOING: UI dan demo workflow tersedia; delapan unit/hook tests lulus.
-- Teruji: boundary parameter, nama preset, cancel request, stale preview cleanup, manual preview, partial-output retry dan cancel batch.
-- Visual/DPI/browser walkthrough BLOCKED: daemon agent-browser gagal start; Chromium tidak terpasang. Tidak mengklaim screenshot atau manual Windows pass.
-- TODO sebelum G1 final: penyelesaian locale error, visual dan keyboard manual review. Reset settings, tinggi antrean dan penolakan PNG/WebP animasi sudah ditambahkan. Native pre-decode validation tetap P2.
-- Berikutnya: review frontend di Windows dengan npm ci / npm run dev. Backend tidak dimulai.
+- F01–F05 selesai untuk scope demo G1: React 18/TypeScript/Tailwind/Zustand, import browser, parameter/preset/settings, compare/zoom/pan, export demo dan batch demo.
+- Verifikasi lokal pengguna: `npm run lint` lulus setelah perbaikan binding catch, 3 test files / 10 tests lulus, dan `npm run build` lulus.
+- Teruji otomatis: boundary parameter, nama preset, cancellation mock, stale preview cleanup, manual preview, partial-output retry/cancel batch, recovery preference corrupt dan locale error import.
+- Screenshot terbaru ditinjau pengguna pada Windows dan dipoles lagi pada panel batch. Ini memenuhi bukti screenshot + persetujuan untuk G1.
+- Tidak mengklaim matriks DPI/keyboard lengkap atau native Windows shell sudah diuji; keduanya tetap item verifikasi berikutnya, bukan alasan menyamarkan demo sebagai aplikasi native.
+- Native pre-decode validation, filesystem grant dan tracing nyata tetap fase B02/B03.
 
 ## Polish F02 — 1 Oktober 2026
 
-User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa diganti. Perubahan: panel lebih padat, header lebih singkat, empty canvas solid adaptif, banner demo ringkas, scrollbar bertema. Pilihan dark/light/system dan latar putih/checker/gelap dipertahankan. Tidak mengubah engine atau kontrak IPC. Build/lint dan delapan tes existing dijalankan untuk regresi; pemeriksaan visual hasil terbaru di Windows tetap menunggu, sehingga G1 belum dinyatakan selesai.
+User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa diganti. Perubahan: panel lebih padat, header lebih singkat, empty canvas solid adaptif, banner demo ringkas, scrollbar bertema. Pilihan dark/light/system dan latar putih/checker/gelap dipertahankan. Tidak mengubah engine atau kontrak IPC. Setelah polish lanjutan batch, pengguna meninjau hasil terbaru di Windows dan verifikasi lokal berakhir dengan lint, 10 tes dan build lulus. G1 kemudian disetujui dan ditutup.
+
+
+## B01 spike — 1 Oktober 2026
+
+- Kandidat tracing: `vtracer = 1.0.0-alpha.4` untuk spike, karena menyediakan `CancelToken`, progress fase, `VectorDoc` dan pipeline segment/finish. Status pre-release berarti belum menjadi lock produksi.
+- Kandidat decode: `image = 0.25.10` dengan PNG/JPEG/WebP/BMP.
+- Kandidat PDF: `svg2pdf = 0.13.0`; gunakan `svg2pdf::usvg` agar tidak membuat version skew dengan usvg standalone.
+- Harness terisolasi berada di `spikes/b01-engine`; tidak boleh diimpor frontend atau dianggap backend produksi.
+- Source inspection menemukan blocker D10: stock VTracer alpha.4 memakai paint/fill RGB solid dan tidak menyerialisasi alpha parsial. Harness akan mengonfirmasi perilaku fixture di Windows.
+- Detail versi, lisensi awal, langkah run, dan kriteria keluar ada di `b01-engine-spike.md`.

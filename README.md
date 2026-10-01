@@ -41,15 +41,15 @@ npm run build
 
 Frontend demo tersedia: import gambar, panel parameter/preset, perbandingan dan zoom/pan, pengaturan tema/bahasa, dialog ekspor simulasi dan batch simulasi dengan cancel/retry per format. Preview sengaja menampilkan ilustrasi berlabel DEMO, **bukan hasil tracing gambar input**. Simulasi tidak menulis file hasil. Preferences demo memakai localStorage, bukan app data Windows.
 
-Pedoman fase selanjutnya tetap berlaku. `npm run tauri dev/build` belum tersedia. Engine, grant native file, full-resolution export, worker paralel dan penyimpanan JSON Rust belum dibuat.
+Gate frontend G1 sudah disetujui setelah review visual Windows dan verifikasi lokal. B01 kini berjalan sebagai spike Rust **terisolasi**; `npm run tauri dev/build` tetap belum tersedia. Engine produksi, grant native file, full-resolution export, worker paralel dan penyimpanan JSON Rust belum dibuat.
 
 ## Verifikasi
 
-Baseline sebelum patch audit 1 Oktober 2026: build TypeScript/Vite, lint, dan delapan tes validasi/lifecycle preview-batch lulus pada environment Linux/Node 24. Verifikasi proyek dilakukan **secara lokal**, bukan melalui GitHub Actions. Setelah perubahan baru, jalankan `npm run lint`, `npm run test`, dan `npm run build` sebelum menyatakan gate terkait lulus. Tes frontend ini tidak membuktikan aplikasi native Windows berjalan.
+Verifikasi proyek dilakukan **secara lokal**, bukan melalui GitHub Actions. Pada Windows pengguna, lint lulus, 3 test files / 10 tests lulus, dan build Vite produksi lulus setelah polish terbaru. Screenshot light-mode dengan gambar aktif dan batch queue juga ditinjau langsung pengguna. Tes frontend ini tetap tidak membuktikan shell native Windows berjalan.
 
-Percobaan browser automation terblokir: agent-browser daemon gagal start, Chromium lokal tidak tersedia. Visual, DPI Windows, keyboard walkthrough dan pengujian aplikasi grafis eksternal berstatus NOT RUN. Gate G1 menunggu review UI, belum menjadi izin backend.
+Percobaan browser automation pada environment agent sebelumnya terblokir, sehingga tidak ada klaim matriks DPI/keyboard otomatis. Keterbatasan itu dicatat, tetapi pengguna menyetujui hasil G1 dan memerintahkan lanjut ke B01.
 
-## Batas demo yang perlu ditutup sebelum G1 final
+## Batas demo yang dibawa ke fase native
 
 - Browser decode memeriksa signature, menolak APNG/animated WebP, dan menerapkan batas 30 MP setelah decode; pengecekan dimensi pra-decode, profil warna, dan grant file di Rust tetap B02/B03.
 - Teks UI utama, error import demo, dan label preset bawaan mengikuti pilihan ID/EN. Kontrak native tetap harus menangani locale/error code secara terstruktur saat adapter Rust dibuat.
@@ -62,6 +62,19 @@ Percobaan browser automation terblokir: agent-browser daemon gagal start, Chromi
 
 `src/core` komposisi; `src/features` UI per fitur; `src/services` adapter demo/import/preferences; `src/stores` state proyek; `src/types` model; `src/shared` modal dan locale; `src/styles` tema/layout; `src/tests` tes risiko. Satu file satu tanggung jawab tanpa limit baris.
 
+## B01 engine/export spike
+
+Harness Rust ada di `spikes/b01-engine` dan dijelaskan di [b01-engine-spike.md](b01-engine-spike.md). Harness ini menguji kandidat VTracer, cancellation/progress, SVG→PDF, writer EPS dan karakterisasi alpha. Ia **bukan** `src-tauri` produksi dan tidak dihubungkan ke React.
+
+```powershell
+cd spikes/b01-engine
+cargo check
+cargo run
+cargo tree
+```
+
+Source inspection awal menemukan bahwa stock SVG writer VTracer 1.0.0-alpha.4 masih memakai fill RGB solid, sehingga alpha parsial SVG/PDF adalah blocker D10 sampai dibuktikan dan diputuskan secara eksplisit. Jangan flatten diam-diam.
+
 ## Langkah berikutnya
 
-Review frontend dan tutup item G1 yang belum terverifikasi. Setelah persetujuan frontend, lanjut B01 untuk validasi dependency/engine/transparansi/EPS, bukan langsung mengklaim dukungan seluruh format. Lisensi aplikasi belum ditentukan pemilik; belum ada rilis publik atau installer.
+Jalankan harness B01 pada Windows, catat dependency tree/lisensi transitif, uji filesystem atomic replace, lalu tutup keputusan alpha. B02 baru boleh dimulai setelah B01 benar-benar DONE. Lisensi aplikasi VectorForge sendiri belum ditentukan pemilik; belum ada rilis publik atau installer.
