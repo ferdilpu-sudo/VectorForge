@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0 dan frontend P1 selesai untuk gate G1. UI terbaru telah ditinjau pengguna di Windows; lint, 10 tes dan build frontend lulus lokal. Pengguna kemudian memerintahkan lanjut, sehingga G1 dicatat DONE dan B01 mulai sebagai spike terisolasi. B02 dan backend produksi belum diizinkan sampai B01 selesai.
+Status 1 Oktober 2026: P0, frontend P1/G1, dan B01 selesai. UI telah ditinjau pengguna di Windows; lint, 10 tes dan build frontend lulus lokal. B01 engine/export spike juga lulus pada Windows release, dependency graph dikunci, dan audit deklarasi lisensi transitif selesai. B02 belum dimulai karena izin sebelumnya hanya mencakup B01.
 
 ## Backlog dan gate
 
@@ -44,7 +44,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 |---|---|---|---|---|
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
-| 2026-10-01 | B01 | DOING | Engine/export/alpha/filesystem Windows PASS; dependency tree terkunci dan Cargo.lock dikomit pada 2bf29cf | Tinggal audit lisensi transitif sebelum B01 DONE |
+| 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | B02 siap secara dependensi, tetapi menunggu izin fase berikutnya |
 
 ## Catatan izin fase
 
@@ -113,3 +113,12 @@ Status B01 tetap DOING hanya untuk penutupan dependency graph/lisensi dan lockfi
 ### B01 lockfile
 
 `spikes/b01-engine/Cargo.lock` telah dikomit pada `2bf29cf`; working tree pengguna clean dan branch lokal sinkron dengan origin. Exact dependency graph kini terkunci. B01 tinggal menutup audit lisensi transitif.
+
+
+### B01 ditutup — 1 Oktober 2026
+
+Audit `cargo metadata --locked` menunjukkan satu-satunya package tanpa field `license` adalah package lokal `vectorforge-b01-engine-spike 0.0.0`. Semua dependency eksternal/transitif memiliki deklarasi license. Spike lokal `publish = false`; lisensi aplikasi tetap keputusan pemilik dan tidak diisi secara asumtif.
+
+Dengan build/run release Windows, alpha split-mask, SVG/PDF/EPS, cancellation, resource characterization, filesystem safety, Cargo.lock, dependency tree dan audit lisensi selesai, **B01 = DONE**.
+
+B02 belum dimulai. Catatan izin fase tetap berlaku: persetujuan sebelumnya hanya untuk B01 dan tidak otomatis memberi izin membuat backend produksi.

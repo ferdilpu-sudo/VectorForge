@@ -78,3 +78,12 @@ Source inspection awal menemukan bahwa stock SVG writer VTracer 1.0.0-alpha.4 ma
 ## Langkah berikutnya
 
 Jalankan harness B01 pada Windows, catat dependency tree/lisensi transitif, uji filesystem atomic replace, lalu tutup keputusan alpha. B02 baru boleh dimulai setelah B01 benar-benar DONE. Lisensi aplikasi VectorForge sendiri belum ditentukan pemilik; belum ada rilis publik atau installer.
+
+
+## Native backend status
+
+- G1 frontend demo: **DONE**
+- B01 engine/export dependency spike: **DONE**
+- B02 production Tauri/backend shell: **NOT STARTED**
+
+B01 passed Windows release characterization for SVG/PDF/EPS, cancellation, alpha-preserving split-mask, resource guard characterization, and safe Windows file replacement. Its Cargo.lock is committed and Cargo metadata reported no external/transitive package missing a license declaration. The local non-published spike package intentionally has no application license declaration yet.

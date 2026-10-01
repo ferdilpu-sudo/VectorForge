@@ -1,6 +1,6 @@
 # B01 — Engine / Export Spike
 
-Status: **DOING** • 1 Oktober 2026.
+Status: **DONE** • 1 Oktober 2026.
 
 Dokumen ini mencatat pembuktian dependency sebelum VectorForge membuat shell Tauri atau adapter produksi. Isi folder `spikes/b01-engine` adalah harness karakterisasi, bukan backend aplikasi dan bukan izin menghubungkannya ke React.
 
@@ -223,7 +223,7 @@ Resource characterization release:
 - smooth 512×256, 255 level: 16 KiB lower-bound mask, segment 4 ms, split 3 ms;
 - fragmented 256×256, 255 level: 1913 KiB lower-bound mask, segment 4 ms, split 4 ms.
 
-B01 belum DONE hanya karena exact dependency graph, lisensi transitif, dan lockfile spike belum dicatat/committed. Engine/export/alpha/filesystem tidak lagi blocker.
+B01 engine/export/alpha/filesystem telah lulus. Exact dependency graph juga telah dikunci melalui Cargo.lock.
 
 
 ## Lockfile B01
@@ -231,3 +231,30 @@ B01 belum DONE hanya karena exact dependency graph, lisensi transitif, dan lockf
 `spikes/b01-engine/Cargo.lock` telah dikomit oleh pengguna pada commit `2bf29cf`. Working tree lokal dilaporkan clean dan branch `main` sinkron dengan `origin/main`.
 
 Dengan ini exact dependency resolution untuk spike B01 sudah reproducible. Item yang masih terbuka untuk menutup B01 hanyalah verifikasi lisensi transitif dari metadata Cargo.
+
+
+## Audit lisensi transitif — PASS
+
+Pengguna menjalankan `cargo metadata --locked --format-version 1` lalu memfilter package tanpa field `license`. Hasilnya hanya:
+
+`vectorforge-b01-engine-spike 0.0.0`
+
+Tidak ada dependency eksternal/transitif yang muncul pada daftar tanpa lisensi. Package spike lokal sendiri `publish = false` dan sengaja tidak diberi SPDX karena lisensi aplikasi VectorForge belum diputuskan oleh pemilik. Ini tidak dianggap dependency-license blocker dan tidak boleh digunakan untuk mengarang lisensi aplikasi.
+
+## Keputusan keluar B01
+
+B01 **DONE**.
+
+Bukti keluar:
+- build/run release Windows berhasil;
+- tracing SVG, PDF, EPS terkarakterisasi;
+- cancellation/progress native terbukti;
+- alpha nol aman melalui pre-check;
+- alpha parsial dipertahankan melalui split-mask + writer SVG alpha-aware;
+- kasus RGB sama / alpha berbeda terbukti benar;
+- resource risk alpha dikarakterisasi dan candidate 128 MiB mask guard dicatat;
+- collision, atomic replace, dan locked-file failure Windows terbukti;
+- exact dependency graph dikunci di Cargo.lock;
+- seluruh dependency eksternal/transitif memiliki deklarasi license pada Cargo metadata.
+
+Catatan: B01 adalah spike. Tidak ada file di `spikes/b01-engine` yang otomatis menjadi backend produksi. B02 harus mengimplementasikan kontrak produksi secara terpisah dan hanya dimulai setelah izin fase berikutnya.
