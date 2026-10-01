@@ -1,63 +1,120 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useProject } from "../stores/project.store";
-import { useLanguage } from "../shared/useLanguage";
-import { ParamPanel } from "../features/params/ParamPanel";
-import { CompareCanvas } from "../features/compare/CompareCanvas";
+import { useCallback, useEffect, useState } from "react";
+
+import { api } from "../services/api";
+import { appErrorMessage } from "../services/errors";
 import { BatchQueue } from "../features/batch/BatchQueue";
-import { SettingsDialog } from "../features/settings/SettingsDialog";
+import { CompareCanvas } from "../features/compare/CompareCanvas";
 import { ExportDialog } from "../features/export/ExportDialog";
+import { ParamPanel } from "../features/params/ParamPanel";
+import { SettingsDialog } from "../features/settings/SettingsDialog";
+import { useLanguage } from "../shared/useLanguage";
+import { useProject } from "../stores/project.store";
+
 export function App() {
   const files = useProject((state) => state.files);
   const activeId = useProject((state) => state.activeId);
   const appSettings = useProject((state) => state.settings);
   const notice = useProject((state) => state.notice);
+  const ready = useProject((state) => state.ready);
   const importing = useProject((state) => state.importing);
   const batchBusy = useProject((state) => state.batchBusy);
-  const importFiles = useProject((state) => state.importFiles);
+  const initialize = useProject((state) => state.initialize);
+  const openFiles = useProject((state) => state.openFiles);
+  const importPaths = useProject((state) => state.importPaths);
   const notify = useProject((state) => state.notify);
   const t = useLanguage();
-  const input = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [panel, setPanel] = useState(true);
   const [dragging, setDragging] = useState(false);
   const active = files.find((file) => file.id === activeId);
+
   const open = useCallback(() => {
-    if (!useProject.getState().batchBusy && !useProject.getState().importing)
-      input.current?.click();
-  }, []);
+    const state = useProject.getState();
+    if (!state.batchBusy && !state.importing && state.ready) {
+      void openFiles();
+    }
+  }, [openFiles]);
+
   useEffect(() => {
-    const q = window.matchMedia("(prefers-color-scheme: light)");
+    void initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    let disposed = false;
+    let stop: (() => void) | undefined;
+
+    void api
+      .watchNativeDrops((event) => {
+        if (event.type === "over") {
+          setDragging(true);
+          return;
+        }
+
+        setDragging(false);
+        if (event.type === "drop") {
+          const state = useProject.getState();
+          if (!state.batchBusy && !state.importing && state.ready) {
+            void importPaths(event.paths);
+          }
+        }
+      })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else stop = unlisten;
+      })
+      .catch((error) => {
+        if (!disposed) {
+          notify(
+            appErrorMessage(error, useProject.getState().settings.language),
+          );
+        }
+      });
+
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, [importPaths, notify]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-color-scheme: light)");
     const apply = () => {
       document.documentElement.dataset.theme =
         appSettings.theme === "system"
-          ? q.matches
+          ? query.matches
             ? "light"
             : "dark"
           : appSettings.theme;
       document.documentElement.lang = appSettings.language;
     };
+
     apply();
-    q.addEventListener("change", apply);
-    return () => q.removeEventListener("change", apply);
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
   }, [appSettings.theme, appSettings.language]);
+
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
+    const key = (event: KeyboardEvent) => {
       if (document.querySelector("dialog[open]")) return;
-      if (e.ctrlKey && e.key.toLowerCase() === "o") {
-        e.preventDefault();
+
+      if (event.ctrlKey && event.key.toLowerCase() === "o") {
+        event.preventDefault();
         open();
       }
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "e") {
-        e.preventDefault();
+
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "e") {
+        event.preventDefault();
         if (useProject.getState().activeId) setExporting(true);
       }
     };
-    const leave = (e: BeforeUnloadEvent) => {
+
+    const leave = (event: BeforeUnloadEvent) => {
       if (useProject.getState().batchBusy) {
-        e.preventDefault();
+        event.preventDefault();
       }
     };
+
     window.addEventListener("keydown", key);
     window.addEventListener("beforeunload", leave);
     return () => {
@@ -65,23 +122,9 @@ export function App() {
       window.removeEventListener("beforeunload", leave);
     };
   }, [open]);
+
   return (
-    <main
-      className={`app ${panel ? "" : "panel-collapsed"}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        if (e.dataTransfer.types.includes("Files")) setDragging(true);
-      }}
-      onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-          setDragging(false);
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragging(false);
-        void importFiles(Array.from(e.dataTransfer.files));
-      }}
-    >
+    <main className={`app ${panel ? "" : "panel-collapsed"}`}>
       <header className="app-toolbar">
         <div className="brand">
           <span className="brand-mark">
@@ -96,7 +139,7 @@ export function App() {
         >
           ☷
         </button>
-        <button onClick={open} disabled={importing || batchBusy}>
+        <button onClick={open} disabled={!ready || importing || batchBusy}>
           ＋ {t("Buka Gambar", "Open image")}
         </button>
         <span className="filename" title={active?.name}>
@@ -113,24 +156,7 @@ export function App() {
           {t("Ekspor…", "Export…")} ↗
         </button>
       </header>
-      <div className="demo-banner">
-        <span>◉ {t("MODE DEMO", "DEMO MODE")}</span>
-        {t(
-          "Preview dan ekspor simulasi · Engine belum terhubung.",
-          "Simulated preview and export · Engine not connected.",
-        )}
-      </div>
-      <input
-        hidden
-        ref={input}
-        type="file"
-        accept=".png,.jpg,.jpeg,.webp,.bmp"
-        multiple
-        onChange={(e) => {
-          void importFiles(Array.from(e.target.files ?? []));
-          e.target.value = "";
-        }}
-      />
+
       {notice && (
         <div className="notice" role="alert">
           <span>{notice}</span>
@@ -142,6 +168,7 @@ export function App() {
           </button>
         </div>
       )}
+
       <div className="workspace">
         {panel && <ParamPanel />}
         <div className="work-area">
@@ -149,23 +176,29 @@ export function App() {
           {files.length > 0 && <BatchQueue />}
         </div>
       </div>
+
       <footer className="status-bar">
         <span className="status-dot" />
-        {importing
-          ? t("Membaca gambar…", "Reading images…")
-          : t("Lokal · Mode Demo", "Local · Demo mode")}
+        {!ready
+          ? t("Memuat pengaturan…", "Loading settings…")
+          : importing
+            ? t("Membaca gambar…", "Reading images…")
+            : t("Lokal · Engine aktif", "Local · Engine active")}
         <span className="status-meta">
           {active
-            ? `${active.width} × ${active.height} px · ${(active.bytes / 1024).toFixed(1)} KB`
+            ? `${active.width} × ${active.height} px · ${(
+                active.bytes / 1024
+              ).toFixed(1)} KB`
             : "PNG / JPG / WEBP / BMP"}
         </span>
         <span>
           {t(
-            "Ekspor produksi: resolusi penuh",
-            "Production export: full resolution",
+            "Ekspor: resolusi sumber penuh",
+            "Export: full source resolution",
           )}
         </span>
       </footer>
+
       {dragging && (
         <div className="drop-overlay">
           {batchBusy
@@ -173,6 +206,7 @@ export function App() {
             : t("Lepaskan untuk menambahkan gambar", "Drop to add images")}
         </div>
       )}
+
       {settings && <SettingsDialog onClose={() => setSettings(false)} />}
       {exporting && active && (
         <ExportDialog file={active} onClose={() => setExporting(false)} />

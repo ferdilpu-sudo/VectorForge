@@ -1,38 +1,52 @@
 import { useRef, useState } from "react";
-import { useProject } from "../../stores/project.store";
+
+import { api } from "../../services/api";
+import { appErrorMessage } from "../../services/errors";
 import { useLanguage } from "../../shared/useLanguage";
-import { useDemoBatch } from "./useDemoBatch";
-import type { ExportFormat } from "../../types/project";
+import { useProject } from "../../stores/project.store";
+import type { Destination, ExportFormat } from "../../types/project";
+import { useBatch } from "./useBatch";
 
 const MIN_QUEUE_HEIGHT = 144;
 const MAX_QUEUE_HEIGHT = 240;
 
 export function BatchQueue() {
-  const files = useProject((s) => s.files);
-  const active = useProject((s) => s.activeId);
-  const select = useProject((s) => s.select);
-  const remove = useProject((s) => s.remove);
-  const importing = useProject((s) => s.importing);
+  const files = useProject((state) => state.files);
+  const active = useProject((state) => state.activeId);
+  const select = useProject((state) => state.select);
+  const remove = useProject((state) => state.remove);
+  const importing = useProject((state) => state.importing);
+  const language = useProject((state) => state.settings.language);
+  const notify = useProject((state) => state.notify);
   const t = useLanguage();
-  const batch = useDemoBatch();
+  const batch = useBatch();
   const [formats, setFormats] = useState<ExportFormat[]>(["svg"]);
-  const [fail, setFail] = useState(false);
   const [open, setOpen] = useState(true);
   const [height, setHeight] = useState(178);
-  const [folder, setFolder] = useState("");
+  const [destination, setDestination] = useState<Destination | null>(null);
   const resizeStart = useRef<{ y: number; height: number } | null>(null);
 
   const clampHeight = (value: number) =>
     Math.max(MIN_QUEUE_HEIGHT, Math.min(MAX_QUEUE_HEIGHT, value));
 
-  const completed = batch.items.filter((i) =>
-    ["done", "partial", "failed", "cancelled"].includes(i.status),
+  const chooseFolder = async () => {
+    if (batch.busy) return;
+    try {
+      const selected = await api.chooseDestination({ kind: "directory" });
+      if (selected) setDestination(selected);
+    } catch (error) {
+      notify(appErrorMessage(error, language));
+    }
+  };
+
+  const completed = batch.items.filter((item) =>
+    ["done", "partial", "failed", "cancelled"].includes(item.status),
   ).length;
 
   const labels: Record<string, string> = {
     queued: t("Menunggu", "Queued"),
     processing: t("Proses", "Processing"),
-    done: t("Selesai (demo)", "Done (demo)"),
+    done: t("Selesai", "Done"),
     partial: t("Sebagian gagal", "Partial failure"),
     failed: t("Gagal", "Failed"),
     cancelled: t("Dibatalkan", "Cancelled"),
@@ -97,7 +111,7 @@ export function BatchQueue() {
         </button>
         <span className="batch-heading-meta">
           {batch.busy
-            ? t("Simulasi berjalan", "Simulation running")
+            ? t("Batch berjalan", "Batch running")
             : t(
                 "Satu pengaturan untuk semua gambar",
                 "One configuration for all images",
@@ -108,17 +122,27 @@ export function BatchQueue() {
       {open && (
         <div className="batch-body">
           <div className="file-strip">
-            {files.map((f) => {
-              const job = batch.items.find((i) => i.fileId === f.id);
+            {files.map((file) => {
+              const job = batch.items.find((item) => item.fileId === file.id);
+              const detail =
+                job?.status === "processing"
+                  ? t(job.stage, job.stage)
+                  : job
+                    ? labels[job.status]
+                    : `${file.width} × ${file.height}`;
+
               return (
                 <div
-                  key={f.id}
-                  className={`file-card ${active === f.id ? "selected" : ""}`}
+                  key={file.id}
+                  className={`file-card ${active === file.id ? "selected" : ""}`}
                 >
-                  <button className="file-select" onClick={() => select(f.id)}>
-                    <img src={f.previewUrl} alt="" />
+                  <button
+                    className="file-select"
+                    onClick={() => select(file.id)}
+                  >
+                    <img src={file.previewUrl} alt="" />
                     <span>
-                      <strong title={f.name}>{f.name}</strong>
+                      <strong title={file.name}>{file.name}</strong>
                       <small
                         className={
                           job?.status === "failed" || job?.status === "partial"
@@ -126,7 +150,7 @@ export function BatchQueue() {
                             : ""
                         }
                       >
-                        {job ? labels[job.status] : `${f.width} × ${f.height}`}
+                        {detail}
                       </small>
                     </span>
                   </button>
@@ -135,16 +159,16 @@ export function BatchQueue() {
                     <button
                       className="file-card-action"
                       disabled={batch.busy}
-                      onClick={() => batch.retry(job.id)}
+                      onClick={() => void batch.retry(job.id)}
                     >
                       {t("Coba lagi", "Retry")}
                     </button>
                   ) : (
                     <button
                       className="file-card-remove"
-                      aria-label={`${t("Hapus dari antrean", "Remove from queue")} ${f.name}`}
+                      aria-label={`${t("Hapus dari antrean", "Remove from queue")} ${file.name}`}
                       disabled={batch.busy || importing}
-                      onClick={() => remove(f.id)}
+                      onClick={() => void remove(file.id)}
                     >
                       ×
                     </button>
@@ -188,37 +212,25 @@ export function BatchQueue() {
             <label className="folder-field">
               <span aria-hidden="true">▰</span>
               <input
-                aria-label={t(
-                  "Folder tujuan simulasi",
-                  "Simulated destination folder",
-                )}
-                placeholder={t(
-                  "Folder tujuan (simulasi)",
-                  "Destination folder (simulation)",
-                )}
-                value={folder}
+                aria-label={t("Folder tujuan", "Destination folder")}
+                placeholder={t("Pilih folder tujuan", "Choose destination folder")}
+                value={destination?.displayPath ?? ""}
                 disabled={batch.busy}
-                onChange={(event) => setFolder(event.target.value)}
+                readOnly
+                onClick={() => void chooseFolder()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    void chooseFolder();
+                  }
+                }}
               />
             </label>
-
-            <details className="batch-test">
-              <summary>{t("Uji demo", "Demo test")}</summary>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  disabled={batch.busy}
-                  checked={fail}
-                  onChange={(event) => setFail(event.target.checked)}
-                />
-                {t("Simulasi PDF gagal", "Simulate PDF failure")}
-              </label>
-            </details>
 
             {batch.busy ? (
               <button
                 className="batch-run-button"
-                onClick={batch.cancel}
+                onClick={() => void batch.cancel()}
                 disabled={batch.cancelling}
               >
                 {batch.cancelling
@@ -228,8 +240,10 @@ export function BatchQueue() {
             ) : (
               <button
                 className="primary batch-run-button"
-                disabled={!formats.length || !folder.trim() || importing}
-                onClick={() => batch.start(formats, fail)}
+                disabled={!formats.length || !destination || importing}
+                onClick={() => {
+                  if (destination) void batch.start(formats, destination);
+                }}
               >
                 {t("Mulai batch", "Start batch")}
               </button>
@@ -241,7 +255,9 @@ export function BatchQueue() {
               <progress max={batch.items.length} value={completed} />
               <span role="status">
                 {completed}/{batch.items.length} ·{" "}
-                {t("Tidak ada file disimpan", "No files saved")}
+                {batch.busy
+                  ? t("Memproses output", "Processing outputs")
+                  : t("Batch selesai", "Batch finished")}
               </span>
             </div>
           )}

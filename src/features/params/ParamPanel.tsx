@@ -174,16 +174,19 @@ export function ParamPanel() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (savePreset(name)) {
-                setSaving(false);
-                setName("");
-              } else
-                setError(
-                  t(
-                    "Nama wajib unik dan 1–40 karakter.",
-                    "Use a unique name, 1–40 characters.",
-                  ),
-                );
+              void savePreset(name).then((saved) => {
+                if (saved) {
+                  setSaving(false);
+                  setName("");
+                } else {
+                  setError(
+                    t(
+                      "Nama wajib unik dan 1–40 karakter.",
+                      "Use a unique name, 1–40 characters.",
+                    ),
+                  );
+                }
+              });
             }}
           >
             <label className="field">
@@ -217,7 +220,7 @@ export function ParamPanel() {
           <button
             className="primary"
             onClick={() => {
-              deletePreset(presetId);
+              void deletePreset(presetId);
               setDeleting(false);
             }}
           >

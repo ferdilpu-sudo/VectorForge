@@ -216,10 +216,7 @@ export function CompareCanvas({
                   draggable={false}
                   className="result-image"
                   src={preview.url}
-                  alt={t(
-                    "Ilustrasi demo — bukan hasil tracing",
-                    "Demo illustration — not a trace",
-                  )}
+                  alt={t("Hasil tracing vektor", "Vector trace result")}
                   style={{
                     clipPath:
                       mode === "compare" ? `inset(0 0 0 ${split}%)` : undefined,
@@ -231,15 +228,15 @@ export function CompareCanvas({
               )}
             </div>
             <div className="canvas-label left-label">
-              {mode === "result" ? "DEMO" : t("ASLI", "ORIGINAL")}
+              {mode === "result" ? t("HASIL", "RESULT") : t("ASLI", "ORIGINAL")}
             </div>
             {mode === "compare" && (
-              <div className="canvas-label right-label">DEMO</div>
+              <div className="canvas-label right-label">{t("HASIL", "RESULT")}</div>
             )}
             <div className="preview-caption">
               {t(
-                "Ilustrasi demo • bukan hasil tracing gambar Anda",
-                "Demo illustration • not a trace of your image",
+                "Preview vektor dari engine lokal",
+                "Vector preview from the local engine",
               )}
             </div>
             {mode === "compare" && (
@@ -259,12 +256,12 @@ export function CompareCanvas({
       <div className="canvas-footer">
         <span role="status">
           {preview.busy
-            ? t("Memperbarui preview demo…", "Updating demo preview…")
+            ? t("Memperbarui preview…", "Updating preview…")
             : preview.error ||
               (file
                 ? preview.stale
                   ? t("Preview belum diperbarui", "Preview not updated")
-                  : t("Preview demo siap", "Demo preview ready")
+                  : t("Preview siap", "Preview ready")
                 : t("Siap menerima gambar", "Ready for an image"))}
         </span>
         <div className="zoom-controls">

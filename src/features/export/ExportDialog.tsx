@@ -1,7 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+
+import { api } from "../../services/api";
+import { appErrorMessage, hasAppErrorCode } from "../../services/errors";
 import { Modal } from "../../shared/Modal";
 import { useLanguage } from "../../shared/useLanguage";
-import type { SourceFile, ExportFormat } from "../../types/project";
+import { useProject } from "../../stores/project.store";
+import type {
+  Destination,
+  ExportFormat,
+  ExportResult,
+  SourceFile,
+} from "../../types/project";
+
+type ExportStatus = "idle" | "busy" | "confirm-large" | "done";
+
+function suggestedName(name: string, format: ExportFormat): string {
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  return `${stem}.${format}`;
+}
+
 export function ExportDialog({
   file,
   onClose,
@@ -10,30 +28,83 @@ export function ExportDialog({
   onClose: () => void;
 }) {
   const t = useLanguage();
+  const params = useProject((state) => state.params);
+  const language = useProject((state) => state.settings.language);
   const [format, setFormat] = useState<ExportFormat>("svg");
-  const [status, setStatus] = useState("idle");
-  const timer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const [status, setStatus] = useState<ExportStatus>("idle");
+  const [destination, setDestination] = useState<Destination | null>(null);
+  const [result, setResult] = useState<ExportResult | null>(null);
+  const [error, setError] = useState("");
+
+  const resetTarget = (nextFormat: ExportFormat) => {
+    setFormat(nextFormat);
+    setStatus("idle");
+    setDestination(null);
+    setResult(null);
+    setError("");
+  };
+
+  const runExport = async (allowLargeOutput: boolean) => {
+    setError("");
+    setStatus("busy");
+
+    try {
+      let target = destination;
+      if (!target) {
+        target = await api.chooseDestination({
+          kind: "file",
+          format,
+          suggestedName: suggestedName(file.name, format),
+        });
+        if (!target) {
+          setStatus("idle");
+          return;
+        }
+        setDestination(target);
+      }
+
+      const exported = await api.exportFile({
+        fileId: file.id,
+        params: { ...params },
+        format,
+        destinationId: target.id,
+        allowLargeOutput,
+      });
+      setResult(exported);
+      setStatus("done");
+    } catch (reason) {
+      if (
+        format === "svg" &&
+        !allowLargeOutput &&
+        hasAppErrorCode(reason, "OUTPUT_TOO_LARGE")
+      ) {
+        setStatus("confirm-large");
+        return;
+      }
+
+      setError(appErrorMessage(reason, language));
+      setStatus("idle");
+    }
+  };
+
   return (
     <Modal title={t("Ekspor gambar", "Export image")} onClose={onClose}>
       <p className="muted">
         {file.name} · {file.width} × {file.height}
       </p>
       <div className="format-options">
-        {(["svg", "pdf", "eps"] as const).map((f) => (
+        {(["svg", "pdf", "eps"] as const).map((candidate) => (
           <button
-            key={f}
+            key={candidate}
             disabled={status === "busy"}
-            aria-pressed={format === f}
-            onClick={() => {
-              setFormat(f);
-              setStatus("idle");
-            }}
+            aria-pressed={format === candidate}
+            onClick={() => resetTarget(candidate)}
           >
-            {f.toUpperCase()}
+            {candidate.toUpperCase()}
           </button>
         ))}
       </div>
+
       {format === "eps" && (
         <p className="warning">
           {t(
@@ -42,35 +113,55 @@ export function ExportDialog({
           )}
         </p>
       )}
+
       <p>
         {t(
-          "Ekspor produksi akan memakai resolusi penuh.",
-          "Production export will use full resolution.",
+          "Ekspor memakai resolusi sumber penuh.",
+          "Export uses the full source resolution.",
         )}
       </p>
-      <p className="demo-inline">
-        {t(
-          "Mode Demo: dialog Save As dan penyimpanan file belum terhubung.",
-          "Demo mode: Save As and file export are not connected.",
-        )}
-      </p>
-      <button
-        className="primary wide"
-        disabled={status === "busy"}
-        onClick={() => {
-          setStatus("busy");
-          timer.current = setTimeout(() => setStatus("done"), 700);
-        }}
-      >
-        {status === "busy"
-          ? t("Simulasi proses…", "Simulating…")
-          : t("Simulasikan ekspor", "Simulate export")}
-      </button>
+
+      {status === "confirm-large" ? (
+        <div className="warning">
+          <p>
+            {t(
+              "SVG melebihi 50 MiB. Lanjutkan ekspor file besar?",
+              "SVG exceeds 50 MiB. Continue with the large export?",
+            )}
+          </p>
+          <button onClick={() => setStatus("idle")}>
+            {t("Batal", "Cancel")}
+          </button>{" "}
+          <button
+            className="primary"
+            onClick={() => void runExport(true)}
+          >
+            {t("Lanjutkan", "Continue")}
+          </button>
+        </div>
+      ) : (
+        <button
+          className="primary wide"
+          disabled={status === "busy"}
+          onClick={() => void runExport(false)}
+        >
+          {status === "busy"
+            ? t("Mengekspor…", "Exporting…")
+            : t("Pilih lokasi & ekspor", "Choose location & export")}
+        </button>
+      )}
+
+      {error && (
+        <p role="alert" className="danger">
+          {error}
+        </p>
+      )}
+
       <p role="status">
-        {status === "done"
+        {status === "done" && result
           ? t(
-              "Simulasi selesai. Tidak ada file yang disimpan.",
-              "Simulation complete. No file was saved.",
+              `Tersimpan: ${result.outPath}`,
+              `Saved: ${result.outPath}`,
             )
           : ""}
       </p>
