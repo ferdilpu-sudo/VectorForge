@@ -8,8 +8,9 @@ mod state;
 mod store;
 
 use commands::{
-    cancel_preview, choose_destination, delete_preset, export_file, generate_preview, get_settings,
-    import_files, list_presets, release_files, save_preset, save_settings,
+    cancel_batch, cancel_preview, choose_destination, delete_preset, export_file, generate_preview,
+    get_batch, get_settings, import_files, list_presets, release_files, retry_batch_item,
+    save_preset, save_settings, start_batch,
 };
 use state::AppState;
 
@@ -28,7 +29,11 @@ pub fn run() {
             save_preset,
             delete_preset,
             get_settings,
-            save_settings
+            save_settings,
+            start_batch,
+            get_batch,
+            cancel_batch,
+            retry_batch_item
         ])
         .run(tauri::generate_context!());
 
