@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, dan checkpoint G2 selesai. Setelah backend final lulus 74/74 Rust tests serta smoke WebView2, user memerintahkan **lanjut**; ini dicatat sebagai persetujuan G2 dan izin mengerjakan I01 saja. I01 sekarang DOING: adapter IPC produksi, native file dialog/drop, dan event lifecycle. I02 belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, dan I01 selesai. I01 menghubungkan frontend ke IPC native produksi, native dialog/drop, preview/export/batch/settings/preset, serta lifecycle event tanpa fallback mock diam-diam. Frontend lint, 11/11 tests, production build, Rust 74/74 tests, Clippy, rustfmt, lockfile dependency, dan working tree clean telah dibuktikan. I02 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -52,7 +52,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B06 | DONE | Batch scheduler produksi lulus; 70/70 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; partial/cancel/retry/collision fixtures lulus; working tree clean | User memerintahkan bereskan boundary asset-scope sebelum G2 |
 | 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | User kemudian menyetujui G2 dengan instruksi lanjut |
 | 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
-| 2026-10-01 | I01 | DOING | Adapter frontend native dimulai; dependency JS Tauri exact + DTO IPC kanonis | Ganti mock import/preview/export/batch/preferences dan buktikan event cleanup |
+| 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | I02 belum diizinkan |
 
 ## Catatan izin fase
 
@@ -300,3 +300,30 @@ Bukti Windows final:
 - smoke test native WebView2: import gambar → preview tampil → release → import file yang sama → preview tampil normal.
 
 Dengan bukti ini, technical debt boundary B02 pra-G2 **DONE**. Backend P2 siap checkpoint G2. I01/P3 belum diizinkan.
+
+
+### I01 ditutup — 1 Oktober 2026
+
+Integrasi frontend produksi selesai untuk scope I01:
+- mock engine, browser File import, dan demo batch tidak lagi menjadi fallback produksi;
+- frontend memakai `@tauri-apps/api 2.12.0` dan `@tauri-apps/plugin-dialog 2.8.0` yang dikunci exact;
+- import memakai native file dialog dan native drag/drop;
+- preview memakai IPC Rust + cooperative cancel; SVG hasil tetap dirender sebagai Blob URL dan URL lama direvoke;
+- export SVG/PDF/EPS memakai destination ID opaque dan `open_output_folder` memakai output ID registry, bukan path arbitrary dari JavaScript;
+- settings dan preset memakai storage Rust produksi;
+- batch memakai `start_batch/get_batch/cancel_batch/retry_batch_item`, subscribe `batch://progress` dan `batch://done`, resync setelah start/retry, sequence filter, stale `runId` ignore, serta listener cleanup;
+- wrapper argumen seluruh command I01 dikunci melalui contract test;
+- UI demo/mock source yang tidak lagi dipakai telah dihapus;
+- ESLint mengecualikan hanya build artifact generated `src-tauri/target/**`, bukan source aplikasi.
+
+Bukti Windows final:
+- `npm run lint`: PASS;
+- `npm test`: PASS, 4 files / 11 tests;
+- `npm run build`: PASS;
+- `cargo test`: PASS, 74/74;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS;
+- frontend Tauri dependencies dikunci pada `package-lock.json` commit `07f995b`;
+- working tree pengguna clean setelah push.
+
+Dengan bukti ini, **I01 = DONE**. I02 tetap menunggu instruksi eksplisit user.
