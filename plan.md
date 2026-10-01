@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, backend B01–B06, dan boundary hardening pra-G2 selesai. Backend final lulus `cargo check`, 74/74 Rust tests, Clippy `-D warnings`, rustfmt, serta smoke test Windows untuk preview → release → re-import file yang sama. Preview source kini memakai custom local protocol `vfsource` berbasis opaque `fileId`, sehingga URL lama mati setelah release tanpa mematahkan re-import. Backend siap checkpoint G2; integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, dan checkpoint G2 selesai. Setelah backend final lulus 74/74 Rust tests serta smoke WebView2, user memerintahkan **lanjut**; ini dicatat sebagai persetujuan G2 dan izin mengerjakan I01 saja. I01 sekarang DOING: adapter IPC produksi, native file dialog/drop, dan event lifecycle. I02 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -19,7 +19,7 @@ Status 1 Oktober 2026: P0, frontend P1/G1, backend B01–B06, dan boundary harde
 | B04 | Export SVG/PDF/EPS | B03 | Output vektor nyata, transparansi, bounds, disk safety |
 | B05 | Settings/preset storage | B02 | Atomic update, version mismatch, corrupt file recovery |
 | B06 | Batch scheduler, cancel/retry, events | B04 | IDs stabil, progress benar, partial output, collision handling |
-| G2 | Review backend | B03–B06 | Hasil fixture, kontrak, cargo checks; persetujuan user |
+| G2 | Review backend | B03–B06 | DONE 2026-10-01: backend final 74/74 tests + smoke boundary; user kemudian memerintahkan lanjut |
 | I01 | Adapter IPC produksi + event lifecycle | G2 disetujui | Mock bukan fallback diam-diam, listeners cleanup |
 | I02 | Uji alur desktop lengkap | I01 | Import → parameter → preview → export; batch recovery |
 | H01 | Hardening, benchmark, accessibility | I02 | Matriks testing, angka aktual dan issue tersisa |
@@ -50,7 +50,9 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B05 | DONE | Settings/preset storage produksi lulus; 58/58 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; tidak ada package/version baru di luar graph dependency yang sudah diaudit | User kemudian mengizinkan B06; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B06 | DONE | Batch scheduler produksi lulus; 70/70 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; partial/cancel/retry/collision fixtures lulus; working tree clean | User memerintahkan bereskan boundary asset-scope sebelum G2 |
-| 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | Backend siap checkpoint G2; I01 tetap menunggu persetujuan G2 |
+| 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | User kemudian menyetujui G2 dengan instruksi lanjut |
+| 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
+| 2026-10-01 | I01 | DOING | Adapter frontend native dimulai; dependency JS Tauri exact + DTO IPC kanonis | Ganti mock import/preview/export/batch/preferences dan buktikan event cleanup |
 
 ## Catatan izin fase
 
@@ -62,7 +64,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 1 Oktober 2026: setelah B04 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B05 saja**. B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - 1 Oktober 2026: setelah B05 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B06 saja**. Integrasi frontend produksi dan G2 belum otomatis diizinkan.
 - 1 Oktober 2026: user mengonfirmasi smoke test preview → release → re-import file yang sama **normal** setelah custom protocol `vfsource` diterapkan. Ini menutup blocker boundary pra-G2, tetapi bukan persetujuan G2 atau izin I01.
-- G2 belum disetujui.
+- 1 Oktober 2026: setelah backend P2 dan boundary hardening selesai, user memerintahkan **lanjut**. Ini dicatat sebagai persetujuan **G2** dan izin mengerjakan **I01 saja**. I02/P4 belum otomatis diizinkan.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
 ## Target performa
