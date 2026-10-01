@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, dan backend B01–B06 selesai secara implementasi dan gate lokal. B06 telah lulus 70/70 Rust tests, Clippy, rustfmt, dan working tree bersih. Sebelum G2, user memerintahkan **bereskan** untuk menutup boundary B02 yang tertunda: revocation Tauri asset-protocol scope pada `release_files`. Integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, backend B01–B06, dan boundary hardening pra-G2 selesai. Backend final lulus `cargo check`, 74/74 Rust tests, Clippy `-D warnings`, rustfmt, serta smoke test Windows untuk preview → release → re-import file yang sama. Preview source kini memakai custom local protocol `vfsource` berbasis opaque `fileId`, sehingga URL lama mati setelah release tanpa mematahkan re-import. Backend siap checkpoint G2; integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -50,7 +50,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B05 | DONE | Settings/preset storage produksi lulus; 58/58 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; tidak ada package/version baru di luar graph dependency yang sudah diaudit | User kemudian mengizinkan B06; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B06 | DONE | Batch scheduler produksi lulus; 70/70 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; partial/cancel/retry/collision fixtures lulus; working tree clean | User memerintahkan bereskan boundary asset-scope sebelum G2 |
-| 2026-10-01 | B02 boundary hardening | DOING | Inspeksi Tauri 2.12 membuktikan `forbid_file()` one-way selama sesi dan dapat mematahkan re-import. Boundary diganti ke custom local protocol `vfsource` berbasis opaque `fileId`; handler hanya melayani ID yang masih hidup di registry dan memverifikasi fingerprint | Jalankan cargo check/test/clippy/fmt + smoke preview/re-import pada Windows sebelum menutup blocker G2 |
+| 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | Backend siap checkpoint G2; I01 tetap menunggu persetujuan G2 |
 
 ## Catatan izin fase
 
@@ -61,6 +61,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 1 Oktober 2026: setelah B03 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B04 saja**. B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - 1 Oktober 2026: setelah B04 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B05 saja**. B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - 1 Oktober 2026: setelah B05 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B06 saja**. Integrasi frontend produksi dan G2 belum otomatis diizinkan.
+- 1 Oktober 2026: user mengonfirmasi smoke test preview → release → re-import file yang sama **normal** setelah custom protocol `vfsource` diterapkan. Ini menutup blocker boundary pra-G2, tetapi bukan persetujuan G2 atau izin I01.
 - G2 belum disetujui.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
@@ -272,3 +273,28 @@ Verifikasi final pengguna:
 Dengan bukti ini, **B05 = DONE**.
 
 B06 belum dimulai. Catatan lintas fase tetap berlaku: sebelum G2, `release_files` wajib diverifikasi terhadap Tauri 2.12 agar grant asset-protocol scope benar-benar dicabut ketika referensi sumber terakhir dilepas.
+
+
+### Boundary pra-G2 ditutup — 1 Oktober 2026
+
+Masalah awal: `release_files` hanya menghapus source dari registry, sementara preview masih memakai Tauri asset protocol. Inspeksi source Tauri 2.12 menunjukkan `forbid_file()` bersifat one-way selama sesi karena forbidden path selalu mengalahkan allowed path; pendekatan itu akan mematahkan re-import file yang sama.
+
+Solusi final:
+- preview source dipindahkan ke custom local protocol `vfsource`;
+- URL preview hanya membawa opaque `fileId`, bukan path filesystem;
+- handler Rust resolve `fileId` melalui registry;
+- fingerprint diverifikasi sebelum dan sesudah membaca bytes;
+- MIME berasal dari format hasil probe, bukan ekstensi;
+- response memakai `Cache-Control: no-store`;
+- setelah `release_files`, ID lama hilang dari registry sehingga URL lama tidak lagi dapat melayani file;
+- file yang sama dapat di-import ulang dan mendapat ID/URL baru;
+- CSP production dan development hanya mengizinkan origin lokal `http://vfsource.localhost` untuk preview source.
+
+Bukti Windows final:
+- `cargo check`: PASS;
+- `cargo test`: PASS, 74/74;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS;
+- smoke test native WebView2: import gambar → preview tampil → release → import file yang sama → preview tampil normal.
+
+Dengan bukti ini, technical debt boundary B02 pra-G2 **DONE**. Backend P2 siap checkpoint G2. I01/P3 belum diizinkan.
