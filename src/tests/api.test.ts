@@ -24,39 +24,120 @@ beforeEach(() => {
 });
 
 describe("IPC command contract", () => {
-  it("wraps canonical Rust command arguments exactly once", async () => {
+  it("wraps every canonical Rust command with the documented arguments", async () => {
     tauri.invoke.mockResolvedValue({});
 
-    const request = {
-      fileId: "00000000-0000-4000-8000-000000000001",
-      params: { ...defaults },
-      maxSide: 1024,
-      requestId: "00000000-0000-4000-8000-000000000002",
-    };
-    await api.generatePreview(request);
+    const fileId = "00000000-0000-4000-8000-000000000001";
+    const requestId = "00000000-0000-4000-8000-000000000002";
+    const destinationId = "00000000-0000-4000-8000-000000000003";
+    const batchId = "00000000-0000-4000-8000-000000000004";
+    const runId = "00000000-0000-4000-8000-000000000005";
+    const itemId = "00000000-0000-4000-8000-000000000006";
+    const outputId = "00000000-0000-4000-8000-000000000007";
+    const presetId = "00000000-0000-4000-8000-000000000008";
 
-    expect(tauri.invoke).toHaveBeenCalledWith("generate_preview", { request });
-
-    await api.releaseFiles(["00000000-0000-4000-8000-000000000001"]);
-    expect(tauri.invoke).toHaveBeenCalledWith("release_files", {
-      fileIds: ["00000000-0000-4000-8000-000000000001"],
+    await api.importFiles(["C:\\a.png"]);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("import_files", {
+      request: { paths: ["C:\\a.png"] },
     });
 
-    await api.saveSettings({
-      language: "id",
-      theme: "dark",
+    await api.releaseFiles([fileId]);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("release_files", {
+      fileIds: [fileId],
+    });
+
+    const destinationRequest = { kind: "directory" as const };
+    await api.chooseDestination(destinationRequest);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("choose_destination", {
+      request: destinationRequest,
+    });
+
+    const previewRequest = {
+      fileId,
+      params: { ...defaults },
+      maxSide: 1024,
+      requestId,
+    };
+    await api.generatePreview(previewRequest);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("generate_preview", {
+      request: previewRequest,
+    });
+
+    await api.cancelPreview(requestId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("cancel_preview", {
+      requestId,
+    });
+
+    const exportRequest = {
+      fileId,
+      params: { ...defaults },
+      format: "svg" as const,
+      destinationId,
+      allowLargeOutput: false,
+    };
+    await api.exportFile(exportRequest);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("export_file", {
+      request: exportRequest,
+    });
+
+    await api.openOutputFolder(outputId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("open_output_folder", {
+      outputId,
+    });
+
+    const batchRequest = {
+      fileIds: [fileId],
+      params: { ...defaults },
+      formats: ["svg" as const],
+      destinationId,
+      overwrite: false,
+    };
+    await api.startBatch(batchRequest);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("start_batch", {
+      request: batchRequest,
+    });
+
+    await api.getBatch(batchId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("get_batch", { batchId });
+
+    await api.cancelBatch(batchId, runId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("cancel_batch", {
+      batchId,
+      runId,
+    });
+
+    await api.retryBatchItem(batchId, itemId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("retry_batch_item", {
+      batchId,
+      itemId,
+    });
+
+    await api.listPresets();
+    expect(tauri.invoke).toHaveBeenLastCalledWith("list_presets", undefined);
+
+    await api.savePreset("Saya", defaults);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("save_preset", {
+      request: { name: "Saya", params: defaults },
+    });
+
+    await api.deletePreset(presetId);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("delete_preset", {
+      id: presetId,
+    });
+
+    await api.getSettings();
+    expect(tauri.invoke).toHaveBeenLastCalledWith("get_settings", undefined);
+
+    const settings = {
+      language: "id" as const,
+      theme: "dark" as const,
       workerCount: 2,
       autoPreview: true,
       previewMaxSide: 1024,
-    });
-    expect(tauri.invoke).toHaveBeenCalledWith("save_settings", {
-      settings: {
-        language: "id",
-        theme: "dark",
-        workerCount: 2,
-        autoPreview: true,
-        previewMaxSide: 1024,
-      },
+    };
+    await api.saveSettings(settings);
+    expect(tauri.invoke).toHaveBeenLastCalledWith("save_settings", {
+      settings,
     });
   });
 
