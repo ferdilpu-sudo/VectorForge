@@ -299,7 +299,9 @@ mod tests {
         assert!(!svg.contains("<image"));
         assert_eq!(
             result.bytes,
-            fs::metadata(output).map_err(|error| error.to_string())?.len()
+            fs::metadata(output)
+                .map_err(|error| error.to_string())?
+                .len()
         );
         Ok(())
     }
@@ -348,8 +350,7 @@ mod tests {
 
     #[test]
     fn export_refuses_to_overwrite_the_source_file() -> Result<(), String> {
-        let fixture =
-            TempFixture::create(&RgbaImage::from_pixel(32, 16, Rgba([20, 40, 60, 255])))?;
+        let fixture = TempFixture::create(&RgbaImage::from_pixel(32, 16, Rgba([20, 40, 60, 255])))?;
         let original = fs::read(&fixture.source).map_err(|error| error.to_string())?;
         let probe = probe_source(&fixture.source).map_err(|error| error.message)?;
 

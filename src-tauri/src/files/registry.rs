@@ -120,9 +120,10 @@ impl FileRegistry {
         destination_id: &str,
     ) -> Result<DestinationSnapshot, AppError> {
         validate_uuid(destination_id)?;
-        let entry = self.destinations.get(destination_id).ok_or_else(|| {
-            AppError::new(ErrorCode::NotFound, "Tujuan output tidak terdaftar.")
-        })?;
+        let entry = self
+            .destinations
+            .get(destination_id)
+            .ok_or_else(|| AppError::new(ErrorCode::NotFound, "Tujuan output tidak terdaftar."))?;
 
         Ok(DestinationSnapshot {
             path: entry.path.clone(),

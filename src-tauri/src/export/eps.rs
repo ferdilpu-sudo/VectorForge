@@ -15,11 +15,7 @@ pub fn write_eps(doc: &VectorDoc) -> Result<Vec<u8>, AppError> {
 
     let mut output = String::new();
     let _ = writeln!(output, "%!PS-Adobe-3.0 EPSF-3.0");
-    let _ = writeln!(
-        output,
-        "%%BoundingBox: 0 0 {} {}",
-        doc.width, doc.height
-    );
+    let _ = writeln!(output, "%%BoundingBox: 0 0 {} {}", doc.width, doc.height);
     let _ = writeln!(output, "%%LanguageLevel: 2");
     let _ = writeln!(output, "%%Pages: 1");
     let _ = writeln!(output, "%%EndComments");

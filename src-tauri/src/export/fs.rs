@@ -25,9 +25,9 @@ pub fn write_atomic(
     bytes: &[u8],
     overwrite_confirmed: bool,
 ) -> Result<u64, AppError> {
-    let parent = target.parent().ok_or_else(|| {
-        AppError::new(ErrorCode::WriteFailed, "Folder output tidak valid.")
-    })?;
+    let parent = target
+        .parent()
+        .ok_or_else(|| AppError::new(ErrorCode::WriteFailed, "Folder output tidak valid."))?;
     if !parent.is_dir() {
         return Err(AppError::new(
             ErrorCode::WriteFailed,
@@ -49,9 +49,8 @@ pub fn write_atomic(
     }
     commit_result?;
 
-    u64::try_from(bytes.len()).map_err(|error| {
-        AppError::invalid_state("Ukuran output tidak valid.", error.to_string())
-    })
+    u64::try_from(bytes.len())
+        .map_err(|error| AppError::invalid_state("Ukuran output tidak valid.", error.to_string()))
 }
 
 fn create_temp(parent: &Path) -> Result<(File, PathBuf), AppError> {
@@ -76,11 +75,7 @@ fn write_temp(file: &mut File, bytes: &[u8]) -> Result<(), AppError> {
         .map_err(|error| write_error("Temporary output gagal ditulis.", error))
 }
 
-fn commit_temp(
-    target: &Path,
-    temp: &Path,
-    overwrite_confirmed: bool,
-) -> Result<(), AppError> {
+fn commit_temp(target: &Path, temp: &Path, overwrite_confirmed: bool) -> Result<(), AppError> {
     if target.exists() {
         if !overwrite_confirmed {
             return Err(AppError::new(
@@ -92,8 +87,7 @@ fn commit_temp(
             .map_err(|error| write_error("File tujuan gagal diganti.", error));
     }
 
-    commit_new_file(target, temp)
-        .map_err(|error| write_error("Output baru gagal dikomit.", error))
+    commit_new_file(target, temp).map_err(|error| write_error("Output baru gagal dikomit.", error))
 }
 
 #[cfg(windows)]
@@ -176,10 +170,7 @@ mod tests {
 
     impl TempDir {
         fn create() -> Result<Self, String> {
-            let path = std::env::temp_dir().join(format!(
-                "vectorforge-b04-fs-{}",
-                Uuid::new_v4()
-            ));
+            let path = std::env::temp_dir().join(format!("vectorforge-b04-fs-{}", Uuid::new_v4()));
             fs::create_dir(&path).map_err(|error| error.to_string())?;
             Ok(Self { path })
         }
@@ -196,7 +187,10 @@ mod tests {
         let dir = TempDir::create()?;
         let target = dir.path.join("new.svg");
         write_atomic(&target, b"new-vector", false).map_err(|error| error.message)?;
-        assert_eq!(fs::read(target).map_err(|error| error.to_string())?, b"new-vector");
+        assert_eq!(
+            fs::read(target).map_err(|error| error.to_string())?,
+            b"new-vector"
+        );
         Ok(())
     }
 
@@ -206,7 +200,10 @@ mod tests {
         let target = dir.path.join("existing.svg");
         fs::write(&target, b"keep").map_err(|error| error.to_string())?;
         assert!(write_atomic(&target, b"replace", false).is_err());
-        assert_eq!(fs::read(target).map_err(|error| error.to_string())?, b"keep");
+        assert_eq!(
+            fs::read(target).map_err(|error| error.to_string())?,
+            b"keep"
+        );
         Ok(())
     }
 

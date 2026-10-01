@@ -93,8 +93,7 @@ mod tests {
             .save(&path)
             .map_err(|error| error.to_string())?;
 
-        let result = decode_full(&path, Orientation::Rotate90)
-            .map_err(|error| error.message);
+        let result = decode_full(&path, Orientation::Rotate90).map_err(|error| error.message);
         let _ = std::fs::remove_file(&path);
         let result = result?;
         assert_eq!(result.dimensions(), (400, 800));
