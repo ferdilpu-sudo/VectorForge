@@ -27,7 +27,11 @@ pub fn handle<R: Runtime>(
     request: Request<Vec<u8>>,
 ) -> Response<Vec<u8>> {
     let Some(file_id) = source_id_from_path(request.uri().path()) else {
-        return response(StatusCode::BAD_REQUEST, "text/plain; charset=utf-8", b"invalid source".to_vec());
+        return response(
+            StatusCode::BAD_REQUEST,
+            "text/plain; charset=utf-8",
+            b"invalid source".to_vec(),
+        );
     };
 
     let snapshot = {
@@ -137,6 +141,8 @@ mod tests {
         let id = "00000000-0000-4000-8000-000000000001";
         let url = preview_url(id);
         assert!(url.ends_with(id));
+        #[cfg(target_os = "windows")]
+        assert!(url.starts_with("http://vfsource.localhost/"));
         assert!(!url.contains("Users"));
         assert!(!url.contains("fixture.png"));
     }
