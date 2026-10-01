@@ -100,12 +100,9 @@ pub fn validate_request_id(request_id: &str) -> Result<(), AppError> {
 }
 
 fn validate_uuid(value: &str, label: &str) -> Result<(), AppError> {
-    Uuid::parse_str(value).map(|_| ()).map_err(|_| {
-        AppError::new(
-            ErrorCode::InvalidParams,
-            format!("{label} tidak valid."),
-        )
-    })
+    Uuid::parse_str(value)
+        .map(|_| ())
+        .map_err(|_| AppError::new(ErrorCode::InvalidParams, format!("{label} tidak valid.")))
 }
 
 #[cfg(test)]

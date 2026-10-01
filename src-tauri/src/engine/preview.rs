@@ -16,10 +16,7 @@ pub struct PreviewWork {
     pub request: PreviewRequest,
 }
 
-pub fn render_preview(
-    work: PreviewWork,
-    cancel: &CancelToken,
-) -> Result<PreviewResult, AppError> {
+pub fn render_preview(work: PreviewWork, cancel: &CancelToken) -> Result<PreviewResult, AppError> {
     work.request.validate()?;
     check_cancel(cancel)?;
 
@@ -29,11 +26,7 @@ pub fn render_preview(
         return Err(source_changed_error());
     }
 
-    let image = decode_preview(
-        &work.source.path,
-        before.orientation,
-        work.request.max_side,
-    )?;
+    let image = decode_preview(&work.source.path, before.orientation, work.request.max_side)?;
     let width = image.width();
     let height = image.height();
 
@@ -78,10 +71,7 @@ pub fn render_preview(
 
 fn check_cancel(cancel: &CancelToken) -> Result<(), AppError> {
     if cancel.is_cancelled() {
-        Err(AppError::new(
-            ErrorCode::Cancelled,
-            "Preview dibatalkan.",
-        ))
+        Err(AppError::new(ErrorCode::Cancelled, "Preview dibatalkan."))
     } else {
         Ok(())
     }

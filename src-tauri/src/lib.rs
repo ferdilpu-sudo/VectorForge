@@ -4,9 +4,7 @@ mod files;
 mod models;
 mod state;
 
-use commands::{
-    cancel_preview, choose_destination, generate_preview, import_files, release_files,
-};
+use commands::{cancel_preview, choose_destination, generate_preview, import_files, release_files};
 use state::AppState;
 
 pub fn run() {

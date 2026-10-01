@@ -6,9 +6,7 @@ use vtracer::{
     Hierarchical as VTracerHierarchical, VectorDoc,
 };
 
-use crate::models::{
-    AppError, ErrorCode, HierarchicalMode, TraceMode, TraceParams,
-};
+use crate::models::{AppError, ErrorCode, HierarchicalMode, TraceMode, TraceParams};
 
 use super::alpha::split_by_source_alpha;
 
@@ -40,9 +38,7 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    let pipeline = config_from_params(params)
-        .build()
-        .map_err(vtracer_error)?;
+    let pipeline = config_from_params(params).build().map_err(vtracer_error)?;
 
     let mut progress = |_| {};
     let segmentation = pipeline
@@ -84,8 +80,10 @@ fn rgba_to_color_image(image: RgbaImage) -> ColorImage {
 fn is_fully_transparent(image: &ColorImage) -> bool {
     image
         .pixels
-        .chunks_exact(4)
-        .all(|pixel| pixel[3] == 0)
+        .iter()
+        .skip(3)
+        .step_by(4)
+        .all(|alpha| *alpha == 0)
 }
 
 fn vtracer_error(error: VTracerError) -> AppError {
@@ -139,8 +137,8 @@ mod tests {
     #[test]
     fn fully_transparent_preview_skips_tracer() -> Result<(), String> {
         let image = RgbaImage::from_pixel(16, 16, Rgba([10, 20, 30, 0]));
-        let result = trace_preview(image, &params(), &CancelToken::new())
-            .map_err(|error| error.message)?;
+        let result =
+            trace_preview(image, &params(), &CancelToken::new()).map_err(|error| error.message)?;
         assert!(result.is_none());
         Ok(())
     }

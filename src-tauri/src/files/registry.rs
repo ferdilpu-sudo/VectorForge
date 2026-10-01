@@ -85,9 +85,10 @@ impl FileRegistry {
 
     pub fn resolve_source(&self, file_id: &str) -> Result<SourceSnapshot, AppError> {
         validate_uuid(file_id)?;
-        let entry = self.sources.get(file_id).ok_or_else(|| {
-            AppError::new(ErrorCode::NotFound, "File sumber tidak terdaftar.")
-        })?;
+        let entry = self
+            .sources
+            .get(file_id)
+            .ok_or_else(|| AppError::new(ErrorCode::NotFound, "File sumber tidak terdaftar."))?;
 
         Ok(SourceSnapshot {
             path: entry.path.clone(),
@@ -148,7 +149,9 @@ mod tests {
             .map_err(|error| error.message)?;
 
         uuid::Uuid::parse_str(&id).map_err(|error| error.to_string())?;
-        let entry = registry.resolve_source(&id).map_err(|error| error.message)?;
+        let entry = registry
+            .resolve_source(&id)
+            .map_err(|error| error.message)?;
         if entry.path.as_path() != Path::new("fixture.png") || entry.fingerprint != "fingerprint" {
             return Err("registered source changed".to_owned());
         }

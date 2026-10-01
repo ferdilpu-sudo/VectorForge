@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use visioncortex::BinaryImage;
 use vtracer::ir::{Layer, Paint, RegionMask, Segmentation};
-use vtracer::{CancelToken, ColorImage, Color, PointI32};
+use vtracer::{CancelToken, Color, ColorImage, PointI32};
 
 use crate::models::{AppError, ErrorCode};
 
@@ -181,10 +181,7 @@ fn global_position(
 
 fn check_cancel(cancel: &CancelToken) -> Result<(), AppError> {
     if cancel.is_cancelled() {
-        Err(AppError::new(
-            ErrorCode::Cancelled,
-            "Preview dibatalkan.",
-        ))
+        Err(AppError::new(ErrorCode::Cancelled, "Preview dibatalkan."))
     } else {
         Ok(())
     }
@@ -206,22 +203,24 @@ mod tests {
     use super::split_with_budget;
 
     fn fixture() -> (Segmentation, ColorImage) {
-        let width = 8usize;
-        let height = 8usize;
+        let width = 8u32;
+        let height = 8u32;
+        let width_usize = width as usize;
+        let height_usize = height as usize;
         let source = ColorImage {
-            pixels: (0..width * height)
+            pixels: (0..width_usize * height_usize)
                 .flat_map(|index| {
                     let alpha = if index % 2 == 0 { 128 } else { 255 };
                     [40, 120, 220, alpha]
                 })
                 .collect(),
-            width,
-            height,
+            width: width_usize,
+            height: height_usize,
         };
 
-        let mut mask = BinaryImage::new_w_h(width, height);
-        for y in 0..height {
-            for x in 0..width {
+        let mut mask = BinaryImage::new_w_h(width_usize, height_usize);
+        for y in 0..height_usize {
+            for x in 0..width_usize {
                 mask.set_pixel(x, y, true);
             }
         }
@@ -238,13 +237,8 @@ mod tests {
     #[test]
     fn alpha_split_preserves_distinct_levels() -> Result<(), String> {
         let (segmentation, source) = fixture();
-        let split = split_with_budget(
-            segmentation,
-            &source,
-            &CancelToken::new(),
-            1024,
-        )
-        .map_err(|error| error.message)?;
+        let split = split_with_budget(segmentation, &source, &CancelToken::new(), 1024)
+            .map_err(|error| error.message)?;
 
         let mut alphas: Vec<u8> = split
             .layers
@@ -259,12 +253,7 @@ mod tests {
     #[test]
     fn alpha_split_enforces_mask_budget_before_allocation() {
         let (segmentation, source) = fixture();
-        let result = split_with_budget(
-            segmentation,
-            &source,
-            &CancelToken::new(),
-            1,
-        );
+        let result = split_with_budget(segmentation, &source, &CancelToken::new(), 1);
         assert!(result.is_err());
     }
 }

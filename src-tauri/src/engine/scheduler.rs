@@ -81,24 +81,19 @@ impl PreviewScheduler {
     pub fn cancel(&self, request_id: &str) -> Result<(), AppError> {
         let mut state = self.shared.state.lock().map_err(lock_error)?;
 
-        if state
+        if let Some(active) = state
             .active
             .as_ref()
-            .is_some_and(|active| active.request_id == request_id)
+            .filter(|active| active.request_id == request_id)
         {
-            if let Some(active) = state.active.as_ref() {
-                active.cancel.cancel();
-            }
+            active.cancel.cancel();
         }
 
-        if state
+        if let Some(pending) = state
             .pending
-            .as_ref()
-            .is_some_and(|pending| pending.work.request.request_id == request_id)
+            .take_if(|pending| pending.work.request.request_id == request_id)
         {
-            if let Some(pending) = state.pending.take() {
-                let _ = pending.response.try_send(Err(cancelled_error()));
-            }
+            let _ = pending.response.try_send(Err(cancelled_error()));
         }
 
         Ok(())
