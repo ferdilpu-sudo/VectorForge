@@ -100,13 +100,9 @@ mod tests {
     use vtracer::CancelToken;
 
     use crate::files::{SourceSnapshot, probe_source};
-    use crate::models::{
-        ErrorCode, HierarchicalMode, PreviewRequest, TraceMode, TraceParams,
-    };
+    use crate::models::{ErrorCode, HierarchicalMode, PreviewRequest, TraceMode, TraceParams};
 
-    use super::{
-        MAX_PREVIEW_SVG_BYTES, PreviewWork, render_preview, validate_preview_svg_size,
-    };
+    use super::{MAX_PREVIEW_SVG_BYTES, PreviewWork, render_preview, validate_preview_svg_size};
 
     struct TempPng {
         path: PathBuf,
@@ -114,10 +110,7 @@ mod tests {
 
     impl TempPng {
         fn create(image: &RgbaImage) -> Result<Self, String> {
-            let path = std::env::temp_dir().join(format!(
-                "vectorforge-b03-{}.png",
-                Uuid::new_v4()
-            ));
+            let path = std::env::temp_dir().join(format!("vectorforge-b03-{}.png", Uuid::new_v4()));
             image.save(&path).map_err(|error| error.to_string())?;
             Ok(Self { path })
         }
@@ -192,15 +185,10 @@ mod tests {
 
     #[test]
     fn changed_source_is_rejected_before_preview() -> Result<(), String> {
-        let fixture =
-            TempPng::create(&RgbaImage::from_pixel(32, 32, Rgba([20, 40, 60, 255])))?;
+        let fixture = TempPng::create(&RgbaImage::from_pixel(32, 32, Rgba([20, 40, 60, 255])))?;
         let original = probe_source(fixture.path()).map_err(|error| error.message)?;
 
-        fixture.overwrite(&RgbaImage::from_pixel(
-            32,
-            32,
-            Rgba([200, 180, 20, 255]),
-        ))?;
+        fixture.overwrite(&RgbaImage::from_pixel(32, 32, Rgba([200, 180, 20, 255])))?;
 
         let result = render_preview(
             PreviewWork {
