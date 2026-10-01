@@ -46,7 +46,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
-| 2026-10-01 | B03 | DOING | Izin diterima; implementasi decode/preview scheduler/VTracer adapter dimulai | Verifikasi compile/test/clippy/fmt dan fixture preview nyata |
+| 2026-10-01 | B03 | DOING | Core preview backend compile bersih; 24/24 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS | Lanjut fixture preview nyata end-to-end + resource-limit verification |
 
 ## Catatan izin fase
 
@@ -172,3 +172,14 @@ Verifikasi final pengguna:
 Dengan bukti ini, **B02 = DONE**.
 
 B03 belum dimulai. Scope berikutnya adalah decode + preview scheduler + adapter vtracer, tetapi tetap menunggu instruksi user untuk lanjut fase berikutnya.
+
+
+### B03 verifikasi core preview
+
+Verifikasi lokal Windows setelah implementasi awal B03:
+- `cargo check`: PASS;
+- `cargo test`: PASS, 24/24;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS tanpa output.
+
+Bukti unit yang sudah lulus meliputi decode tanpa upscale, resize aspect-ratio, orientation-before-resize, alpha split 128/255, alpha mask budget, fully-transparent bypass, schema-to-VTracer mapping, production adapter partial alpha, PreviewRequest validation, dan scheduler latest-wins. B03 tetap DOING sampai fixture preview nyata end-to-end dan resource-limit verification selesai.
