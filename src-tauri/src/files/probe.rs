@@ -84,13 +84,7 @@ fn probe_source_inner(path: &Path) -> Result<SourceProbe, AppError> {
     };
 
     let (width, height) = oriented_dimensions(raw_width, raw_height, orientation);
-    let pixels = u64::from(width).saturating_mul(u64::from(height));
-    if pixels > MAX_PIXELS {
-        return Err(AppError::new(
-            ErrorCode::ImageTooLarge,
-            "Gambar melebihi batas 30 MP.",
-        ));
-    }
+    validate_pixel_count(width, height)?;
 
     let fingerprint = sampled_fingerprint(path, metadata.len())?;
     Ok(SourceProbe {
@@ -102,6 +96,18 @@ fn probe_source_inner(path: &Path) -> Result<SourceProbe, AppError> {
         orientation,
         fingerprint,
     })
+}
+
+fn validate_pixel_count(width: u32, height: u32) -> Result<(), AppError> {
+    let pixels = u64::from(width).saturating_mul(u64::from(height));
+    if pixels > MAX_PIXELS {
+        Err(AppError::new(
+            ErrorCode::ImageTooLarge,
+            "Gambar melebihi batas 30 MP.",
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 fn decoder_metadata<D: ImageDecoder>(
@@ -267,7 +273,12 @@ mod tests {
 
     use image::metadata::Orientation;
 
-    use super::{SourceFormat, format_from_extension, oriented_dimensions, sample_offsets};
+    use crate::models::ErrorCode;
+
+    use super::{
+        SourceFormat, format_from_extension, oriented_dimensions, sample_offsets,
+        validate_pixel_count,
+    };
 
     #[test]
     fn extensions_match_schema_formats() -> Result<(), String> {
@@ -304,6 +315,15 @@ mod tests {
             oriented_dimensions(400, 300, Orientation::FlipHorizontal),
             (400, 300)
         );
+    }
+
+    #[test]
+    fn pixel_limit_accepts_30_mp_and_rejects_next_pixel_range() {
+        assert!(validate_pixel_count(6000, 5000).is_ok());
+        assert!(matches!(
+            validate_pixel_count(6001, 5000),
+            Err(error) if error.code == ErrorCode::ImageTooLarge
+        ));
     }
 
     #[test]
