@@ -9,35 +9,28 @@ use crate::models::{
     AppError, Destination, DestinationKind, DestinationRequest, ErrorCode, ImportRejection,
     ImportRequest, ImportResult, SourceFile,
 };
+use crate::source_protocol::preview_url;
 use crate::state::AppState;
 
 #[tauri::command]
 pub async fn import_files(
     app: AppHandle,
-    window: WebviewWindow,
     request: ImportRequest,
 ) -> Result<ImportResult, AppError> {
     let app_for_task = app.clone();
-    let window_for_task = window.clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        import_files_blocking(&app_for_task, &window_for_task, request)
-    })
+    tauri::async_runtime::spawn_blocking(move || import_files_blocking(&app_for_task, request))
     .await
     .map_err(|error| AppError::invalid_state("Proses import internal gagal.", error.to_string()))
 }
 
-fn import_files_blocking(
-    app: &AppHandle,
-    window: &WebviewWindow,
-    request: ImportRequest,
-) -> ImportResult {
+fn import_files_blocking(app: &AppHandle, request: ImportRequest) -> ImportResult {
     let mut files = Vec::new();
     let mut rejected = Vec::new();
 
     for raw_path in request.paths {
         let name = rejection_name(&raw_path);
-        match import_one(app, window, &raw_path) {
+        match import_one(app, &raw_path) {
             Ok(source) => files.push(source),
             Err(error) => rejected.push(ImportRejection { name, error }),
         }
@@ -46,16 +39,8 @@ fn import_files_blocking(
     ImportResult { files, rejected }
 }
 
-fn import_one(
-    app: &AppHandle,
-    window: &WebviewWindow,
-    raw_path: &str,
-) -> Result<SourceFile, AppError> {
+fn import_one(app: &AppHandle, raw_path: &str) -> Result<SourceFile, AppError> {
     let state = app.state::<AppState>();
-    let _scope_guard = state.file_scope.lock().map_err(|error| {
-        AppError::invalid_state("Boundary akses file tidak dapat dikunci.", error.to_string())
-    })?;
-
     let requested = PathBuf::from(raw_path);
     let scope = app.asset_protocol_scope();
 
@@ -86,19 +71,13 @@ fn import_one(
         })?
         .to_owned();
 
-    let preview_url = window
-        .convert_file_src(&canonical, None)
-        .map_err(|error| {
-            AppError::invalid_state("URL preview lokal gagal dibuat.", error.to_string())
-        })?
-        .to_string();
-
     let id = {
         let mut registry = state.registry.lock().map_err(|error| {
             AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
         })?;
         registry.register_source(canonical, probe.fingerprint.clone())?
     };
+    let preview_url = preview_url(&id);
 
     Ok(SourceFile {
         id,
@@ -114,32 +93,7 @@ fn import_one(
 }
 
 #[tauri::command]
-pub fn release_files(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    file_ids: Vec<String>,
-) -> Result<(), AppError> {
-    let _scope_guard = state.file_scope.lock().map_err(|error| {
-        AppError::invalid_state("Boundary akses file tidak dapat dikunci.", error.to_string())
-    })?;
-
-    let revoke_paths = {
-        let registry = state.registry.lock().map_err(|error| {
-            AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
-        })?;
-        registry.source_paths_to_revoke(&file_ids)?
-    };
-
-    let scope = app.asset_protocol_scope();
-    for path in &revoke_paths {
-        scope.forbid_file(path).map_err(|error| {
-            AppError::invalid_state(
-                "Akses preview file gagal dicabut.",
-                error.to_string(),
-            )
-        })?;
-    }
-
+pub fn release_files(state: State<'_, AppState>, file_ids: Vec<String>) -> Result<(), AppError> {
     let mut registry = state.registry.lock().map_err(|error| {
         AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
     })?;

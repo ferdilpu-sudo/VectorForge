@@ -4,6 +4,7 @@ mod engine;
 mod export;
 mod files;
 mod models;
+mod source_protocol;
 mod state;
 mod store;
 
@@ -16,6 +17,9 @@ use state::AppState;
 
 pub fn run() {
     let result = tauri::Builder::default()
+        .register_uri_scheme_protocol(source_protocol::SOURCE_PROTOCOL, |context, request| {
+            source_protocol::handle(context, request)
+        })
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![

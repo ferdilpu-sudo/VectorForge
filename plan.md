@@ -50,7 +50,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B05 | DONE | Settings/preset storage produksi lulus; 58/58 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; tidak ada package/version baru di luar graph dependency yang sudah diaudit | User kemudian mengizinkan B06; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B06 | DONE | Batch scheduler produksi lulus; 70/70 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; partial/cancel/retry/collision fixtures lulus; working tree clean | User memerintahkan bereskan boundary asset-scope sebelum G2 |
-| 2026-10-01 | B02 boundary hardening | DOING | `release_files` diperbaiki agar revoke asset-protocol scope hanya saat referensi path terakhir dilepas; import/release diserialkan untuk mencegah race | Jalankan cargo check/test/clippy/fmt pada Windows sebelum menutup blocker G2 |
+| 2026-10-01 | B02 boundary hardening | DOING | Inspeksi Tauri 2.12 membuktikan `forbid_file()` one-way selama sesi dan dapat mematahkan re-import. Boundary diganti ke custom local protocol `vfsource` berbasis opaque `fileId`; handler hanya melayani ID yang masih hidup di registry dan memverifikasi fingerprint | Jalankan cargo check/test/clippy/fmt + smoke preview/re-import pada Windows sebelum menutup blocker G2 |
 
 ## Catatan izin fase
 
