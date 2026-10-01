@@ -1,6 +1,5 @@
 mod error;
 mod files;
-mod trace;
 
 pub use error::{AppError, ErrorCode};
 pub use files::{
