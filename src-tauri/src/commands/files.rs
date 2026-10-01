@@ -104,7 +104,7 @@ fn import_one(
                 error.to_string(),
             )
         })?;
-        registry.register_source(canonical, probe.fingerprint.clone())
+        registry.register_source(canonical, probe.fingerprint.clone())?
     };
 
     Ok(SourceFile {
@@ -194,7 +194,7 @@ pub async fn choose_destination(
             kind,
             format,
             overwrite_confirmed,
-        )
+        )?
     };
 
     Ok(Some(Destination {
