@@ -124,3 +124,8 @@ Audit `cargo metadata --locked` menunjukkan satu-satunya package tanpa field `li
 Dengan build/run release Windows, alpha split-mask, SVG/PDF/EPS, cancellation, resource characterization, filesystem safety, Cargo.lock, dependency tree dan audit lisensi selesai, **B01 = DONE**.
 
 B02 belum dimulai. Catatan izin fase tetap berlaku: persetujuan sebelumnya hanya untuk B01 dan tidak otomatis memberi izin membuat backend produksi.
+
+
+### B02 bootstrap icon
+
+Build Windows pertama berhenti di `tauri-build` sebelum compile Rust karena `src-tauri/icons/icon.ico` belum ada. B02 menambahkan bootstrap icon teknis minimal hanya agar Windows resource generation dapat berjalan. Ini **bukan** keputusan branding final; icon aplikasi/installer final tetap pekerjaan H02.
