@@ -44,7 +44,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 |---|---|---|---|---|
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
-| 2026-10-01 | B01 | DOING | Kandidat dependency diteliti; harness `spikes/b01-engine` ditambahkan untuk trace/cancel/PDF/EPS/alpha | Jalankan Cargo di Windows; alpha parsial stock VTracer masih blocker |
+| 2026-10-01 | B01 | DOING | Harness Windows: SVG, PDF, EPS dan cancellation PASS; fixture alpha nol memicu panic divide-by-zero di visioncortex 0.9.3 | Harness diperkeras untuk lanjut karakterisasi alpha parsial; alpha support tetap blocker |
 
 ## Catatan izin fase
 
@@ -77,5 +77,5 @@ User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa d
 - Kandidat decode: `image = 0.25.10` dengan PNG/JPEG/WebP/BMP.
 - Kandidat PDF: `svg2pdf = 0.13.0`; gunakan `svg2pdf::usvg` agar tidak membuat version skew dengan usvg standalone.
 - Harness terisolasi berada di `spikes/b01-engine`; tidak boleh diimpor frontend atau dianggap backend produksi.
-- Source inspection menemukan blocker D10: stock VTracer alpha.4 memakai paint/fill RGB solid dan tidak menyerialisasi alpha parsial. Harness akan mengonfirmasi perilaku fixture di Windows.
+- Run Windows membuktikan opaque SVG, PDF, EPS dan cooperative cancellation bekerja. Fixture alpha nol memicu panic `attempt to divide by zero` di `visioncortex 0.9.3`; harness menangkap panic fixture agar pengujian alpha parsial dapat lanjut. Source inspection juga menunjukkan stock writer memakai paint/fill RGB solid dan tidak menyerialisasi alpha parsial.
 - Detail versi, lisensi awal, langkah run, dan kriteria keluar ada di `b01-engine-spike.md`.

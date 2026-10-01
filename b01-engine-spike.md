@@ -59,6 +59,23 @@ Harness menghasilkan status tekstual untuk:
 
 Harness tidak menulis output ke disk dan tidak menguji atomic replace Windows. Uji filesystem nyata tetap item B01 terpisah.
 
+## Hasil run Windows — 1 Oktober 2026
+
+Environment pengguna:
+- `rustc 1.98.1 (48a229cea 2026-09-01)`;
+- `cargo 1.98.1 (797e8a9bc 2026-08-05)`;
+- host/target `x86_64-pc-windows-msvc`;
+- MSVC Build Tools 2022 tersedia dan linker native berhasil dipakai.
+
+Hasil pertama `cargo run` setelah harness dikompilasi:
+- PASS raster opaque → `VectorDoc` → SVG;
+- PASS SVG → PDF pada mapping 96 DPI;
+- PASS `VectorDoc` → EPS solid path;
+- PASS progress fase + cooperative cancellation;
+- **BLOCKER** saat fixture alpha nol: proses panic di dependency `visioncortex 0.9.3`, `src/color_clusters/builder.rs:323:22`, dengan pesan `attempt to divide by zero`.
+
+Panic dependency ini bukan acceptance failure yang boleh disembunyikan. Harness kini menangkap panic khusus pada fixture alpha agar karakterisasi berikutnya dapat terus berjalan dan fixture alpha parsial tetap diuji. Production code nantinya tidak boleh bergantung pada `catch_unwind` sebagai strategi normal; input alpha nol harus ditangani sebelum memasuki engine atau dependency harus diganti/diperbaiki.
+
 ## Temuan sebelum run lokal
 
 ### Cancellation/progress
@@ -75,6 +92,16 @@ IR alpha.4 memiliki `MoveTo`, `LineTo`, `CubicTo`, `Close` dan paint solid. Itu 
 
 Writer di harness hanya karakterisasi geometri. Atomic write, race nama, file target terbuka dan overwrite aman belum diuji.
 
+### BLOCKER — alpha nol dapat memicu panic dependency
+
+Run Windows membuktikan VTracer/visioncortex tidak aman menerima fixture yang seluruh pixel-nya alpha 0 pada konfigurasi default spike: `visioncortex 0.9.3` membagi dengan nol di color-cluster builder.
+
+Implikasi untuk desain:
+- gambar yang seluruhnya transparan harus dideteksi pada boundary decode/normalize dan menghasilkan dokumen vektor kosong tanpa menjalankan cluster engine; atau
+- dependency/engine harus diperbaiki sebelum input tersebut diteruskan.
+
+Ini cocok dengan D10 bahwa alpha nol harus tetap kosong pada SVG/PDF. Pre-check alpha nol adalah validasi semantik, bukan fallback raster atau flatten.
+
 ### BLOCKER — alpha parsial SVG/PDF
 
 Stock SVG writer vtracer 1.0.0-alpha.4 saat ini menulis `Paint::Solid(Color)` sebagai fill RGB. IR `Paint` juga hanya memiliki varian solid; writer tidak menulis `opacity` atau `fill-opacity`.
@@ -90,7 +117,7 @@ Belum ada pilihan yang diambil.
 
 ## Kriteria keluar B01 yang masih terbuka
 
-- `cargo check` dan `cargo run` lulus pada Windows pengguna;
+- harness berhasil compile/run pada Windows; empat jalur utama sudah PASS, tetapi run keseluruhan belum dapat dinyatakan lulus sampai karakterisasi alpha selesai tanpa process abort;
 - simpan output diagnostik dan `cargo tree`;
 - lengkapi lisensi transitif;
 - konfirmasi hasil fixture alpha nol dan alpha parsial;

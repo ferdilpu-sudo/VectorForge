@@ -56,6 +56,33 @@ fn contains_alpha_encoding(svg: &str) -> bool {
         || svg.contains("fill=\"rgba(")
 }
 
+fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_owned()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "non-string panic payload".to_owned()
+    }
+}
+
+fn trace_svg_catching_dependency_panic(
+    image: ColorImage,
+) -> Result<Result<String, Error>, String> {
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+
+    let result = std::panic::catch_unwind(move || {
+        Config::default()
+            .build()
+            .and_then(|pipeline| pipeline.to_svg(&image))
+    });
+
+    std::panic::set_hook(previous_hook);
+
+    result.map_err(panic_message)
+}
+
 fn color_to_rgb(hex: &str) -> Result<(f64, f64, f64), String> {
     let value = hex.strip_prefix('#').unwrap_or(hex);
     if value.len() != 6 {
@@ -187,33 +214,43 @@ fn run() -> Result<(), String> {
     }
     println!("[PASS] phase progress + cooperative cancellation");
 
-    match pipeline.to_svg(&fully_transparent(48, 48)) {
-        Ok(transparent_svg) if !transparent_svg.contains("<path") => {
+    match trace_svg_catching_dependency_panic(fully_transparent(48, 48)) {
+        Ok(Ok(transparent_svg)) if !transparent_svg.contains("<path") => {
             println!("[PASS] fully transparent source produces no visible path");
         }
-        Ok(_) => {
+        Ok(Ok(_)) => {
             println!(
                 "[BLOCKED] fully transparent source produced a visible path; inspect before D10"
             );
         }
-        Err(error) => {
+        Ok(Err(error)) => {
             println!(
                 "[BLOCKED] fully transparent source returned tracer error: {error}"
             );
         }
+        Err(message) => {
+            println!(
+                "[BLOCKED] fully transparent source panicked inside VTracer/visioncortex: {message}"
+            );
+        }
     }
 
-    match pipeline.to_svg(&partial_alpha(64, 64)) {
-        Ok(alpha_svg) if contains_alpha_encoding(&alpha_svg) => {
+    match trace_svg_catching_dependency_panic(partial_alpha(64, 64)) {
+        Ok(Ok(alpha_svg)) if contains_alpha_encoding(&alpha_svg) => {
             println!("[PASS] partial alpha is represented in stock SVG output");
         }
-        Ok(_) => {
+        Ok(Ok(_)) => {
             println!(
                 "[BLOCKED] partial alpha is not represented by stock VTracer SVG output"
             );
         }
-        Err(error) => {
+        Ok(Err(error)) => {
             println!("[BLOCKED] partial-alpha trace returned tracer error: {error}");
+        }
+        Err(message) => {
+            println!(
+                "[BLOCKED] partial-alpha trace panicked inside VTracer/visioncortex: {message}"
+            );
         }
     }
 
