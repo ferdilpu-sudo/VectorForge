@@ -53,8 +53,8 @@ mod tests {
 
     use uuid::Uuid;
 
-    use crate::models::{AppSettings, ErrorCode};
     use crate::models::preferences::{Language, Theme};
+    use crate::models::{AppSettings, ErrorCode};
 
     use super::{get_settings, save_settings};
 
@@ -140,10 +140,7 @@ mod tests {
             save_settings(&dir.0, settings()),
             Err(error) if error.code == ErrorCode::DataVersionUnsupported
         ));
-        assert_eq!(
-            fs::read(path).map_err(|error| error.to_string())?,
-            original
-        );
+        assert_eq!(fs::read(path).map_err(|error| error.to_string())?, original);
         Ok(())
     }
 }

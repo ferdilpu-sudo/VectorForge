@@ -6,13 +6,13 @@ mod trace;
 
 pub use error::{AppError, ErrorCode};
 pub use export::{ExportRequest, ExportResult};
-pub use preferences::{
-    AppSettings, PRESETS_VERSION, Preset, PresetsFile, SETTINGS_VERSION, SavePresetRequest,
-    SettingsFile,
-};
 pub use files::{
     Destination, DestinationKind, DestinationRequest, ExportFormat, ImportRejection, ImportRequest,
     ImportResult, SourceFile, SourceFormat,
+};
+pub use preferences::{
+    AppSettings, PRESETS_VERSION, Preset, PresetsFile, SETTINGS_VERSION, SavePresetRequest,
+    SettingsFile,
 };
 
 pub use trace::{

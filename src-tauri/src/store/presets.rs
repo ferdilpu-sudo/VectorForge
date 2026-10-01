@@ -343,10 +343,7 @@ mod tests {
             save_preset(&dir.0, request("New")),
             Err(error) if error.code == ErrorCode::DataVersionUnsupported
         ));
-        assert_eq!(
-            fs::read(path).map_err(|error| error.to_string())?,
-            original
-        );
+        assert_eq!(fs::read(path).map_err(|error| error.to_string())?, original);
         Ok(())
     }
 }
