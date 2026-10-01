@@ -19,8 +19,7 @@ impl Default for WorkGate {
         let capacity = std::thread::available_parallelism()
             .map(|value| value.get())
             .unwrap_or(1)
-            .min(4)
-            .max(1);
+            .clamp(1, 4);
         Self::new(capacity)
     }
 }

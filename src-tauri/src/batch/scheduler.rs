@@ -80,8 +80,7 @@ impl BatchScheduler {
         let batch_id = Uuid::new_v4().to_string();
         let run_id = Uuid::new_v4().to_string();
         let worker_limit = requested_workers
-            .max(1)
-            .min(4)
+            .clamp(1, 4)
             .min(self.shared.gate.capacity())
             .min(works.len());
 
@@ -341,11 +340,7 @@ fn worker_loop(
     batch_id: String,
     run_id: String,
 ) {
-    loop {
-        let Some(claimed) = claim_next(&shared, &app, &batch_id, &run_id) else {
-            break;
-        };
-
+    while let Some(claimed) = claim_next(&shared, &app, &batch_id, &run_id) {
         let item_id = claimed.item_id.clone();
         let shared_for_stage = Arc::clone(&shared);
         let app_for_stage = app.clone();
@@ -487,15 +482,14 @@ fn update_stage(
         }
 
         stored.view.stage = stage;
-        if let Some(format) = format {
-            if let Some(output) = stored
+        if let Some(format) = format
+            && let Some(output) = stored
                 .view
                 .outputs
                 .iter_mut()
                 .find(|output| output.format == format && output.status == OutputStatus::Queued)
-            {
-                output.status = OutputStatus::Processing;
-            }
+        {
+            output.status = OutputStatus::Processing;
         }
         batch.sequence = batch.sequence.saturating_add(1);
         throttled_snapshot(batch, false)
