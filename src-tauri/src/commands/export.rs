@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tauri::State;
 
 use crate::export::{ExportWork, export_work};
@@ -21,7 +23,9 @@ pub async fn export_file(
         )
     };
 
+    let heavy = Arc::clone(&state.heavy);
     let committed = tauri::async_runtime::spawn_blocking(move || {
+        let _permit = heavy.acquire_normal()?;
         export_work(ExportWork {
             source,
             destination,

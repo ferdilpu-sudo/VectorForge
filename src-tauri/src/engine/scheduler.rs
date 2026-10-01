@@ -8,6 +8,7 @@ use vtracer::CancelToken;
 use crate::models::{AppError, ErrorCode, PreviewResult};
 
 use super::preview::{PreviewWork, render_preview};
+use super::work_gate::WorkGate;
 
 type PreviewResponse = Result<PreviewResult, AppError>;
 type PreviewProcessor =
@@ -35,6 +36,7 @@ struct SchedulerShared {
     state: Mutex<SchedulerState>,
     wake: Condvar,
     processor: Arc<PreviewProcessor>,
+    gate: Arc<WorkGate>,
 }
 
 pub struct PreviewScheduler {
@@ -43,17 +45,22 @@ pub struct PreviewScheduler {
 
 impl Default for PreviewScheduler {
     fn default() -> Self {
-        Self::with_processor(Arc::new(render_preview))
+        Self::new(Arc::new(WorkGate::default()))
     }
 }
 
 impl PreviewScheduler {
-    fn with_processor(processor: Arc<PreviewProcessor>) -> Self {
+    pub fn new(gate: Arc<WorkGate>) -> Self {
+        Self::with_processor(gate, Arc::new(render_preview))
+    }
+
+    fn with_processor(gate: Arc<WorkGate>, processor: Arc<PreviewProcessor>) -> Self {
         Self {
             shared: Arc::new(SchedulerShared {
                 state: Mutex::new(SchedulerState::default()),
                 wake: Condvar::new(),
                 processor,
+                gate,
             }),
         }
     }
@@ -163,14 +170,18 @@ fn worker_loop(shared: Arc<SchedulerShared>) {
             (pending, cancel, request_id)
         };
 
-        let mut result = match catch_unwind(AssertUnwindSafe(|| {
-            (shared.processor)(pending.work, &cancel)
-        })) {
-            Ok(result) => result,
-            Err(_) => Err(AppError::new(
-                ErrorCode::TraceFailed,
-                "Worker preview berhenti secara tidak terduga.",
-            )),
+        let mut result = match shared.gate.acquire_preview() {
+            Ok(_permit) if cancel.is_cancelled() => Err(cancelled_error()),
+            Ok(_permit) => match catch_unwind(AssertUnwindSafe(|| {
+                (shared.processor)(pending.work, &cancel)
+            })) {
+                Ok(result) => result,
+                Err(_) => Err(AppError::new(
+                    ErrorCode::TraceFailed,
+                    "Worker preview berhenti secara tidak terduga.",
+                )),
+            },
+            Err(error) => Err(error),
         };
 
         match shared.state.lock() {
@@ -224,6 +235,7 @@ mod tests {
     };
 
     use super::{PreviewProcessor, PreviewScheduler, PreviewWork};
+    use crate::engine::work_gate::WorkGate;
 
     const A: &str = "00000000-0000-4000-8000-00000000000a";
     const B: &str = "00000000-0000-4000-8000-00000000000b";
@@ -277,7 +289,8 @@ mod tests {
             }
             Ok(success(work))
         });
-        let scheduler = PreviewScheduler::with_processor(processor);
+        let scheduler =
+            PreviewScheduler::with_processor(Arc::new(WorkGate::new(1)), processor);
 
         let a = scheduler.submit(work(A)).map_err(|error| error.message)?;
         thread::sleep(Duration::from_millis(10));
