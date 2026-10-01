@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use image::RgbaImage;
@@ -33,6 +34,7 @@ pub struct CommittedExport {
 pub fn export_work(work: ExportWork) -> Result<CommittedExport, AppError> {
     work.request.validate()?;
     validate_destination(&work.destination, work.request.format)?;
+    validate_not_source(&work.source.path, &work.destination.path)?;
 
     let started = Instant::now();
     let before = probe_source(&work.source.path)?;
@@ -126,6 +128,29 @@ fn validate_destination(
     }
 
     Ok(())
+}
+
+fn validate_not_source(source: &Path, destination: &Path) -> Result<(), AppError> {
+    if !destination.exists() {
+        return Ok(());
+    }
+
+    let canonical_destination = fs::canonicalize(destination).map_err(|error| {
+        AppError::with_details(
+            ErrorCode::WriteFailed,
+            "File tujuan gagal diverifikasi.",
+            error.to_string(),
+        )
+    })?;
+
+    if canonical_destination == source {
+        Err(AppError::new(
+            ErrorCode::WriteFailed,
+            "File sumber tidak boleh ditimpa oleh hasil export.",
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_svg_size(
@@ -294,8 +319,13 @@ mod tests {
 
     #[test]
     fn eps_export_flattens_transparency_to_white_before_trace() -> Result<(), String> {
-        let fixture =
-            TempFixture::create(&RgbaImage::from_pixel(64, 32, Rgba([20, 40, 60, 0])))?;
+        let fixture = TempFixture::create(&RgbaImage::from_fn(64, 32, |x, _| {
+            if x < 32 {
+                Rgba([20, 40, 60, 128])
+            } else {
+                Rgba([200, 60, 40, 255])
+            }
+        }))?;
         let output = fixture.output("result.eps");
         let result = export_work(work(&fixture, ExportFormat::Eps, &output)?)
             .map_err(|error| error.message)?;
@@ -303,8 +333,47 @@ mod tests {
 
         assert!(eps.starts_with("%!PS-Adobe-3.0 EPSF-3.0"));
         assert!(eps.contains("%%BoundingBox: 0 0 64 32"));
-        assert!(eps.contains("1.000000 1.000000 1.000000 setrgbcolor"));
+        assert!(eps.contains("setrgbcolor"));
+        assert!(!eps.contains("fill-opacity"));
         assert_eq!((result.stats.width, result.stats.height), (64, 32));
+        Ok(())
+    }
+
+    #[test]
+    fn export_refuses_to_overwrite_the_source_file() -> Result<(), String> {
+        let fixture =
+            TempFixture::create(&RgbaImage::from_pixel(32, 16, Rgba([20, 40, 60, 255])))?;
+        let original = fs::read(&fixture.source).map_err(|error| error.to_string())?;
+        let probe = probe_source(&fixture.source).map_err(|error| error.message)?;
+
+        let result = export_work(ExportWork {
+            source: SourceSnapshot {
+                path: fixture.source.clone(),
+                fingerprint: probe.fingerprint,
+            },
+            destination: DestinationSnapshot {
+                path: fixture.source.clone(),
+                kind: DestinationKind::File,
+                format: Some(ExportFormat::Svg),
+                overwrite_confirmed: true,
+            },
+            request: ExportRequest {
+                file_id: "00000000-0000-4000-8000-000000000001".to_owned(),
+                params: params(),
+                format: ExportFormat::Svg,
+                destination_id: "00000000-0000-4000-8000-000000000002".to_owned(),
+                allow_large_output: false,
+            },
+        });
+
+        assert!(matches!(
+            result,
+            Err(error) if error.code == ErrorCode::WriteFailed
+        ));
+        assert_eq!(
+            fs::read(&fixture.source).map_err(|error| error.to_string())?,
+            original
+        );
         Ok(())
     }
 

@@ -9,9 +9,6 @@ use crate::models::{AppError, ErrorCode};
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
 #[cfg(windows)]
-use std::os::windows::fs::OpenOptionsExt;
-
-#[cfg(windows)]
 unsafe extern "system" {
     fn ReplaceFileW(
         replaced_file_name: *const u16,
@@ -95,24 +92,24 @@ fn commit_temp(
             .map_err(|error| write_error("File tujuan gagal diganti.", error));
     }
 
-    let reservation = match OpenOptions::new().write(true).create_new(true).open(target) {
-        Ok(file) => file,
-        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-            return Err(AppError::new(
-                ErrorCode::WriteFailed,
-                "File tujuan dibuat proses lain sebelum export selesai.",
-            ));
-        }
-        Err(error) => return Err(write_error("Nama output gagal direservasi.", error)),
-    };
-    drop(reservation);
+    commit_new_file(target, temp)
+        .map_err(|error| write_error("Output baru gagal dikomit.", error))
+}
 
-    if let Err(error) = replace_existing_file(target, temp) {
-        let _ = fs::remove_file(target);
-        return Err(write_error("Output baru gagal dikomit.", error));
+#[cfg(windows)]
+fn commit_new_file(target: &Path, temp: &Path) -> io::Result<()> {
+    fs::rename(temp, target)
+}
+
+#[cfg(not(windows))]
+fn commit_new_file(target: &Path, temp: &Path) -> io::Result<()> {
+    if target.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "target appeared before commit",
+        ));
     }
-
-    Ok(())
+    fs::rename(temp, target)
 }
 
 #[cfg(windows)]
