@@ -84,6 +84,11 @@ Jalankan harness B01 pada Windows, catat dependency tree/lisensi transitif, uji 
 
 - G1 frontend demo: **DONE**
 - B01 engine/export dependency spike: **DONE**
-- B02 production Tauri/backend shell: **NOT STARTED**
+- B02 production Tauri/backend shell: **DOING**
 
 B01 passed Windows release characterization for SVG/PDF/EPS, cancellation, alpha-preserving split-mask, resource guard characterization, and safe Windows file replacement. Its Cargo.lock is committed and Cargo metadata reported no external/transitive package missing a license declaration. The local non-published spike package intentionally has no application license declaration yet.
+
+
+### B02 scope aktif
+
+B02 membuat shell Tauri 2 dan boundary file native saja: DTO/error Rust, file/destination registry opaque, validasi metadata input, scope authorization dan capability minimum. Frontend tetap memakai adapter demo sampai fase integrasi; tracing/preview produksi belum dimulai.
