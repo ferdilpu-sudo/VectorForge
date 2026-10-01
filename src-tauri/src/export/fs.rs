@@ -162,8 +162,14 @@ fn write_error(message: &str, error: io::Error) -> AppError {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::PathBuf;
 
     use uuid::Uuid;
+
+    #[cfg(windows)]
+    use std::fs::OpenOptions;
+    #[cfg(windows)]
+    use std::os::windows::fs::OpenOptionsExt;
 
     use super::write_atomic;
 

@@ -1,10 +1,13 @@
 mod commands;
 mod engine;
+mod export;
 mod files;
 mod models;
 mod state;
 
-use commands::{cancel_preview, choose_destination, generate_preview, import_files, release_files};
+use commands::{
+    cancel_preview, choose_destination, export_file, generate_preview, import_files, release_files,
+};
 use state::AppState;
 
 pub fn run() {
@@ -16,7 +19,8 @@ pub fn run() {
             release_files,
             choose_destination,
             generate_preview,
-            cancel_preview
+            cancel_preview,
+            export_file
         ])
         .run(tauri::generate_context!());
 
