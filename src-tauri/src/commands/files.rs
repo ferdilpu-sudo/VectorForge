@@ -20,8 +20,10 @@ pub async fn import_files(
     let app_for_task = app.clone();
 
     tauri::async_runtime::spawn_blocking(move || import_files_blocking(&app_for_task, request))
-    .await
-    .map_err(|error| AppError::invalid_state("Proses import internal gagal.", error.to_string()))
+        .await
+        .map_err(|error| {
+            AppError::invalid_state("Proses import internal gagal.", error.to_string())
+        })
 }
 
 fn import_files_blocking(app: &AppHandle, request: ImportRequest) -> ImportResult {
