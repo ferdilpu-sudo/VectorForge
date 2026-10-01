@@ -10,6 +10,10 @@ use vtracer::ir::{Layer, Paint, PathCmd, RegionMask, Segmentation};
 use vtracer::progress::{CancelToken, Phase, Progress};
 use vtracer::{ColorImage, Config, Error, VectorDoc};
 
+mod windows_fs;
+
+const MAX_ALPHA_MASK_BYTES: usize = 128 * 1024 * 1024;
+
 fn rgba_image_to_color(image: RgbaImage) -> ColorImage {
     let width = image.width() as usize;
     let height = image.height() as usize;
@@ -344,6 +348,7 @@ fn split_segmentation_by_source_alpha(
     source: &ColorImage,
 ) -> Result<Segmentation, String> {
     let mut result = Segmentation::new(segmentation.width, segmentation.height);
+    let mut planned_mask_bytes = 0usize;
 
     for layer in segmentation.layers {
         let base_color = layer.paint.color();
@@ -375,6 +380,21 @@ fn split_segmentation_by_source_alpha(
                     .and_modify(|bbox| bbox.include(local_x, local_y))
                     .or_insert_with(|| AlphaBounds::new(local_x, local_y));
             }
+        }
+
+        let layer_mask_bytes: usize = bounds
+            .values()
+            .map(|bbox| bbox.width().saturating_mul(bbox.height()).div_ceil(8))
+            .sum();
+        planned_mask_bytes = planned_mask_bytes
+            .checked_add(layer_mask_bytes)
+            .ok_or_else(|| "alpha mask budget overflow".to_owned())?;
+        if planned_mask_bytes > MAX_ALPHA_MASK_BYTES {
+            return Err(format!(
+                "alpha mask complexity exceeds {} MiB budget (needs at least {} MiB)",
+                MAX_ALPHA_MASK_BYTES / (1024 * 1024),
+                planned_mask_bytes.div_ceil(1024 * 1024),
+            ));
         }
 
         let mut masks: BTreeMap<u8, (AlphaBounds, BinaryImage)> = bounds
@@ -635,6 +655,10 @@ fn run() -> Result<(), String> {
         "fragmented",
         &fragmented_alpha(256, 256),
     )?;
+
+    for result in windows_fs::run_windows_filesystem_spike()? {
+        println!("{result}");
+    }
 
     println!(
         "B01 remains a spike: do not wire this harness into the production frontend."

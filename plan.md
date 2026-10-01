@@ -94,3 +94,10 @@ Stock segmentation meratakan fixture RGB-sama dengan alpha 128/255 menjadi alpha
 ### B01 alpha resource characterization
 
 Correctness split-mask lulus pada Windows untuk alpha parsial dan boundary RGB-sama alpha 128/255. Spike berikutnya meng-crop sub-mask per alpha dan mengukur gradient coherent vs alpha terfragmentasi. Lower-bound mask dihitung dari 1 bit/pixel; benchmark keputusan harus memakai release build. Jika input alpha patologis menyebabkan ledakan layer/mask, kebijakan produksi adalah complexity guard + error eksplisit, bukan silent flatten.
+
+
+### B01 hasil alpha release dan filesystem
+
+Release benchmark Windows: smooth 512×256 dengan 255 level menghasilkan 16 KiB lower-bound mask (8 ms segment, 6 ms split); fragmented 256×256 dengan 255 level menghasilkan 1913 KiB (2 ms segment, 4 ms split). Guard tidak boleh berbasis jumlah alpha level. Candidate split-mask budget ditetapkan 128 MiB berdasarkan bounding-box mask sebelum alokasi, dengan error eksplisit jika terlampaui.
+
+Spike berikutnya menguji filesystem Windows nyata: create_new collision, same-directory commit target baru, ReplaceFileW overwrite, dan kegagalan aman saat target dikunci deny-share.

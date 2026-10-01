@@ -165,3 +165,22 @@ Versi karakterisasi memakai nilai alpha exact agar correctness mudah dibuktikan.
 - membandingkan fixture gradient alpha spatially-coherent dengan fixture alpha terfragmentasi.
 
 Angka waktu dari `cargo run` debug hanya smoke signal. Untuk keputusan performa, jalankan `cargo run --release`. Fixture terfragmentasi sengaja patologis; jika hasilnya menunjukkan layer/mask explosion, produksi harus memiliki complexity guard dan mengembalikan error terstruktur sesuai D14, bukan flatten atau OOM.
+
+
+## Hasil resource alpha Windows — release build
+
+Run `cargo run --release` pada Windows pengguna:
+- smooth gradient 512×256: 255 level, 255 split layer, lower-bound mask 16 KiB, segment 8 ms, split 6 ms;
+- fragmented alpha 256×256: 255 level, 255 split layer, lower-bound mask 1913 KiB, segment 2 ms, split 4 ms.
+
+Kesimpulan: jumlah level alpha sendirian bukan guard yang tepat. Gradient 255 level dapat murah, sedangkan pola terfragmentasi dengan level sama jauh lebih mahal. Spike karena itu memakai **candidate mask budget 128 MiB** berdasarkan jumlah area bounding-box sub-mask sebelum alokasi. Ini bukan klaim peak RSS; hanya guard terhadap satu sumber ledakan yang dapat dihitung deterministik. Peak process 20 MP tetap pekerjaan H01/B03 benchmark.
+
+## Windows filesystem spike
+
+B01 kini juga menguji langsung filesystem Windows:
+- reservasi nama memakai `create_new` dan duplicate harus gagal `AlreadyExists`;
+- target baru dikomit dengan rename dalam direktori yang sama;
+- overwrite existing target memakai Win32 `ReplaceFileW`, sehingga target lama tidak di-unlink lebih dulu;
+- handle target yang dibuka dengan deny-share harus membuat replace gagal, isi lama tetap utuh, dan temp masih tersedia untuk cleanup.
+
+Harness menggunakan FFI Win32 hanya untuk karakterisasi B01. Implementasi produksi B04 boleh membungkus API ini dalam modul Windows yang lebih rapi, tetapi harus mempertahankan semantik bukti yang sama.
