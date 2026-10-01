@@ -13,6 +13,7 @@ use crate::models::{
     AppError, BatchOutput, ErrorCode, ExportFormat, JobStage, OutputStatus, TraceParams,
 };
 
+#[derive(Clone)]
 pub struct BatchItemWork {
     pub file_id: String,
     pub name: String,
@@ -38,7 +39,7 @@ pub fn process_item<F>(
     mut on_stage: F,
 ) -> ItemProcessResult
 where
-    F: FnMut(JobStage),
+    F: FnMut(JobStage, Option<ExportFormat>),
 {
     let started = Instant::now();
     let mut outputs = work
@@ -73,7 +74,7 @@ where
     let mut item_error = None;
 
     if !vector_formats.is_empty() {
-        on_stage(JobStage::Decoding);
+        on_stage(JobStage::Decoding, None);
         match decode_verified(&work.source) {
             Ok(image) => {
                 if cancel.is_cancelled() {
@@ -82,7 +83,7 @@ where
                     return finish(outputs, None, true, started);
                 }
 
-                on_stage(JobStage::Tracing);
+                on_stage(JobStage::Tracing, None);
                 match trace_image(image, &work.params, cancel) {
                     Ok(document) => {
                         let dimensions = document
@@ -104,7 +105,7 @@ where
                                 drop(permit);
                                 return finish(outputs, item_error, true, started);
                             }
-                            on_stage(JobStage::Exporting);
+                            on_stage(JobStage::Exporting, Some(*format));
                             let result = match format {
                                 ExportFormat::Svg => {
                                     validate_svg_size(svg.svg.len(), ExportFormat::Svg, false)
@@ -157,7 +158,7 @@ where
             return finish(outputs, item_error, true, started);
         }
 
-        on_stage(JobStage::Decoding);
+        on_stage(JobStage::Decoding, None);
         match decode_verified(&work.source) {
             Ok(image) => {
                 if cancel.is_cancelled() {
@@ -166,10 +167,10 @@ where
                     return finish(outputs, item_error, true, started);
                 }
 
-                on_stage(JobStage::Tracing);
+                on_stage(JobStage::Tracing, None);
                 match trace_image(flatten_on_white(image), &work.params, cancel) {
                     Ok(Some(document)) => {
-                        on_stage(JobStage::Exporting);
+                        on_stage(JobStage::Exporting, Some(ExportFormat::Eps));
                         let result = write_eps(&document).and_then(|payload| {
                             commit_payload(
                                 &work,

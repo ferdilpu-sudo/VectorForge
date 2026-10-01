@@ -1,13 +1,15 @@
 use std::sync::{Arc, Mutex};
 
+use crate::batch::BatchScheduler;
 use crate::engine::{PreviewScheduler, WorkGate};
 use crate::files::FileRegistry;
 
 pub struct AppState {
     pub registry: Arc<Mutex<FileRegistry>>,
     pub preview: PreviewScheduler,
+    pub batch: BatchScheduler,
     pub heavy: Arc<WorkGate>,
-    pub storage: Mutex<()>,
+    pub storage: Arc<Mutex<()>>,
 }
 
 impl Default for AppState {
@@ -16,10 +18,11 @@ impl Default for AppState {
         let heavy = Arc::new(WorkGate::default());
 
         Self {
-            registry,
+            registry: Arc::clone(&registry),
             preview: PreviewScheduler::new(Arc::clone(&heavy)),
+            batch: BatchScheduler::new(Arc::clone(&heavy), registry),
             heavy,
-            storage: Mutex::new(()),
+            storage: Arc::new(Mutex::new(())),
         }
     }
 }
