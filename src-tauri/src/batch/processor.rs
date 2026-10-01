@@ -188,11 +188,7 @@ where
                 }
             }
             Err(error) => {
-                apply_output_result(
-                    &mut outputs,
-                    ExportFormat::Eps,
-                    Err(error.clone()),
-                );
+                apply_output_result(&mut outputs, ExportFormat::Eps, Err(error.clone()));
                 item_error.get_or_insert(error);
             }
         }
@@ -335,7 +331,6 @@ fn finish(
         elapsed_ms: started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
     }
 }
-
 
 #[cfg(test)]
 mod tests {
