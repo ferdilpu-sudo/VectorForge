@@ -109,8 +109,8 @@ export function App() {
       <div className="demo-banner">
         <span>◉ {t("MODE DEMO", "DEMO MODE")}</span>
         {t(
-          "Engine belum terhubung. Preview dan ekspor berupa simulasi.",
-          "Engine not connected. Preview and export are simulated.",
+          "Preview dan ekspor simulasi · Engine belum terhubung.",
+          "Simulated preview and export · Engine not connected.",
         )}
       </div>
       <input

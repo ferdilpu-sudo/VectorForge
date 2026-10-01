@@ -107,7 +107,7 @@ export function CompareCanvas({
           }));
           setZoom(next);
         }}
-        className={`canvas ${bg}`}
+        className={`canvas ${file ? bg : "empty-canvas"}`}
         tabIndex={0}
         aria-label={t(
           "Canvas gambar. Pan dengan Space dan drag atau tombol arah.",
@@ -169,8 +169,8 @@ export function CompareCanvas({
             <span className="section-eyebrow">RASTER → VECTOR</span>
             <h1>
               {t(
-                "Detail baru. Kemungkinan baru.",
-                "New detail. New possibilities.",
+                "Ubah gambar menjadi vektor",
+                "Turn images into vectors",
               )}
             </h1>
             <p>

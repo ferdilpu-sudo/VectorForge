@@ -93,3 +93,7 @@ Tema gelap/terang/sistem; bahasa ID/EN; worker 1–4; preview otomatis; sisi pre
 Tab order logis, nama aksesibel semua icon button, modal focus trap dan restore focus, Escape menutup modal non-blocking, slider dapat keyboard, focus tidak tersembunyi. Pembaruan status lewat live region yang tidak berbicara tiap slider tick. Error terkait field. Jangan mengandalkan warna atau hover saja.
 
 Ctrl+O buka, Ctrl+Shift+E ekspor, Ctrl+0 fit, +/- zoom hanya saat canvas fokus. Shortcut selalu punya tombol/menu alternatif. Teks ID/EN panjang dan filename panjang tidak boleh mendorong aksi utama keluar layar; ellipsis dengan cara melihat nama penuh.
+
+## Polish F02 — 1 Oktober 2026
+
+Panel dimulai langsung dengan judul Pengaturan vektor; label WORKSPACE dan deskripsi dekoratif dihapus. Padding panel 16×20 px, jarak field/parameter 12 px, separator 14 px; ukuran teks dan focus ring tetap. Canvas kosong memakai surface solid sesuai tema, judul “Ubah gambar menjadi vektor”. Saat file dibuka, pilihan latar checkerboard/putih/gelap diterapkan kembali tanpa mengubah nilai pilihan. Banner demo lebih tipis tetapi tetap eksplisit dan mengikuti tema. Scrollbar thin memakai token per tema, bukan disembunyikan.

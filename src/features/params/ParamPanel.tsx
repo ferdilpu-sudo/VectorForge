@@ -29,11 +29,7 @@ export function ParamPanel() {
   };
   return (
     <aside className="param-panel">
-      <div className="section-eyebrow">WORKSPACE</div>
       <h2>{t("Pengaturan vektor", "Vector settings")}</h2>
-      <p className="muted">
-        {t("Bentuk hasil sesuai kebutuhan.", "Fine-tune your result.")}
-      </p>
       <label className="field">
         Preset
         <select

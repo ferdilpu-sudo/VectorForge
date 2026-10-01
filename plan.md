@@ -62,3 +62,7 @@ Target PRD adalah sasaran, bukan fakta: startup <2 s, preview tipikal 1024 px <1
 - Visual/DPI/browser walkthrough BLOCKED: daemon agent-browser gagal start; Chromium tidak terpasang. Tidak mengklaim screenshot atau manual Windows pass.
 - TODO sebelum G1 final: penyelesaian locale error, visual dan keyboard manual review. Reset settings, tinggi antrean dan penolakan PNG/WebP animasi sudah ditambahkan. Native pre-decode validation tetap P2.
 - Berikutnya: review frontend di Windows dengan npm ci / npm run dev. Backend tidak dimulai.
+
+## Polish F02 — 1 Oktober 2026
+
+User meminta polish setelah meninjau screenshot dan memastikan tema/latar bisa diganti. Perubahan: panel lebih padat, header lebih singkat, empty canvas solid adaptif, banner demo ringkas, scrollbar bertema. Pilihan dark/light/system dan latar putih/checker/gelap dipertahankan. Tidak mengubah engine atau kontrak IPC. Build/lint dan delapan tes existing dijalankan untuk regresi; pemeriksaan visual hasil terbaru di Windows tetap menunggu, sehingga G1 belum dinyatakan selesai.
