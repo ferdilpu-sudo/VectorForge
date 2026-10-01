@@ -76,6 +76,7 @@ pub async fn start_batch(
         AppError::invalid_state("Pengaturan worker gagal dibaca.", error.to_string())
     })??;
 
+    state.heavy.set_limit(worker_count)?;
     state.batch.start(app, works, worker_count)
 }
 

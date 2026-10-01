@@ -2,10 +2,10 @@ use std::sync::{Arc, Condvar, Mutex};
 
 use crate::models::AppError;
 
-#[derive(Default)]
 struct GateState {
     active: usize,
     preview_waiters: usize,
+    limit: usize,
 }
 
 pub struct WorkGate {
@@ -26,15 +26,27 @@ impl Default for WorkGate {
 
 impl WorkGate {
     pub fn new(capacity: usize) -> Self {
+        let capacity = capacity.max(1);
         Self {
-            capacity: capacity.max(1),
-            state: Mutex::new(GateState::default()),
+            capacity,
+            state: Mutex::new(GateState {
+                active: 0,
+                preview_waiters: 0,
+                limit: capacity,
+            }),
             wake: Condvar::new(),
         }
     }
 
     pub fn capacity(&self) -> usize {
         self.capacity
+    }
+
+    pub fn set_limit(&self, requested: usize) -> Result<(), AppError> {
+        let mut state = self.state.lock().map_err(lock_error)?;
+        state.limit = requested.clamp(1, self.capacity);
+        self.wake.notify_all();
+        Ok(())
     }
 
     pub fn acquire_preview(self: &Arc<Self>) -> Result<WorkPermit, AppError> {
@@ -51,7 +63,7 @@ impl WorkGate {
             state.preview_waiters = state.preview_waiters.saturating_add(1);
         }
 
-        while state.active >= self.capacity || (!preview && state.preview_waiters > 0) {
+        while state.active >= state.limit || (!preview && state.preview_waiters > 0) {
             state = self.wake.wait(state).map_err(lock_error)?;
         }
 
@@ -91,6 +103,32 @@ mod tests {
     use std::time::Duration;
 
     use super::WorkGate;
+
+    #[test]
+    fn lowered_limit_blocks_work_even_when_capacity_is_larger() -> Result<(), String> {
+        let gate = Arc::new(WorkGate::new(4));
+        gate.set_limit(1).map_err(|error| error.message)?;
+        let first = gate.acquire_normal().map_err(|error| error.message)?;
+
+        let (sent, received) = mpsc::sync_channel(1);
+        let gate_for_thread = Arc::clone(&gate);
+        let worker = thread::spawn(move || {
+            let permit = gate_for_thread
+                .acquire_normal()
+                .map_err(|error| error.message)?;
+            sent.send(()).map_err(|error| error.to_string())?;
+            drop(permit);
+            Ok::<(), String>(())
+        });
+
+        assert!(received.recv_timeout(Duration::from_millis(30)).is_err());
+        drop(first);
+        received
+            .recv_timeout(Duration::from_secs(1))
+            .map_err(|error| error.to_string())?;
+        worker.join().map_err(|_| "worker panicked".to_owned())??;
+        Ok(())
+    }
 
     #[test]
     fn gate_blocks_work_above_capacity_until_permit_is_released() -> Result<(), String> {

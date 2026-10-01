@@ -23,12 +23,24 @@ pub async fn delete_preset(app: AppHandle, id: String) -> Result<(), AppError> {
 
 #[tauri::command]
 pub async fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
-    run_storage(app, store::get_settings).await
+    let state_app = app.clone();
+    let settings = run_storage(app, store::get_settings).await?;
+    state_app
+        .state::<AppState>()
+        .heavy
+        .set_limit(usize::from(settings.worker_count))?;
+    Ok(settings)
 }
 
 #[tauri::command]
 pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, AppError> {
-    run_storage(app, move |dir| store::save_settings(dir, settings)).await
+    let state_app = app.clone();
+    let settings = run_storage(app, move |dir| store::save_settings(dir, settings)).await?;
+    state_app
+        .state::<AppState>()
+        .heavy
+        .set_limit(usize::from(settings.worker_count))?;
+    Ok(settings)
 }
 
 async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
