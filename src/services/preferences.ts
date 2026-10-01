@@ -68,9 +68,7 @@ export function readPreferences(): {
       settings: defaultSettings,
       presets: [],
       warning:
-        e instanceof Error
-          ? `${e.message} Salinan preference rusak disimpan sebelum reset.`
-          : "Pengaturan demo gagal dibaca. Preference direset ke default.",
+        "Pengaturan demo tidak valid. Salinan preference rusak disimpan sebelum reset.",
     };
   }
 }
@@ -85,6 +83,8 @@ export function writePreferences(
     );
     return "";
   } catch {
-    return "Pengaturan demo tidak dapat disimpan di browser.";
+    return settings.language === "en"
+      ? "Demo preferences could not be saved in this browser."
+      : "Pengaturan demo tidak dapat disimpan di browser.";
   }
 }
