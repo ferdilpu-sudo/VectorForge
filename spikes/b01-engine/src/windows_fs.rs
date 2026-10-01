@@ -145,13 +145,18 @@ fn run_in_dir(dir: &Path) -> Result<Vec<String>, String> {
     if locked_replace.is_ok() {
         return Err("ReplaceFileW unexpectedly replaced a deny-share target".to_owned());
     }
-    if fs::read(&locked_target).map_err(|error| error.to_string())? != b"keep-old" {
-        return Err("locked replace damaged the original target".to_owned());
-    }
     if !locked_temp.exists() {
         return Err("failed locked replace lost the replacement temp before cleanup".to_owned());
     }
+
     drop(locked_handle);
+
+    if fs::read(&locked_target).map_err(|error| {
+        format!("read locked target after releasing deny-share handle failed: {error}")
+    })? != b"keep-old"
+    {
+        return Err("locked replace damaged the original target".to_owned());
+    }
     fs::remove_file(&locked_temp)
         .map_err(|error| format!("locked temp cleanup failed: {error}"))?;
     messages.push(
