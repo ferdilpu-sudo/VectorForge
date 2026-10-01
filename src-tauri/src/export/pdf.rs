@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn simple_vector_svg_converts_to_pdf() -> Result<(), String> {
-        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="96" height="48" viewBox="0 0 96 48"><path d="M0,0L96,0L96,48Z" fill="#336699"/></svg>"#;
+        let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="96" height="48" viewBox="0 0 96 48"><path d="M0,0L96,0L96,48Z" fill="#336699"/></svg>"##;
         let pdf = svg_to_pdf(svg).map_err(|error| error.message)?;
         assert!(pdf.starts_with(b"%PDF-"));
         Ok(())

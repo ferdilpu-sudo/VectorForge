@@ -3,4 +3,4 @@ mod fs;
 mod pdf;
 mod service;
 
-pub use service::{CommittedExport, ExportWork, export_work};
+pub use service::{ExportWork, export_work};
