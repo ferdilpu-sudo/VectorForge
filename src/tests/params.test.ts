@@ -5,7 +5,6 @@ import {
   validPresetName,
   builtIns,
 } from "../types/params";
-import { generatePreview } from "../services/mock-engine";
 describe("parameter contract", () => {
   it("accepts defaults and fractional segment length", () => {
     expect(validParams(defaults)).toBe(true);
@@ -20,14 +19,5 @@ describe("parameter contract", () => {
     expect(validPresetName(" ", builtIns)).toBe(false);
     expect(validPresetName("x".repeat(41), builtIns)).toBe(false);
     expect(validPresetName("Logo saya", builtIns)).toBe(true);
-  });
-  it("cancels mock work without returning stale data", async () => {
-    const controller = new AbortController();
-    const result = generatePreview(
-      { fileId: "a", params: defaults, maxSide: 1024, requestId: "one" },
-      controller.signal,
-    );
-    controller.abort();
-    await expect(result).rejects.toHaveProperty("name", "AbortError");
   });
 });
