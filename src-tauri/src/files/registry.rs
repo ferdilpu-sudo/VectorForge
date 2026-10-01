@@ -11,6 +11,12 @@ struct SourceEntry {
     fingerprint: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct SourceSnapshot {
+    pub path: PathBuf,
+    pub fingerprint: String,
+}
+
 impl SourceEntry {
     fn validate(&self) -> Result<(), AppError> {
         if self.path.as_os_str().is_empty() || self.fingerprint.is_empty() {
@@ -77,6 +83,18 @@ impl FileRegistry {
         Ok(id)
     }
 
+    pub fn resolve_source(&self, file_id: &str) -> Result<SourceSnapshot, AppError> {
+        validate_uuid(file_id)?;
+        let entry = self.sources.get(file_id).ok_or_else(|| {
+            AppError::new(ErrorCode::NotFound, "File sumber tidak terdaftar.")
+        })?;
+
+        Ok(SourceSnapshot {
+            path: entry.path.clone(),
+            fingerprint: entry.fingerprint.clone(),
+        })
+    }
+
     pub fn release_sources(&mut self, file_ids: &[String]) -> Result<(), AppError> {
         for file_id in file_ids {
             validate_uuid(file_id)?;
@@ -130,10 +148,7 @@ mod tests {
             .map_err(|error| error.message)?;
 
         uuid::Uuid::parse_str(&id).map_err(|error| error.to_string())?;
-        let entry = registry
-            .sources
-            .get(&id)
-            .ok_or_else(|| "source was not registered".to_owned())?;
+        let entry = registry.resolve_source(&id).map_err(|error| error.message)?;
         if entry.path.as_path() != Path::new("fixture.png") || entry.fingerprint != "fingerprint" {
             return Err("registered source changed".to_owned());
         }

@@ -1,9 +1,12 @@
 mod commands;
+mod engine;
 mod files;
 mod models;
 mod state;
 
-use commands::{choose_destination, import_files, release_files};
+use commands::{
+    cancel_preview, choose_destination, generate_preview, import_files, release_files,
+};
 use state::AppState;
 
 pub fn run() {
@@ -13,7 +16,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             import_files,
             release_files,
-            choose_destination
+            choose_destination,
+            generate_preview,
+            cancel_preview
         ])
         .run(tauri::generate_context!());
 

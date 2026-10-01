@@ -22,6 +22,7 @@ pub struct SourceProbe {
     pub bytes: u64,
     pub format: SourceFormat,
     pub has_alpha: bool,
+    pub orientation: Orientation,
     pub fingerprint: String,
 }
 
@@ -98,6 +99,7 @@ fn probe_source_inner(path: &Path) -> Result<SourceProbe, AppError> {
         bytes: metadata.len(),
         format: detected,
         has_alpha,
+        orientation,
         fingerprint,
     })
 }

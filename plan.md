@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, dan B01 selesai. Setelah B01 ditutup, pengguna memerintahkan **lanjut**, sehingga B02 sekarang DOING. Scope izin ini hanya Tauri shell, file registry, models/errors, IPC validation/authorization dan capabilities; B03 tracing/preview belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, B01 dan B02 selesai. Setelah B02 ditutup, pengguna memerintahkan **lanjut B03**, sehingga B03 sekarang DOING. Scope aktif: decode/normalize preview, bounded latest-wins scheduler, VTracer adapter alpha-aware, preview stats/resource guard, serta command generate/cancel preview. B04–B06 dan integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -45,13 +45,15 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
-| 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | B03 menunggu izin fase berikutnya |
+| 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
+| 2026-10-01 | B03 | DOING | Izin diterima; implementasi decode/preview scheduler/VTracer adapter dimulai | Verifikasi compile/test/clippy/fmt dan fixture preview nyata |
 
 ## Catatan izin fase
 
 - 1 Oktober 2026: user memerintahkan eksekusi ke repository ferdilpu-sudo/VectorForge; izin meliputi memasukkan pedoman dan memulai frontend P1.
 - 1 Oktober 2026: setelah review screenshot Windows, polish, dan verifikasi lokal sukses, user memerintahkan **lanjut**. Ini dicatat sebagai persetujuan melewati G1 dan izin mengerjakan **B01 saja**. Tidak ada izin melewati G2 atau menganggap B01 otomatis mengizinkan B02.
 - 1 Oktober 2026: setelah B01 resmi DONE, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **B02 saja**. B03/B04/B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
+- 1 Oktober 2026: setelah B02 resmi DONE, user memerintahkan **lanjut b03**. Ini menjadi izin mengerjakan **B03 saja**. B04/B05/B06 dan integrasi frontend produksi belum otomatis diizinkan.
 - G2 belum disetujui.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
