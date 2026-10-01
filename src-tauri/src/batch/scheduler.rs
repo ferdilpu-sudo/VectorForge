@@ -846,7 +846,9 @@ mod tests {
             elapsed_ms: Some(10),
         };
 
+        let original_item_id = item.id.clone();
         reset_for_retry(&mut item).map_err(|error| error.message)?;
+        assert_eq!(item.id, original_item_id);
         assert_eq!(item.status, ItemStatus::Queued);
         assert_eq!(item.outputs[0], done);
         assert_eq!(item.outputs[1].status, OutputStatus::Queued);

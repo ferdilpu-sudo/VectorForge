@@ -335,3 +335,216 @@ fn finish(
         elapsed_ms: started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::{Arc, Mutex};
+
+    use image::{Rgba, RgbaImage};
+    use uuid::Uuid;
+    use vtracer::CancelToken;
+
+    #[cfg(windows)]
+    use std::fs::OpenOptions;
+    #[cfg(windows)]
+    use std::os::windows::fs::OpenOptionsExt;
+
+    use crate::engine::WorkGate;
+    use crate::files::{FileRegistry, SourceSnapshot, probe_source};
+    use crate::models::{
+        ExportFormat, HierarchicalMode, JobStage, OutputStatus, TraceMode, TraceParams,
+    };
+
+    use super::{BatchItemWork, process_item};
+
+    struct TempFixture {
+        dir: PathBuf,
+        source: PathBuf,
+    }
+
+    impl TempFixture {
+        fn create(name: &str) -> Result<Self, String> {
+            let dir =
+                std::env::temp_dir().join(format!("vectorforge-b06-item-{}", Uuid::new_v4()));
+            fs::create_dir(&dir).map_err(|error| error.to_string())?;
+
+            let source = dir.join(name);
+            let image = RgbaImage::from_fn(64, 32, |x, _| {
+                if x < 32 {
+                    Rgba([40, 120, 220, 180])
+                } else {
+                    Rgba([220, 80, 60, 255])
+                }
+            });
+            image.save(&source).map_err(|error| error.to_string())?;
+
+            Ok(Self { dir, source })
+        }
+
+        fn work(
+            &self,
+            formats: Vec<ExportFormat>,
+            overwrite: bool,
+        ) -> Result<BatchItemWork, String> {
+            let probe = probe_source(&self.source).map_err(|error| error.message)?;
+            Ok(BatchItemWork {
+                file_id: Uuid::new_v4().to_string(),
+                name: self
+                    .source
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .ok_or_else(|| "invalid fixture name".to_owned())?
+                    .to_owned(),
+                source: SourceSnapshot {
+                    path: self.source.clone(),
+                    fingerprint: probe.fingerprint,
+                },
+                params: params(),
+                formats,
+                output_dir: self.dir.clone(),
+                output_stem: "logo".to_owned(),
+                overwrite,
+            })
+        }
+    }
+
+    impl Drop for TempFixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    fn params() -> TraceParams {
+        TraceParams {
+            color_precision: 6,
+            filter_speckle: 4,
+            layer_difference: 16,
+            corner_threshold: 60,
+            length_threshold: 4.0,
+            mode: TraceMode::Spline,
+            hierarchical: HierarchicalMode::Stacked,
+        }
+    }
+
+    fn output_status(
+        outputs: &[crate::models::BatchOutput],
+        format: ExportFormat,
+    ) -> Option<OutputStatus> {
+        outputs
+            .iter()
+            .find(|output| output.format == format)
+            .map(|output| output.status)
+    }
+
+    #[test]
+    fn cancellation_after_first_export_keeps_committed_output() -> Result<(), String> {
+        let fixture = TempFixture::create("logo.png")?;
+        let cancel = CancelToken::new();
+        let cancel_on_svg = cancel.clone();
+        let gate = Arc::new(WorkGate::new(1));
+        let registry = Arc::new(Mutex::new(FileRegistry::default()));
+
+        let result = process_item(
+            fixture.work(vec![ExportFormat::Svg, ExportFormat::Pdf], false)?,
+            &cancel,
+            &gate,
+            &registry,
+            move |stage, format| {
+                if stage == JobStage::Exporting && format == Some(ExportFormat::Svg) {
+                    cancel_on_svg.cancel();
+                }
+            },
+        );
+
+        assert!(result.cancelled);
+        assert_eq!(
+            output_status(&result.outputs, ExportFormat::Svg),
+            Some(OutputStatus::Done)
+        );
+        assert_eq!(
+            output_status(&result.outputs, ExportFormat::Pdf),
+            Some(OutputStatus::Cancelled)
+        );
+        assert!(fixture.dir.join("logo.svg").is_file());
+        assert!(!fixture.dir.join("logo.pdf").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn repeated_same_name_uses_suffix_without_overwrite() -> Result<(), String> {
+        let fixture = TempFixture::create("logo.png")?;
+        let gate = Arc::new(WorkGate::new(1));
+        let registry = Arc::new(Mutex::new(FileRegistry::default()));
+
+        let first = process_item(
+            fixture.work(vec![ExportFormat::Svg], false)?,
+            &CancelToken::new(),
+            &gate,
+            &registry,
+            |_, _| {},
+        );
+        let second = process_item(
+            fixture.work(vec![ExportFormat::Svg], false)?,
+            &CancelToken::new(),
+            &gate,
+            &registry,
+            |_, _| {},
+        );
+
+        assert_eq!(
+            output_status(&first.outputs, ExportFormat::Svg),
+            Some(OutputStatus::Done)
+        );
+        assert_eq!(
+            output_status(&second.outputs, ExportFormat::Svg),
+            Some(OutputStatus::Done)
+        );
+        assert!(fixture.dir.join("logo.svg").is_file());
+        assert!(fixture.dir.join("logo (2).svg").is_file());
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn svg_success_and_locked_pdf_failure_preserve_partial_outputs() -> Result<(), String> {
+        let fixture = TempFixture::create("logo.png")?;
+        let pdf_path = fixture.dir.join("logo.pdf");
+        fs::write(&pdf_path, b"keep-old-pdf").map_err(|error| error.to_string())?;
+
+        let locked = OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&pdf_path)
+            .map_err(|error| error.to_string())?;
+
+        let gate = Arc::new(WorkGate::new(1));
+        let registry = Arc::new(Mutex::new(FileRegistry::default()));
+        let result = process_item(
+            fixture.work(vec![ExportFormat::Svg, ExportFormat::Pdf], true)?,
+            &CancelToken::new(),
+            &gate,
+            &registry,
+            |_, _| {},
+        );
+
+        assert_eq!(
+            output_status(&result.outputs, ExportFormat::Svg),
+            Some(OutputStatus::Done)
+        );
+        assert_eq!(
+            output_status(&result.outputs, ExportFormat::Pdf),
+            Some(OutputStatus::Failed)
+        );
+        assert!(fixture.dir.join("logo.svg").is_file());
+
+        drop(locked);
+        assert_eq!(
+            fs::read(pdf_path).map_err(|error| error.to_string())?,
+            b"keep-old-pdf"
+        );
+        Ok(())
+    }
+}
