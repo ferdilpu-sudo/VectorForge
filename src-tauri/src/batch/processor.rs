@@ -362,8 +362,7 @@ mod tests {
 
     impl TempFixture {
         fn create(name: &str) -> Result<Self, String> {
-            let dir =
-                std::env::temp_dir().join(format!("vectorforge-b06-item-{}", Uuid::new_v4()));
+            let dir = std::env::temp_dir().join(format!("vectorforge-b06-item-{}", Uuid::new_v4()));
             fs::create_dir(&dir).map_err(|error| error.to_string())?;
 
             let source = dir.join(name);
