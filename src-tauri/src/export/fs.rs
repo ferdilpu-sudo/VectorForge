@@ -20,6 +20,85 @@ unsafe extern "system" {
     ) -> i32;
 }
 
+pub struct OutputReservation {
+    path: PathBuf,
+    owns_placeholder: bool,
+    committed: bool,
+}
+
+impl OutputReservation {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn commit(mut self, bytes: &[u8]) -> Result<(PathBuf, u64), AppError> {
+        let written = write_atomic(&self.path, bytes, true)?;
+        self.committed = true;
+        Ok((self.path.clone(), written))
+    }
+}
+
+impl Drop for OutputReservation {
+    fn drop(&mut self) {
+        if self.owns_placeholder && !self.committed {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
+pub fn reserve_batch_output(
+    directory: &Path,
+    stem: &str,
+    extension: &str,
+    overwrite: bool,
+) -> Result<OutputReservation, AppError> {
+    if !directory.is_dir() || stem.is_empty() || extension.is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidParams,
+            "Tujuan batch atau nama output tidak valid.",
+        ));
+    }
+
+    if overwrite {
+        return Ok(OutputReservation {
+            path: directory.join(format!("{stem}.{extension}")),
+            owns_placeholder: false,
+            committed: false,
+        });
+    }
+
+    for number in 1..=10_000u32 {
+        let file_name = if number == 1 {
+            format!("{stem}.{extension}")
+        } else {
+            format!("{stem} ({number}).{extension}")
+        };
+        let path = directory.join(file_name);
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(file) => {
+                drop(file);
+                return Ok(OutputReservation {
+                    path,
+                    owns_placeholder: true,
+                    committed: false,
+                });
+            }
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(write_error(
+                    "Nama output batch gagal direservasi.",
+                    error,
+                ));
+            }
+        }
+    }
+
+    Err(AppError::new(
+        ErrorCode::WriteFailed,
+        "Nama output batch unik tidak tersedia.",
+    ))
+}
+
 pub fn write_atomic(
     target: &Path,
     bytes: &[u8],
@@ -162,7 +241,7 @@ mod tests {
     #[cfg(windows)]
     use std::os::windows::fs::OpenOptionsExt;
 
-    use super::write_atomic;
+    use super::{reserve_batch_output, write_atomic};
 
     struct TempDir {
         path: PathBuf,
@@ -214,6 +293,49 @@ mod tests {
         fs::write(&target, b"old").map_err(|error| error.to_string())?;
         write_atomic(&target, b"new", true).map_err(|error| error.message)?;
         assert_eq!(fs::read(target).map_err(|error| error.to_string())?, b"new");
+        Ok(())
+    }
+
+    #[test]
+    fn batch_reservation_uses_suffix_without_racing_existing_file() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        fs::write(dir.path.join("logo.svg"), b"existing")
+            .map_err(|error| error.to_string())?;
+
+        let reservation = reserve_batch_output(&dir.path, "logo", "svg", false)
+            .map_err(|error| error.message)?;
+        assert_eq!(
+            reservation
+                .path()
+                .file_name()
+                .and_then(|value| value.to_str()),
+            Some("logo (2).svg")
+        );
+
+        let (path, bytes) = reservation
+            .commit(b"vector")
+            .map_err(|error| error.message)?;
+        assert_eq!(bytes, 6);
+        assert_eq!(
+            fs::read(path).map_err(|error| error.to_string())?,
+            b"vector"
+        );
+        assert_eq!(
+            fs::read(dir.path.join("logo.svg")).map_err(|error| error.to_string())?,
+            b"existing"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn dropped_batch_reservation_cleans_placeholder() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        let path = {
+            let reservation = reserve_batch_output(&dir.path, "logo", "pdf", false)
+                .map_err(|error| error.message)?;
+            reservation.path().to_path_buf()
+        };
+        assert!(!path.exists());
         Ok(())
     }
 

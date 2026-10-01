@@ -160,7 +160,7 @@ fn validate_not_source(source: &Path, destination: &Path) -> Result<(), AppError
     }
 }
 
-fn validate_svg_size(
+pub(crate) fn validate_svg_size(
     bytes: usize,
     format: ExportFormat,
     allow_large_output: bool,
@@ -175,7 +175,7 @@ fn validate_svg_size(
     }
 }
 
-fn flatten_on_white(mut image: RgbaImage) -> RgbaImage {
+pub(crate) fn flatten_on_white(mut image: RgbaImage) -> RgbaImage {
     for pixel in image.pixels_mut() {
         let alpha = u16::from(pixel[3]);
         for channel in &mut pixel.0[..3] {
