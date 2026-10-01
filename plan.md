@@ -47,7 +47,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
 | 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | User kemudian mengizinkan B03 |
 | 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | User kemudian mengizinkan B04 |
-| 2026-10-01 | B04 | DOING | Izin diterima; kontrak export, destination snapshot, output registry dan dependency PDF dimulai | Implement writer SVG/PDF/EPS + atomic Windows commit + fixture export |
+| 2026-10-01 | B04 | DOING | Export SVG/PDF/EPS produksi + atomic Windows commit terimplementasi; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS | Kunci Cargo.lock produksi + audit dependency/license B04 |
 
 ## Catatan izin fase
 
