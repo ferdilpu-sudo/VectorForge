@@ -224,3 +224,10 @@ Resource characterization release:
 - fragmented 256×256, 255 level: 1913 KiB lower-bound mask, segment 4 ms, split 4 ms.
 
 B01 belum DONE hanya karena exact dependency graph, lisensi transitif, dan lockfile spike belum dicatat/committed. Engine/export/alpha/filesystem tidak lagi blocker.
+
+
+## Lockfile B01
+
+`spikes/b01-engine/Cargo.lock` telah dikomit oleh pengguna pada commit `2bf29cf`. Working tree lokal dilaporkan clean dan branch `main` sinkron dengan `origin/main`.
+
+Dengan ini exact dependency resolution untuk spike B01 sudah reproducible. Item yang masih terbuka untuk menutup B01 hanyalah verifikasi lisensi transitif dari metadata Cargo.
