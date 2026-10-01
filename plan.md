@@ -89,3 +89,8 @@ Setelah run Windows membuktikan panic pada gambar alpha nol dan stock writer men
 ### B01 split-mask alpha spike
 
 Stock segmentation meratakan fixture RGB-sama dengan alpha 128/255 menjadi alpha 191. Karena IR segmentation VTracer public, B01 menguji split-mask per alpha setelah clustering namun sebelum curve fitting. Tujuannya mempertahankan engine VTracer tanpa fork dan tanpa multi-pass tracing. Dependency `visioncortex 0.9.3` ditambahkan langsung pada spike hanya untuk konstruksi `BinaryImage`. Correctness diuji dengan alpha exact; biaya layer/memory pada gambar nyata belum dianggap lulus.
+
+
+### B01 alpha resource characterization
+
+Correctness split-mask lulus pada Windows untuk alpha parsial dan boundary RGB-sama alpha 128/255. Spike berikutnya meng-crop sub-mask per alpha dan mengukur gradient coherent vs alpha terfragmentasi. Lower-bound mask dihitung dari 1 bit/pixel; benchmark keputusan harus memakai release build. Jika input alpha patologis menyebabkan ledakan layer/mask, kebijakan produksi adalah complexity guard + error eksplisit, bukan silent flatten.

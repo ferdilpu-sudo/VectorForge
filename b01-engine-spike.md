@@ -155,3 +155,13 @@ Hasil Windows menunjukkan stock VTracer menggabungkan dua area yang RGB-nya iden
 Spike menambah dependency langsung `visioncortex = 0.9.3` hanya karena `BinaryImage` diperlukan untuk membangun sub-mask. Ini penggunaan API nyata, bukan dependency transitif yang ditambahkan tanpa alasan.
 
 Versi karakterisasi memakai nilai alpha exact agar correctness mudah dibuktikan. Itu **belum** keputusan produksi: gambar dengan banyak level alpha dapat memperbanyak layer/mask dan perlu benchmark/resource budget sebelum B01 ditutup.
+
+
+### Stress test alpha dan budgeting mask
+
+`BinaryImage` visioncortex menyimpan mask sebagai bit-vector, secara konseptual 1 bit per pixel. Harness kini:
+- crop setiap sub-mask alpha ke bounding box alpha tersebut, bukan mewarisi ukuran penuh layer warna;
+- melaporkan jumlah level alpha, jumlah split layer, waktu segment/split dan **lower-bound** byte mask (jumlah area bounding-box / 8; belum termasuk allocator/metadata);
+- membandingkan fixture gradient alpha spatially-coherent dengan fixture alpha terfragmentasi.
+
+Angka waktu dari `cargo run` debug hanya smoke signal. Untuk keputusan performa, jalankan `cargo run --release`. Fixture terfragmentasi sengaja patologis; jika hasilnya menunjukkan layer/mask explosion, produksi harus memiliki complexity guard dan mengembalikan error terstruktur sesuai D14, bukan flatten atau OOM.

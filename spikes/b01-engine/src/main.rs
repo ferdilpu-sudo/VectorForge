@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::time::Instant;
 
 use image::{Rgba, RgbaImage};
 use svg2pdf::{ConversionOptions, PageOptions};
@@ -54,6 +55,20 @@ fn partial_alpha(width: u32, height: u32) -> ColorImage {
 fn same_rgb_alpha_split(width: u32, height: u32) -> ColorImage {
     rgba_image_to_color(RgbaImage::from_fn(width, height, |x, _| {
         let alpha = if x < width / 2 { 128 } else { 255 };
+        Rgba([40, 120, 220, alpha])
+    }))
+}
+
+fn smooth_alpha_gradient(width: u32, height: u32) -> ColorImage {
+    rgba_image_to_color(RgbaImage::from_fn(width, height, |x, _| {
+        let alpha = 1 + ((u64::from(x) * 254) / u64::from(width.max(2) - 1)) as u8;
+        Rgba([40, 120, 220, alpha])
+    }))
+}
+
+fn fragmented_alpha(width: u32, height: u32) -> ColorImage {
+    rgba_image_to_color(RgbaImage::from_fn(width, height, |x, y| {
+        let alpha = 1 + (((u64::from(x) * 37 + u64::from(y) * 17) % 255) as u8);
         Rgba([40, 120, 220, alpha])
     }))
 }
@@ -290,6 +305,40 @@ fn distinct_alphas(doc: &VectorDoc) -> Vec<u8> {
 }
 
 
+#[derive(Clone, Copy)]
+struct AlphaBounds {
+    left: usize,
+    top: usize,
+    right: usize,
+    bottom: usize,
+}
+
+impl AlphaBounds {
+    fn new(x: usize, y: usize) -> Self {
+        Self {
+            left: x,
+            top: y,
+            right: x,
+            bottom: y,
+        }
+    }
+
+    fn include(&mut self, x: usize, y: usize) {
+        self.left = self.left.min(x);
+        self.top = self.top.min(y);
+        self.right = self.right.max(x);
+        self.bottom = self.bottom.max(y);
+    }
+
+    fn width(self) -> usize {
+        self.right - self.left + 1
+    }
+
+    fn height(self) -> usize {
+        self.bottom - self.top + 1
+    }
+}
+
 fn split_segmentation_by_source_alpha(
     segmentation: Segmentation,
     source: &ColorImage,
@@ -298,7 +347,7 @@ fn split_segmentation_by_source_alpha(
 
     for layer in segmentation.layers {
         let base_color = layer.paint.color();
-        let mut masks: BTreeMap<u8, BinaryImage> = BTreeMap::new();
+        let mut bounds: BTreeMap<u8, AlphaBounds> = BTreeMap::new();
 
         for local_y in 0..layer.mask.image.height {
             for local_x in 0..layer.mask.image.width {
@@ -316,24 +365,49 @@ fn split_segmentation_by_source_alpha(
                     return Err("segmentation mask escaped source bounds".to_owned());
                 }
 
-                let alpha = source
-                    .get_pixel(global_x as usize, global_y as usize)
-                    .a;
+                let alpha = source.get_pixel(global_x as usize, global_y as usize).a;
                 if alpha == 0 {
                     continue;
                 }
 
-                let mask = masks.entry(alpha).or_insert_with(|| {
-                    BinaryImage::new_w_h(
-                        layer.mask.image.width,
-                        layer.mask.image.height,
-                    )
-                });
-                mask.set_pixel(local_x, local_y, true);
+                bounds
+                    .entry(alpha)
+                    .and_modify(|bbox| bbox.include(local_x, local_y))
+                    .or_insert_with(|| AlphaBounds::new(local_x, local_y));
             }
         }
 
-        for (alpha, mask) in masks {
+        let mut masks: BTreeMap<u8, (AlphaBounds, BinaryImage)> = bounds
+            .into_iter()
+            .map(|(alpha, bbox)| {
+                (
+                    alpha,
+                    (bbox, BinaryImage::new_w_h(bbox.width(), bbox.height())),
+                )
+            })
+            .collect();
+
+        for local_y in 0..layer.mask.image.height {
+            for local_x in 0..layer.mask.image.width {
+                if !layer.mask.image.get_pixel(local_x, local_y) {
+                    continue;
+                }
+
+                let global_x = (layer.mask.offset.x + local_x as i32) as usize;
+                let global_y = (layer.mask.offset.y + local_y as i32) as usize;
+                let alpha = source.get_pixel(global_x, global_y).a;
+                if alpha == 0 {
+                    continue;
+                }
+
+                let (bbox, mask) = masks
+                    .get_mut(&alpha)
+                    .ok_or_else(|| "alpha mask disappeared during split".to_owned())?;
+                mask.set_pixel(local_x - bbox.left, local_y - bbox.top, true);
+            }
+        }
+
+        for (alpha, (bbox, mask)) in masks {
             result.layers.push(Layer {
                 paint: Paint::Solid(vtracer::Color::new_rgba(
                     base_color.r,
@@ -341,12 +415,67 @@ fn split_segmentation_by_source_alpha(
                     base_color.b,
                     alpha,
                 )),
-                mask: RegionMask::new(mask, layer.mask.offset),
+                mask: RegionMask::new(
+                    mask,
+                    vtracer::PointI32 {
+                        x: layer.mask.offset.x + bbox.left as i32,
+                        y: layer.mask.offset.y + bbox.top as i32,
+                    },
+                ),
             });
         }
     }
 
     Ok(result)
+}
+
+fn segmentation_mask_lower_bound_bytes(segmentation: &Segmentation) -> usize {
+    segmentation
+        .layers
+        .iter()
+        .map(|layer| {
+            let bits = layer.mask.image.width.saturating_mul(layer.mask.image.height);
+            bits.div_ceil(8)
+        })
+        .sum()
+}
+
+fn alpha_levels(source: &ColorImage) -> usize {
+    let mut seen = [false; 256];
+    for pixel in source.pixels.chunks_exact(4) {
+        seen[pixel[3] as usize] = true;
+    }
+    seen.into_iter().filter(|value| *value).count()
+}
+
+fn characterize_alpha_split_cost(
+    pipeline: &vtracer::Pipeline,
+    label: &str,
+    source: &ColorImage,
+) -> Result<(), String> {
+    let segment_started = Instant::now();
+    let segmentation = pipeline
+        .segment(source)
+        .map_err(|error| error.to_string())?;
+    let segment_elapsed = segment_started.elapsed();
+
+    let split_started = Instant::now();
+    let split = split_segmentation_by_source_alpha(segmentation, source)?;
+    let split_elapsed = split_started.elapsed();
+
+    let mask_bytes = segmentation_mask_lower_bound_bytes(&split);
+    println!(
+        "[INFO] alpha stress {label}: {}x{}, levels={}, split_layers={}, mask_lower_bound={} KiB, segment={} ms, split={} ms",
+        source.width,
+        source.height,
+        alpha_levels(source),
+        split.layers.len(),
+        mask_bytes.div_ceil(1024),
+        segment_elapsed.as_millis(),
+        split_elapsed.as_millis(),
+    );
+
+    Ok(())
 }
 
 fn trace_alpha_split(
@@ -495,6 +624,17 @@ fn run() -> Result<(), String> {
             "[BLOCKED] alpha-split segmentation failed same-RGB boundary; IR alphas = {split_alphas:?}"
         );
     }
+
+    characterize_alpha_split_cost(
+        &pipeline,
+        "smooth-gradient",
+        &smooth_alpha_gradient(512, 256),
+    )?;
+    characterize_alpha_split_cost(
+        &pipeline,
+        "fragmented",
+        &fragmented_alpha(256, 256),
+    )?;
 
     println!(
         "B01 remains a spike: do not wire this harness into the production frontend."
