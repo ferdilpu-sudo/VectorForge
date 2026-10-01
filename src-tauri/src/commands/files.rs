@@ -51,6 +51,11 @@ fn import_one(
     window: &WebviewWindow,
     raw_path: &str,
 ) -> Result<SourceFile, AppError> {
+    let state = app.state::<AppState>();
+    let _scope_guard = state.file_scope.lock().map_err(|error| {
+        AppError::invalid_state("Boundary akses file tidak dapat dikunci.", error.to_string())
+    })?;
+
     let requested = PathBuf::from(raw_path);
     let scope = app.asset_protocol_scope();
 
@@ -88,7 +93,6 @@ fn import_one(
         })?
         .to_string();
 
-    let state = app.state::<AppState>();
     let id = {
         let mut registry = state.registry.lock().map_err(|error| {
             AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
@@ -110,11 +114,35 @@ fn import_one(
 }
 
 #[tauri::command]
-pub fn release_files(state: State<'_, AppState>, file_ids: Vec<String>) -> Result<(), AppError> {
+pub fn release_files(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    file_ids: Vec<String>,
+) -> Result<(), AppError> {
+    let _scope_guard = state.file_scope.lock().map_err(|error| {
+        AppError::invalid_state("Boundary akses file tidak dapat dikunci.", error.to_string())
+    })?;
+
+    let revoke_paths = {
+        let registry = state.registry.lock().map_err(|error| {
+            AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
+        })?;
+        registry.source_paths_to_revoke(&file_ids)?
+    };
+
+    let scope = app.asset_protocol_scope();
+    for path in &revoke_paths {
+        scope.forbid_file(path).map_err(|error| {
+            AppError::invalid_state(
+                "Akses preview file gagal dicabut.",
+                error.to_string(),
+            )
+        })?;
+    }
+
     let mut registry = state.registry.lock().map_err(|error| {
         AppError::invalid_state("Registry file tidak dapat dikunci.", error.to_string())
     })?;
-
     registry.release_sources(&file_ids)
 }
 

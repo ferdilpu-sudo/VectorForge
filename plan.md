@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 1 Oktober 2026: P0, frontend P1/G1, B01, B02, B03, B04, dan B05 selesai. Setelah B05 ditutup, pengguna memerintahkan **lanjut**, sehingga B06 sekarang DOING. Scope aktif hanya batch scheduler, cancel/retry, event snapshot, output collision handling, dan shared heavy-work budget. Integrasi frontend produksi tetap belum diizinkan.
+Status 1 Oktober 2026: P0, frontend P1/G1, dan backend B01–B06 selesai secara implementasi dan gate lokal. B06 telah lulus 70/70 Rust tests, Clippy, rustfmt, dan working tree bersih. Sebelum G2, user memerintahkan **bereskan** untuk menutup boundary B02 yang tertunda: revocation Tauri asset-protocol scope pada `release_files`. Integrasi frontend produksi tetap belum diizinkan.
 
 ## Backlog dan gate
 
@@ -49,7 +49,8 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B03 | DONE | Core + fixture preview nyata lulus; 28/28 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; latest-wins/cancel, alpha preservation, SOURCE_CHANGED, 30 MP dan 50 MiB guards terbukti; Cargo.lock committed | User kemudian mengizinkan B04 |
 | 2026-10-01 | B04 | DONE | Export SVG/PDF/EPS produksi + atomic Windows commit lulus; 44/44 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS | User kemudian mengizinkan B05; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
 | 2026-10-01 | B05 | DONE | Settings/preset storage produksi lulus; 58/58 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; Cargo.lock committed; tidak ada package/version baru di luar graph dependency yang sudah diaudit | User kemudian mengizinkan B06; sebelum G2 verifikasi/fix asset-protocol scope revocation pada release_files |
-| 2026-10-01 | B06 | DOING | Izin diterima; model batch kanonis dan shared heavy-work budget dimulai | Implement scheduler, per-format output, collision reservation, cancel/retry, progress/done events |
+| 2026-10-01 | B06 | DONE | Batch scheduler produksi lulus; 70/70 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; partial/cancel/retry/collision fixtures lulus; working tree clean | User memerintahkan bereskan boundary asset-scope sebelum G2 |
+| 2026-10-01 | B02 boundary hardening | DOING | `release_files` diperbaiki agar revoke asset-protocol scope hanya saat referensi path terakhir dilepas; import/release diserialkan untuk mencegah race | Jalankan cargo check/test/clippy/fmt pada Windows sebelum menutup blocker G2 |
 
 ## Catatan izin fase
 

@@ -9,6 +9,7 @@ pub struct AppState {
     pub preview: PreviewScheduler,
     pub batch: BatchScheduler,
     pub heavy: Arc<WorkGate>,
+    pub file_scope: Mutex<()>,
     pub storage: Arc<Mutex<()>>,
 }
 
@@ -22,6 +23,7 @@ impl Default for AppState {
             preview: PreviewScheduler::new(Arc::clone(&heavy)),
             batch: BatchScheduler::new(Arc::clone(&heavy), registry),
             heavy,
+            file_scope: Mutex::new(()),
             storage: Arc::new(Mutex::new(())),
         }
     }

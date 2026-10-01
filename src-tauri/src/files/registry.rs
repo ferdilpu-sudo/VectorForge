@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use uuid::Uuid;
@@ -103,6 +103,31 @@ impl FileRegistry {
             path: entry.path.clone(),
             fingerprint: entry.fingerprint.clone(),
         })
+    }
+
+    pub fn source_paths_to_revoke(&self, file_ids: &[String]) -> Result<Vec<PathBuf>, AppError> {
+        for file_id in file_ids {
+            validate_uuid(file_id)?;
+        }
+
+        let release_ids = file_ids.iter().collect::<HashSet<_>>();
+        let mut paths = Vec::new();
+
+        for (file_id, entry) in &self.sources {
+            if !release_ids.contains(file_id) || paths.contains(&entry.path) {
+                continue;
+            }
+
+            let has_surviving_reference = self.sources.iter().any(|(other_id, other)| {
+                other.path == entry.path && !release_ids.contains(other_id)
+            });
+            if !has_surviving_reference {
+                paths.push(entry.path.clone());
+            }
+        }
+
+        paths.sort();
+        Ok(paths)
     }
 
     pub fn release_sources(&mut self, file_ids: &[String]) -> Result<(), AppError> {
@@ -221,6 +246,58 @@ mod tests {
                 .release_sources(&["not-a-uuid".to_owned()])
                 .is_err()
         );
+        assert!(
+            registry
+                .source_paths_to_revoke(&["not-a-uuid".to_owned()])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn source_scope_is_revoked_only_after_last_reference() -> Result<(), String> {
+        let mut registry = FileRegistry::default();
+        let path = PathBuf::from("shared.png");
+        let first = registry
+            .register_source(path.clone(), "fingerprint-a".to_owned())
+            .map_err(|error| error.message)?;
+        let second = registry
+            .register_source(path.clone(), "fingerprint-b".to_owned())
+            .map_err(|error| error.message)?;
+
+        let first_paths = registry
+            .source_paths_to_revoke(std::slice::from_ref(&first))
+            .map_err(|error| error.message)?;
+        assert!(first_paths.is_empty());
+
+        registry
+            .release_sources(std::slice::from_ref(&first))
+            .map_err(|error| error.message)?;
+        assert!(registry.resolve_source(&second).is_ok());
+
+        let second_paths = registry
+            .source_paths_to_revoke(std::slice::from_ref(&second))
+            .map_err(|error| error.message)?;
+        assert_eq!(second_paths, vec![path]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn releasing_all_duplicate_references_revokes_path_once() -> Result<(), String> {
+        let mut registry = FileRegistry::default();
+        let path = PathBuf::from("shared.png");
+        let first = registry
+            .register_source(path.clone(), "fingerprint-a".to_owned())
+            .map_err(|error| error.message)?;
+        let second = registry
+            .register_source(path.clone(), "fingerprint-b".to_owned())
+            .map_err(|error| error.message)?;
+
+        let paths = registry
+            .source_paths_to_revoke(&[first, second])
+            .map_err(|error| error.message)?;
+        assert_eq!(paths, vec![path]);
+        Ok(())
     }
 
     #[test]
