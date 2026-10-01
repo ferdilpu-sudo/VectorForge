@@ -38,6 +38,24 @@ struct DestinationEntry {
     overwrite_confirmed: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct DestinationSnapshot {
+    pub path: PathBuf,
+    pub kind: DestinationKind,
+    pub format: Option<ExportFormat>,
+    pub overwrite_confirmed: bool,
+}
+
+#[derive(Debug, Clone)]
+struct OutputEntry {
+    path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub struct OutputSnapshot {
+    pub path: PathBuf,
+}
+
 impl DestinationEntry {
     fn validate(&self) -> Result<(), AppError> {
         if self.path.as_os_str().is_empty() {
@@ -67,6 +85,7 @@ impl DestinationEntry {
 pub struct FileRegistry {
     sources: HashMap<String, SourceEntry>,
     destinations: HashMap<String, DestinationEntry>,
+    outputs: HashMap<String, OutputEntry>,
 }
 
 impl FileRegistry {
@@ -106,6 +125,23 @@ impl FileRegistry {
         Ok(())
     }
 
+    pub fn resolve_destination(
+        &self,
+        destination_id: &str,
+    ) -> Result<DestinationSnapshot, AppError> {
+        validate_uuid(destination_id)?;
+        let entry = self.destinations.get(destination_id).ok_or_else(|| {
+            AppError::new(ErrorCode::NotFound, "Tujuan output tidak terdaftar.")
+        })?;
+
+        Ok(DestinationSnapshot {
+            path: entry.path.clone(),
+            kind: entry.kind,
+            format: entry.format,
+            overwrite_confirmed: entry.overwrite_confirmed,
+        })
+    }
+
     pub fn register_destination(
         &mut self,
         path: PathBuf,
@@ -124,6 +160,31 @@ impl FileRegistry {
         let id = Uuid::new_v4().to_string();
         self.destinations.insert(id.clone(), entry);
         Ok(id)
+    }
+
+    pub fn register_output(&mut self, path: PathBuf) -> Result<String, AppError> {
+        if path.as_os_str().is_empty() {
+            return Err(AppError::new(
+                ErrorCode::InvalidState,
+                "Registry output menerima path kosong.",
+            ));
+        }
+
+        let id = Uuid::new_v4().to_string();
+        self.outputs.insert(id.clone(), OutputEntry { path });
+        Ok(id)
+    }
+
+    pub fn resolve_output(&self, output_id: &str) -> Result<OutputSnapshot, AppError> {
+        validate_uuid(output_id)?;
+        let entry = self
+            .outputs
+            .get(output_id)
+            .ok_or_else(|| AppError::new(ErrorCode::NotFound, "Output tidak terdaftar."))?;
+
+        Ok(OutputSnapshot {
+            path: entry.path.clone(),
+        })
     }
 }
 
@@ -177,6 +238,46 @@ mod tests {
                 .release_sources(&["not-a-uuid".to_owned()])
                 .is_err()
         );
+    }
+
+    #[test]
+    fn destination_snapshot_preserves_write_authority() -> Result<(), String> {
+        let mut registry = FileRegistry::default();
+        let id = registry
+            .register_destination(
+                PathBuf::from("output.svg"),
+                DestinationKind::File,
+                Some(ExportFormat::Svg),
+                true,
+            )
+            .map_err(|error| error.message)?;
+
+        let snapshot = registry
+            .resolve_destination(&id)
+            .map_err(|error| error.message)?;
+        if snapshot.path != PathBuf::from("output.svg")
+            || snapshot.kind != DestinationKind::File
+            || snapshot.format != Some(ExportFormat::Svg)
+            || !snapshot.overwrite_confirmed
+        {
+            return Err("destination snapshot changed".to_owned());
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn output_id_resolves_only_registered_output() -> Result<(), String> {
+        let mut registry = FileRegistry::default();
+        let id = registry
+            .register_output(PathBuf::from("result.svg"))
+            .map_err(|error| error.message)?;
+        let output = registry
+            .resolve_output(&id)
+            .map_err(|error| error.message)?;
+        assert_eq!(output.path, PathBuf::from("result.svg"));
+        assert!(registry.resolve_output("not-a-uuid").is_err());
+        Ok(())
     }
 
     #[test]
