@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -21,6 +21,7 @@ pub struct BatchItemWork {
     pub params: TraceParams,
     pub formats: Vec<ExportFormat>,
     pub output_dir: PathBuf,
+    pub output_stem: String,
     pub overwrite: bool,
 }
 
@@ -63,7 +64,7 @@ where
         return finish(outputs, None, true, started);
     }
 
-    let stem = source_stem(&work.name);
+    let stem = work.output_stem.clone();
     let vector_formats = work
         .formats
         .iter()
@@ -77,6 +78,8 @@ where
         on_stage(JobStage::Decoding, None);
         match decode_verified(&work.source) {
             Ok(image) => {
+                let width = image.width();
+                let height = image.height();
                 if cancel.is_cancelled() {
                     cancel_queued(&mut outputs);
                     drop(permit);
@@ -86,17 +89,9 @@ where
                 on_stage(JobStage::Tracing, None);
                 match trace_image(image, &work.params, cancel) {
                     Ok(document) => {
-                        let dimensions = document
-                            .as_ref()
-                            .map(|doc| (doc.width as u32, doc.height as u32));
                         let svg = match document.as_ref() {
                             Some(doc) => write_alpha_svg(doc),
-                            None => {
-                                let (width, height) = dimensions.unwrap_or_else(|| {
-                                    probe_dimensions(&work.source).unwrap_or((1, 1))
-                                });
-                                empty_svg(width, height)
-                            }
+                            None => empty_svg(width, height),
                         };
 
                         for format in &vector_formats {
@@ -128,7 +123,10 @@ where
                                         registry,
                                     )
                                 }),
-                                ExportFormat::Eps => unreachable!(),
+                                ExportFormat::Eps => Err(AppError::new(
+                                    ErrorCode::InvalidState,
+                                    "Format EPS masuk ke jalur export SVG/PDF.",
+                                )),
                             };
                             apply_output_result(&mut outputs, *format, result);
                         }
@@ -239,14 +237,6 @@ fn decode_verified(source: &SourceSnapshot) -> Result<image::RgbaImage, AppError
     Ok(image)
 }
 
-fn probe_dimensions(source: &SourceSnapshot) -> Result<(u32, u32), AppError> {
-    let probe = probe_source(&source.path)?;
-    if probe.fingerprint != source.fingerprint {
-        return Err(source_changed());
-    }
-    Ok((probe.width, probe.height))
-}
-
 fn commit_payload(
     work: &BatchItemWork,
     stem: &str,
@@ -345,15 +335,6 @@ fn cancel_queued(outputs: &mut [BatchOutput]) {
         output.status = OutputStatus::Cancelled;
         output.error = None;
     }
-}
-
-fn source_stem(name: &str) -> String {
-    Path::new(name)
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .filter(|value| !value.is_empty())
-        .unwrap_or("output")
-        .to_owned()
 }
 
 fn source_changed() -> AppError {

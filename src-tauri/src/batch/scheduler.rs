@@ -33,7 +33,6 @@ struct BatchRecord {
     cancel_requested: bool,
     items: Vec<StoredItem>,
     active: HashMap<String, CancelToken>,
-    worker_limit: usize,
     workers_remaining: usize,
     run_started: Instant,
     last_emit: Instant,
@@ -86,9 +85,27 @@ impl BatchScheduler {
             .min(self.shared.gate.capacity())
             .min(works.len());
 
+        let mut stem_counts = HashMap::<String, u32>::new();
         let items = works
             .into_iter()
-            .map(|work| StoredItem {
+            .map(|mut work| {
+                let base = source_stem(&work.name);
+                if work.overwrite {
+                    let key = base.to_lowercase();
+                    let count = stem_counts
+                        .entry(key)
+                        .and_modify(|value| *value = value.saturating_add(1))
+                        .or_insert(1);
+                    work.output_stem = if *count == 1 {
+                        base
+                    } else {
+                        format!("{base} ({count})")
+                    };
+                } else {
+                    work.output_stem = base;
+                }
+
+                StoredItem {
                 view: BatchItem {
                     id: Uuid::new_v4().to_string(),
                     file_id: work.file_id.clone(),
@@ -104,7 +121,8 @@ impl BatchScheduler {
                     error: None,
                     elapsed_ms: None,
                 },
-                work,
+                    work,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -130,7 +148,6 @@ impl BatchScheduler {
                 cancel_requested: false,
                 items,
                 active: HashMap::new(),
-                worker_limit,
                 workers_remaining: worker_limit,
                 run_started: now,
                 last_emit: now,
@@ -710,6 +727,15 @@ fn derive_item_status(outputs: &[BatchOutput], cancelled: bool) -> ItemStatus {
     } else {
         ItemStatus::Failed
     }
+}
+
+fn source_stem(name: &str) -> String {
+    std::path::Path::new(name)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("output")
+        .to_owned()
 }
 
 fn queued_output(format: crate::models::ExportFormat) -> BatchOutput {

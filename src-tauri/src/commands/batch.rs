@@ -51,6 +51,7 @@ pub async fn start_batch(
                 params: request.params,
                 formats: request.formats.clone(),
                 output_dir: destination.path.clone(),
+                output_stem: String::new(),
                 overwrite: request.overwrite,
             });
         }

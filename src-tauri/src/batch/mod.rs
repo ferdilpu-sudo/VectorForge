@@ -1,5 +1,5 @@
 mod processor;
 mod scheduler;
 
-pub use processor::{BatchItemWork, ItemProcessResult, process_item};
+pub use processor::BatchItemWork;
 pub use scheduler::BatchScheduler;
