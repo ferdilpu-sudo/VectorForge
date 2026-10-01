@@ -84,7 +84,7 @@ Jalankan harness B01 pada Windows, catat dependency tree/lisensi transitif, uji 
 
 - G1 frontend demo: **DONE**
 - B01 engine/export dependency spike: **DONE**
-- B02 production Tauri/backend shell: **DOING**
+- B02 production Tauri/backend shell: **DONE**
 
 B01 passed Windows release characterization for SVG/PDF/EPS, cancellation, alpha-preserving split-mask, resource guard characterization, and safe Windows file replacement. Its Cargo.lock is committed and Cargo metadata reported no external/transitive package missing a license declaration. The local non-published spike package intentionally has no application license declaration yet.
 

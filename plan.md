@@ -45,7 +45,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-09-30 | P0 | DONE | Paket pedoman revisi 1.1 disusun; belum ada implementasi | Berikutnya F01 setelah izin mulai frontend |
 | 2026-10-01 | G1 | DONE | Screenshot UI Windows ditinjau pengguna; polish panel/canvas/batch diterapkan; lint, 10 tes dan build lulus lokal | Pengguna menyatakan sukses lalu memerintahkan lanjut |
 | 2026-10-01 | B01 | DONE | Engine/export/alpha/filesystem Windows PASS; Cargo.lock committed; Cargo metadata menunjukkan seluruh dependency eksternal/transitif memiliki deklarasi license | User kemudian memerintahkan lanjut |
-| 2026-10-01 | B02 | DOING | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy PASS; smoke-run PASS; Cargo.lock committed; audit lisensi dependency eksternal/transitif PASS | Tinggal konfirmasi rustfmt bersih sebelum B02 DONE |
+| 2026-10-01 | B02 | DONE | Tauri shell/native boundary compile bersih di Windows; 11/11 Rust tests PASS; Clippy -D warnings PASS; rustfmt PASS; smoke-run PASS; Cargo.lock committed; audit lisensi eksternal/transitif PASS; working tree clean | B03 menunggu izin fase berikutnya |
 
 ## Catatan izin fase
 
@@ -153,3 +153,20 @@ Smoke-run dev **PASS**. Ini bukan klaim installer production atau frontend produ
 `src-tauri/Cargo.lock` dikomit pengguna pada commit `1034cb9`. Audit `cargo metadata --locked` menunjukkan satu-satunya package tanpa field `license` adalah package lokal `vectorforge 0.1.0`; seluruh dependency eksternal/transitif memiliki deklarasi license. Lisensi aplikasi VectorForge belum diputuskan dan tidak diisi secara asumtif.
 
 Folder `src-tauri/gen/` adalah output generated Tauri dan di-ignore dari repository; source capability tetap berada di `src-tauri/capabilities/`.
+
+
+### B02 ditutup — 1 Oktober 2026
+
+Verifikasi final pengguna:
+- `cargo check`: PASS;
+- `cargo test`: PASS, 11/11;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS tanpa output;
+- smoke-run Windows: window native VectorForge muncul, frontend tampil dengan Vite dev server aktif, tidak crash saat startup;
+- `src-tauri/Cargo.lock` committed pada `1034cb9`;
+- audit `cargo metadata --locked`: seluruh dependency eksternal/transitif memiliki deklarasi license; hanya package lokal `vectorforge 0.1.0` tanpa field license;
+- working tree bersih dan sinkron dengan `origin/main`.
+
+Dengan bukti ini, **B02 = DONE**.
+
+B03 belum dimulai. Scope berikutnya adalah decode + preview scheduler + adapter vtracer, tetapi tetap menunggu instruksi user untuk lanjut fase berikutnya.
