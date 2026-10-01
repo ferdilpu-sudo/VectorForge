@@ -135,6 +135,13 @@ fn validate_not_source(source: &Path, destination: &Path) -> Result<(), AppError
         return Ok(());
     }
 
+    let canonical_source = fs::canonicalize(source).map_err(|error| {
+        AppError::with_details(
+            ErrorCode::FileNotFound,
+            "File sumber gagal diverifikasi.",
+            error.to_string(),
+        )
+    })?;
     let canonical_destination = fs::canonicalize(destination).map_err(|error| {
         AppError::with_details(
             ErrorCode::WriteFailed,
@@ -143,7 +150,7 @@ fn validate_not_source(source: &Path, destination: &Path) -> Result<(), AppError
         )
     })?;
 
-    if canonical_destination == source {
+    if canonical_destination == canonical_source {
         Err(AppError::new(
             ErrorCode::WriteFailed,
             "File sumber tidak boleh ditimpa oleh hasil export.",

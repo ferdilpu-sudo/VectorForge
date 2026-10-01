@@ -46,16 +46,6 @@ pub struct DestinationSnapshot {
     pub overwrite_confirmed: bool,
 }
 
-#[derive(Debug, Clone)]
-struct OutputEntry {
-    path: PathBuf,
-}
-
-#[derive(Debug, Clone)]
-pub struct OutputSnapshot {
-    pub path: PathBuf,
-}
-
 impl DestinationEntry {
     fn validate(&self) -> Result<(), AppError> {
         if self.path.as_os_str().is_empty() {
@@ -85,7 +75,7 @@ impl DestinationEntry {
 pub struct FileRegistry {
     sources: HashMap<String, SourceEntry>,
     destinations: HashMap<String, DestinationEntry>,
-    outputs: HashMap<String, OutputEntry>,
+    outputs: HashMap<String, PathBuf>,
 }
 
 impl FileRegistry {
@@ -171,20 +161,8 @@ impl FileRegistry {
         }
 
         let id = Uuid::new_v4().to_string();
-        self.outputs.insert(id.clone(), OutputEntry { path });
+        self.outputs.insert(id.clone(), path);
         Ok(id)
-    }
-
-    pub fn resolve_output(&self, output_id: &str) -> Result<OutputSnapshot, AppError> {
-        validate_uuid(output_id)?;
-        let entry = self
-            .outputs
-            .get(output_id)
-            .ok_or_else(|| AppError::new(ErrorCode::NotFound, "Output tidak terdaftar."))?;
-
-        Ok(OutputSnapshot {
-            path: entry.path.clone(),
-        })
     }
 }
 
@@ -255,7 +233,7 @@ mod tests {
         let snapshot = registry
             .resolve_destination(&id)
             .map_err(|error| error.message)?;
-        if snapshot.path != PathBuf::from("output.svg")
+        if snapshot.path.as_path() != Path::new("output.svg")
             || snapshot.kind != DestinationKind::File
             || snapshot.format != Some(ExportFormat::Svg)
             || !snapshot.overwrite_confirmed
@@ -267,16 +245,17 @@ mod tests {
     }
 
     #[test]
-    fn output_id_resolves_only_registered_output() -> Result<(), String> {
+    fn output_id_registers_opaque_output_path() -> Result<(), String> {
         let mut registry = FileRegistry::default();
         let id = registry
             .register_output(PathBuf::from("result.svg"))
             .map_err(|error| error.message)?;
-        let output = registry
-            .resolve_output(&id)
-            .map_err(|error| error.message)?;
-        assert_eq!(output.path, PathBuf::from("result.svg"));
-        assert!(registry.resolve_output("not-a-uuid").is_err());
+
+        uuid::Uuid::parse_str(&id).map_err(|error| error.to_string())?;
+        assert_eq!(
+            registry.outputs.get(&id).map(PathBuf::as_path),
+            Some(Path::new("result.svg"))
+        );
         Ok(())
     }
 
