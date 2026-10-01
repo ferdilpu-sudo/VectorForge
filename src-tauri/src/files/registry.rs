@@ -32,6 +32,13 @@ impl FileRegistry {
         id
     }
 
+    pub fn resolve_source(&self, file_id: &str) -> Result<&SourceEntry, AppError> {
+        validate_uuid(file_id)?;
+        self.sources.get(file_id).ok_or_else(|| {
+            AppError::new(ErrorCode::NotFound, "File sumber tidak terdaftar.")
+        })
+    }
+
     pub fn release_sources(&mut self, file_ids: &[String]) -> Result<(), AppError> {
         for file_id in file_ids {
             validate_uuid(file_id)?;
@@ -62,9 +69,14 @@ impl FileRegistry {
         id
     }
 
-    #[cfg(test)]
-    fn source(&self, id: &str) -> Option<&SourceEntry> {
-        self.sources.get(id)
+    pub fn resolve_destination(
+        &self,
+        destination_id: &str,
+    ) -> Result<&DestinationEntry, AppError> {
+        validate_uuid(destination_id)?;
+        self.destinations.get(destination_id).ok_or_else(|| {
+            AppError::new(ErrorCode::NotFound, "Tujuan output tidak terdaftar.")
+        })
     }
 }
 
@@ -87,8 +99,8 @@ mod tests {
 
         uuid::Uuid::parse_str(&id).map_err(|error| error.to_string())?;
         let entry = registry
-            .source(&id)
-            .ok_or_else(|| "source was not registered".to_owned())?;
+            .resolve_source(&id)
+            .map_err(|error| error.message)?;
         if entry.path != PathBuf::from("fixture.png") || entry.fingerprint != "fingerprint" {
             return Err("registered source changed".to_owned());
         }
@@ -100,7 +112,7 @@ mod tests {
             .release_sources(std::slice::from_ref(&id))
             .map_err(|error| error.message)?;
 
-        if registry.source(&id).is_some() {
+        if registry.resolve_source(&id).is_ok() {
             return Err("source survived release".to_owned());
         }
         Ok(())
