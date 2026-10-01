@@ -7,14 +7,21 @@ import { BatchQueue } from "../features/batch/BatchQueue";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 export function App() {
-  const s = useProject();
+  const files = useProject((state) => state.files);
+  const activeId = useProject((state) => state.activeId);
+  const appSettings = useProject((state) => state.settings);
+  const notice = useProject((state) => state.notice);
+  const importing = useProject((state) => state.importing);
+  const batchBusy = useProject((state) => state.batchBusy);
+  const importFiles = useProject((state) => state.importFiles);
+  const notify = useProject((state) => state.notify);
   const t = useLanguage();
   const input = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [panel, setPanel] = useState(true);
   const [dragging, setDragging] = useState(false);
-  const active = s.files.find((f) => f.id === s.activeId);
+  const active = files.find((file) => file.id === activeId);
   const open = useCallback(() => {
     if (!useProject.getState().batchBusy && !useProject.getState().importing)
       input.current?.click();
@@ -23,17 +30,17 @@ export function App() {
     const q = window.matchMedia("(prefers-color-scheme: light)");
     const apply = () => {
       document.documentElement.dataset.theme =
-        s.settings.theme === "system"
+        appSettings.theme === "system"
           ? q.matches
             ? "light"
             : "dark"
-          : s.settings.theme;
-      document.documentElement.lang = s.settings.language;
+          : appSettings.theme;
+      document.documentElement.lang = appSettings.language;
     };
     apply();
     q.addEventListener("change", apply);
     return () => q.removeEventListener("change", apply);
-  }, [s.settings.theme, s.settings.language]);
+  }, [appSettings.theme, appSettings.language]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (document.querySelector("dialog[open]")) return;
@@ -72,7 +79,7 @@ export function App() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        void s.importFiles(Array.from(e.dataTransfer.files));
+        void importFiles(Array.from(e.dataTransfer.files));
       }}
     >
       <header className="app-toolbar">
@@ -89,7 +96,7 @@ export function App() {
         >
           ☷
         </button>
-        <button onClick={open} disabled={s.importing || s.batchBusy}>
+        <button onClick={open} disabled={importing || batchBusy}>
           ＋ {t("Buka Gambar", "Open image")}
         </button>
         <span className="filename" title={active?.name}>
@@ -100,7 +107,7 @@ export function App() {
         </button>
         <button
           className="primary"
-          disabled={!active || s.batchBusy}
+          disabled={!active || batchBusy}
           onClick={() => setExporting(true)}
         >
           {t("Ekspor…", "Export…")} ↗
@@ -120,16 +127,16 @@ export function App() {
         accept=".png,.jpg,.jpeg,.webp,.bmp"
         multiple
         onChange={(e) => {
-          void s.importFiles(Array.from(e.target.files ?? []));
+          void importFiles(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
       />
-      {s.notice && (
+      {notice && (
         <div className="notice" role="alert">
-          <span>{s.notice}</span>
+          <span>{notice}</span>
           <button
             aria-label={t("Tutup pemberitahuan", "Dismiss notification")}
-            onClick={() => s.notify("")}
+            onClick={() => notify("")}
           >
             ×
           </button>
@@ -139,12 +146,12 @@ export function App() {
         {panel && <ParamPanel />}
         <div className="work-area">
           <CompareCanvas file={active} onOpen={open} />
-          {s.files.length > 0 && <BatchQueue />}
+          {files.length > 0 && <BatchQueue />}
         </div>
       </div>
       <footer className="status-bar">
         <span className="status-dot" />
-        {s.importing
+        {importing
           ? t("Membaca gambar…", "Reading images…")
           : t("Lokal · Mode Demo", "Local · Demo mode")}
         <span className="status-meta">
@@ -161,7 +168,7 @@ export function App() {
       </footer>
       {dragging && (
         <div className="drop-overlay">
-          {s.batchBusy
+          {batchBusy
             ? t("Tunggu batch selesai", "Wait for the batch to finish")
             : t("Lepaskan untuk menambahkan gambar", "Drop to add images")}
         </div>

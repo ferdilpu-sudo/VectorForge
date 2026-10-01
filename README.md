@@ -2,7 +2,7 @@
 
 Revisi dokumen: 1.1 • 30 September 2026 • Bahasa: Indonesia.
 
-VectorForge adalah aplikasi desktop Windows offline untuk mengubah PNG, JPEG, WebP, dan BMP menjadi vektor berwarna SVG, PDF, dan EPS. Paket ini adalah spesifikasi implementasi, **bukan aplikasi yang sudah dibuat**. Tidak ada klaim build, tes, benchmark, maupun installer lulus.
+VectorForge ditujukan sebagai aplikasi desktop Windows offline untuk mengubah PNG, JPEG, WebP, dan BMP menjadi vektor berwarna SVG, PDF, dan EPS. Saat ini repository sudah memiliki **frontend demo yang berjalan di browser**, sedangkan shell Tauri, engine tracing Rust, ekspor native, dan installer Windows belum dibuat. Dokumen proyek membedakan kemampuan demo dari kemampuan produksi agar status implementasi tidak terkesan lebih maju daripada kenyataannya.
 
 ## Mulai di sini
 
@@ -45,14 +45,14 @@ Pedoman fase selanjutnya tetap berlaku. `npm run tauri dev/build` belum tersedia
 
 ## Verifikasi
 
-Build TypeScript/Vite dan lint lulus. Delapan tes validasi dan lifecycle preview/batch lulus pada environment Linux/Node 24. Tes ini tidak membuktikan aplikasi native Windows berjalan.
+Baseline sebelum patch audit 1 Oktober 2026: build TypeScript/Vite, lint, dan delapan tes validasi/lifecycle preview-batch lulus pada environment Linux/Node 24. Verifikasi proyek dilakukan **secara lokal**, bukan melalui GitHub Actions. Setelah perubahan baru, jalankan `npm run lint`, `npm run test`, dan `npm run build` sebelum menyatakan gate terkait lulus. Tes frontend ini tidak membuktikan aplikasi native Windows berjalan.
 
 Percobaan browser automation terblokir: agent-browser daemon gagal start, Chromium lokal tidak tersedia. Visual, DPI Windows, keyboard walkthrough dan pengujian aplikasi grafis eksternal berstatus NOT RUN. Gate G1 menunggu review UI, belum menjadi izin backend.
 
 ## Batas demo yang perlu ditutup sebelum G1 final
 
-- Browser decode memeriksa signature dan batas 30 MP setelah decode; pengecekan dimensi pra-decode, format animasi, profil warna dan grant file di Rust tetap B02/B03.
-- Teks label utama tersedia ID/EN; sebagian pesan validasi masih bilingual dan nama preset bawaan tetap Indonesia.
+- Browser decode memeriksa signature, menolak APNG/animated WebP, dan menerapkan batas 30 MP setelah decode; pengecekan dimensi pra-decode, profil warna, dan grant file di Rust tetap B02/B03.
+- Teks UI utama, error import demo, dan label preset bawaan mengikuti pilihan ID/EN. Kontrak native tetap harus menangani locale/error code secara terstruktur saat adapter Rust dibuat.
 - Kontrak desktop memakai fileId/destinationId. Browser adapter memakai File dan object URL secara eksplisit; native adapter belum dibuat.
 - Batch demo berjalan sekuensial dengan delay simulasi, bukan benchmark workerCount/engine.
 - Preview illustrative tidak memiliki statistik tracing riil; jangan memakai demo untuk penilaian kualitas vektor.

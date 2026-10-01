@@ -5,7 +5,9 @@ import {
   type Preset,
 } from "../types/params";
 import type { AppSettings } from "../types/project";
-const key = "vectorforge-demo-preferences-v1";
+export const preferenceStorageKey = "vectorforge-demo-preferences-v1";
+export const corruptPreferenceBackupKey =
+  "vectorforge-demo-preferences-corrupt-v1";
 export const defaultSettings: AppSettings = {
   language: "id",
   theme: "dark",
@@ -19,7 +21,7 @@ export function readPreferences(): {
   warning: string;
 } {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(preferenceStorageKey);
     if (!raw) return { settings: defaultSettings, presets: [], warning: "" };
     const d = JSON.parse(raw);
     if (d.version !== 1)
@@ -56,10 +58,19 @@ export function readPreferences(): {
     }
     return { settings: s, presets, warning: "" };
   } catch (e) {
+    try {
+      const raw = localStorage.getItem(preferenceStorageKey);
+      if (raw) localStorage.setItem(corruptPreferenceBackupKey, raw);
+    } catch {
+      // Recovery still falls back to defaults when browser storage is unavailable.
+    }
     return {
       settings: defaultSettings,
       presets: [],
-      warning: e instanceof Error ? e.message : "Pengaturan demo gagal dibaca.",
+      warning:
+        e instanceof Error
+          ? `${e.message} Salinan preference rusak disimpan sebelum reset.`
+          : "Pengaturan demo gagal dibaca. Preference direset ke default.",
     };
   }
 }
@@ -69,7 +80,7 @@ export function writePreferences(
 ): string {
   try {
     localStorage.setItem(
-      key,
+      preferenceStorageKey,
       JSON.stringify({ version: 1, settings, presets }),
     );
     return "";

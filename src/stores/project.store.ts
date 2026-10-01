@@ -9,6 +9,7 @@ import {
 import type { AppSettings, SourceFile } from "../types/project";
 import { readPreferences, writePreferences } from "../services/preferences";
 import { api } from "../services/api";
+import { importFileErrorMessage } from "../services/import-files";
 const initial = readPreferences();
 interface State {
   files: SourceFile[];
@@ -61,7 +62,7 @@ export const useProject = create<State>((set, get) => ({
           }));
         } catch (e) {
           errors.push(
-            `${f.name}: ${e instanceof Error ? e.message : "Gagal membaca file"}`,
+            `${f.name}: ${importFileErrorMessage(e, get().settings.language)}`,
           );
         }
       }
@@ -95,9 +96,7 @@ export const useProject = create<State>((set, get) => ({
       createdAt: new Date().toISOString(),
     };
     const presets = [...get().presets, preset];
-    const warning = initial.warning
-      ? "Preferensi rusak dipertahankan; perubahan hanya untuk sesi ini."
-      : writePreferences(get().settings, presets);
+    const warning = writePreferences(get().settings, presets);
     set({ presets, presetId: preset.id, notice: warning });
     return true;
   },
@@ -105,18 +104,14 @@ export const useProject = create<State>((set, get) => ({
     const presets = get().presets.filter((p) => p.id !== id);
     set({
       presets,
-      notice: initial.warning
-        ? "Perubahan hanya untuk sesi ini."
-        : writePreferences(get().settings, presets),
+      notice: writePreferences(get().settings, presets),
     });
     if (get().presetId === id) get().choosePreset(builtIns[0].id);
   },
   setSettings: (settings) => {
     set({
       settings,
-      notice: initial.warning
-        ? "Perubahan hanya untuk sesi ini."
-        : writePreferences(settings, get().presets),
+      notice: writePreferences(settings, get().presets),
     });
   },
 }));

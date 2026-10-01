@@ -93,6 +93,7 @@ export function CompareCanvas({
         ref={canvasRef}
         onWheel={(e) => {
           if (!file) return;
+          e.preventDefault();
           const rect = e.currentTarget.getBoundingClientRect();
           const next = Math.max(
             10,
@@ -209,7 +210,10 @@ export function CompareCanvas({
                   draggable={false}
                   className="result-image"
                   src={preview.url}
-                  alt="Demo illustration — not a trace"
+                  alt={t(
+                    "Ilustrasi demo — bukan hasil tracing",
+                    "Demo illustration — not a trace",
+                  )}
                   style={{
                     clipPath:
                       mode === "compare" ? `inset(0 0 0 ${split}%)` : undefined,
@@ -260,13 +264,13 @@ export function CompareCanvas({
         <div className="zoom-controls">
           <button
             disabled={!file}
-            aria-label="Zoom out"
+            aria-label={t("Perkecil", "Zoom out")}
             onClick={() => zoomTo(zoom - 10)}
           >
             −
           </button>
           <input
-            aria-label="Zoom %"
+            aria-label={t("Persentase zoom", "Zoom percentage")}
             type="number"
             min="10"
             max="800"
@@ -278,7 +282,7 @@ export function CompareCanvas({
           <span>%</span>
           <button
             disabled={!file}
-            aria-label="Zoom in"
+            aria-label={t("Perbesar", "Zoom in")}
             onClick={() => zoomTo(zoom + 10)}
           >
             +

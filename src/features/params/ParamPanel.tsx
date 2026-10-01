@@ -4,26 +4,58 @@ import { builtIns, ranges } from "../../types/params";
 import { useLanguage } from "../../shared/useLanguage";
 import { Modal } from "../../shared/Modal";
 import { ParamField } from "./ParamField";
+
+type Translate = (id: string, en: string) => string;
+
+function presetLabel(
+  id: string,
+  fallback: string,
+  builtIn: boolean,
+  t: Translate,
+): string {
+  if (!builtIn) return fallback;
+  switch (id) {
+    case "builtin-balanced":
+      return t("Seimbang", "Balanced");
+    case "builtin-logo":
+      return t("Logo & Flat", "Logo & Flat");
+    case "builtin-photo":
+      return t("Foto Detail", "Detailed Photo");
+    case "builtin-poster":
+      return t("Poster Halus", "Smooth Poster");
+    default:
+      return fallback;
+  }
+}
+
 export function ParamPanel() {
-  const s = useProject();
+  const params = useProject((state) => state.params);
+  const presetId = useProject((state) => state.presetId);
+  const presets = useProject((state) => state.presets);
+  const appSettings = useProject((state) => state.settings);
+  const setParams = useProject((state) => state.setParams);
+  const choosePreset = useProject((state) => state.choosePreset);
+  const savePreset = useProject((state) => state.savePreset);
+  const deletePreset = useProject((state) => state.deletePreset);
+  const setSettings = useProject((state) => state.setSettings);
   const t = useLanguage();
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const selected = [...builtIns, ...s.presets].find((p) => p.id === s.presetId);
-  const dirty = JSON.stringify(selected?.params) !== JSON.stringify(s.params);
+  const selected = [...builtIns, ...presets].find((p) => p.id === presetId);
+  const dirty = JSON.stringify(selected?.params) !== JSON.stringify(params);
   const field = (key: keyof typeof ranges, label: string) => {
     const [min, max, step] = ranges[key];
     return (
       <ParamField
         key={key}
         label={label}
-        value={s.params[key]}
+        value={params[key]}
         min={min}
         max={max}
         step={step}
-        onChange={(n) => s.setParams({ ...s.params, [key]: n })}
+        onChange={(n) => setParams({ ...params, [key]: n })}
       />
     );
   };
@@ -33,12 +65,12 @@ export function ParamPanel() {
       <label className="field">
         Preset
         <select
-          value={s.presetId}
-          onChange={(e) => s.choosePreset(e.target.value)}
+          value={presetId}
+          onChange={(e) => choosePreset(e.target.value)}
         >
-          {[...builtIns, ...s.presets].map((p) => (
+          {[...builtIns, ...presets].map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {presetLabel(p.id, p.name, p.builtIn, t)}
             </option>
           ))}
         </select>
@@ -72,10 +104,10 @@ export function ParamPanel() {
       <label className="field">
         {t("Mode Kurva", "Curve mode")}
         <select
-          value={s.params.mode}
+          value={params.mode}
           onChange={(e) =>
-            s.setParams({
-              ...s.params,
+            setParams({
+              ...params,
               mode: e.target.value as "spline" | "polygon",
             })
           }
@@ -92,10 +124,10 @@ export function ParamPanel() {
         <label className="field">
           {t("Susunan Layer", "Hierarchy")}
           <select
-            value={s.params.hierarchical}
+            value={params.hierarchical}
             onChange={(e) =>
-              s.setParams({
-                ...s.params,
+              setParams({
+                ...params,
                 hierarchical: e.target.value as "stacked" | "cutout",
               })
             }
@@ -109,16 +141,16 @@ export function ParamPanel() {
       <label className="check">
         <input
           type="checkbox"
-          checked={s.settings.autoPreview}
+          checked={appSettings.autoPreview}
           onChange={(e) =>
-            s.setSettings({ ...s.settings, autoPreview: e.target.checked })
+            setSettings({ ...appSettings, autoPreview: e.target.checked })
           }
         />
         {t("Preview otomatis", "Automatic preview")}
       </label>
       <button
         className="wide"
-        onClick={() => s.choosePreset("builtin-balanced")}
+        onClick={() => choosePreset("builtin-balanced")}
       >
         {t("Reset Parameter", "Reset parameters")}
       </button>
@@ -142,7 +174,7 @@ export function ParamPanel() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (s.savePreset(name)) {
+              if (savePreset(name)) {
                 setSaving(false);
                 setName("");
               } else
@@ -185,7 +217,7 @@ export function ParamPanel() {
           <button
             className="primary"
             onClick={() => {
-              s.deletePreset(s.presetId);
+              deletePreset(presetId);
               setDeleting(false);
             }}
           >
