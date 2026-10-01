@@ -49,6 +49,9 @@ export function BatchQueue() {
           role="separator"
           aria-orientation="horizontal"
           aria-label={t("Ubah tinggi antrean", "Resize queue")}
+          aria-valuemin={MIN_QUEUE_HEIGHT}
+          aria-valuemax={MAX_QUEUE_HEIGHT}
+          aria-valuenow={height}
           tabIndex={0}
           onKeyDown={(event) => {
             if (event.key === "ArrowUp") {

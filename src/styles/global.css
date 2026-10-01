@@ -538,7 +538,7 @@ details[open] summary:before {
 }
 .batch-resize-handle {
   position: absolute;
-  top: -5px;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 4;
