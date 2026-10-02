@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, dan H01 selesai. H01 ditutup setelah hardening recovery, accessibility/focus, benchmark reproducible, DPI/window-size, batch memory characterization, serta native close-confirm lulus pada Windows nyata. H02 belum diizinkan.
+Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, dan H01 selesai. User kemudian memerintahkan **lanjut**, sehingga H02 sekarang DOING untuk build installer Windows dan smoke test install/run/uninstall. G3 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -23,7 +23,7 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 | I01 | Adapter IPC produksi + event lifecycle | G2 disetujui | Mock bukan fallback diam-diam, listeners cleanup |
 | I02 | Uji alur desktop lengkap | I01 | Import → parameter → preview → export; batch recovery |
 | H01 | Hardening, benchmark, accessibility | I02 | DONE 2026-10-02: matriks testing, angka aktual dan issue tersisa terdokumentasi |
-| H02 | Build installer Windows dan smoke test | H01 | NSIS/MSI bila toolchain tersedia, install/run/uninstall |
+| H02 | Build installer Windows dan smoke test | H01 | DOING 2026-10-02: NSIS/MSI bila toolchain tersedia, install/run/uninstall |
 | G3 | Release readiness | H02 | Bukti gate rilis; signing/lisensi/OS dicatat |
 
 ## Batas fase
@@ -55,6 +55,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
 | 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
 | 2026-10-02 | H01 | DONE | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark file nyata PASS: source 1122×1402, 10 run, output 819×1024, 1817 paths / 838653 SVG bytes; median 486.2 ms, p95 520.7 ms, min 472.1 ms, max 520.7 ms; target preview tipikal 1024 px <1.5 s PASS. Frontend modal test harness sudah diperbaiki dan rerun final 5 files / 13 tests PASS. Memory single-source ~20 MP PASS: 88 samples @ 500 ms, median 403.3 MiB, p95 441.3 MiB, peak 445.9 MiB; target <500 MiB PASS. Batch 106-image initial run: 178 samples @ 500 ms, median 654.9 MiB, p95 1085.4 MiB, peak 1361.9 MiB; tidak ada target <500 MiB untuk batch, tetapi memory pressure perlu dikarakterisasi terhadap worker concurrency sebelum H01 ditutup. | DPI 100/125/150 PASS; keyboard accessibility walkthrough PASS; native close-confirm awal menemukan bug, fix `close()` → `destroy()` + capability + regression test diterapkan dan rerun Windows PASS; H01 selesai |
+| 2026-10-02 | H02 | DOING | Packaging Windows disiapkan: Tauri bundle tetap NSIS+MSI, icon bundle diarahkan eksplisit ke `icons/icon.ico`, WebView2 `downloadBootstrapper` dan NSIS `currentUser` dikunci eksplisit. Script `scripts/h02-build-windows.ps1` menjalankan source gates, build NSIS/MSI terpisah, lalu melaporkan ukuran, SHA-256 dan Authenticode status. | Menunggu run Windows nyata dan smoke install/run/import/export/uninstall; icon saat ini masih bootstrap teknis, bukan klaim branding final |
 
 ## Catatan izin fase
 
@@ -69,6 +70,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 1 Oktober 2026: setelah backend P2 dan boundary hardening selesai, user memerintahkan **lanjut**. Ini dicatat sebagai persetujuan **G2** dan izin mengerjakan **I01 saja**. I02/P4 belum otomatis diizinkan.
 - 2 Oktober 2026: user memerintahkan **lanjut I02: uji alur desktop lengkap**. Ini menjadi izin mengerjakan I02 saja. H01/P4 belum otomatis diizinkan.
 - 2 Oktober 2026: user memerintahkan **lanjut H01**. Ini menjadi izin mengerjakan H01 saja. H02/G3 belum otomatis diizinkan.
+- 2 Oktober 2026: setelah H01 ditutup, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **H02 saja**. G3 belum otomatis diizinkan.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
 ## Target performa
