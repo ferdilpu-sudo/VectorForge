@@ -20,7 +20,8 @@ I02 telah diuji pada Windows untuk native import, drag/drop, preview tracing nya
 - Node.js 22.12+ atau 24;
 - npm;
 - Rust stable + Cargo;
-- Microsoft WebView2 Runtime.
+- Microsoft WebView2 Runtime;
+- untuk H02 packaging: `tauri-cli 2.12.0`.
 
 Versi dependency frontend dikunci di `package-lock.json`; dependency Rust dikunci di `src-tauri/Cargo.lock`.
 
@@ -99,6 +100,46 @@ powershell -ExecutionPolicy Bypass -File .\scripts\h01-memory-watch.ps1 -Seconds
 ```
 
 Selama watcher aktif, lakukan skenario yang sedang diukur, misalnya satu source sekitar 20 MP atau batch besar. Angka benchmark hanya dianggap bukti setelah dijalankan pada Windows nyata dan dicatat di `plan.md`.
+
+## H02 — Build installer Windows
+
+H02 memakai Tauri CLI `2.12.0` agar toolchain bundler sesuai dengan runtime Tauri `2.12.0`. Instal sekali pada Windows bila belum tersedia:
+
+```powershell
+cargo install tauri-cli --version 2.12.0 --locked
+```
+
+Dari root repository, jalankan build reproducible:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\h02-build-windows.ps1
+```
+
+Script menjalankan source gates frontend/Rust terlebih dahulu, lalu membangun NSIS dan MSI secara terpisah. Setelah selesai script melaporkan path artefak, ukuran MiB, apakah memenuhi target installer <25 MiB, SHA-256, dan status Authenticode.
+
+Konfigurasi Windows H02:
+- target bundle: NSIS dan MSI;
+- NSIS install mode: current user, tanpa meminta hak Administrator untuk jalur normal;
+- WebView2: `downloadBootstrapper`, sehingga runtime tidak disertakan dalam ukuran installer; pada mesin yang belum memiliki WebView2, installer dapat membutuhkan internet;
+- icon bundle saat ini memakai `src-tauri/icons/icon.ico`; file ini masih icon bootstrap teknis dan belum dianggap keputusan branding final.
+
+MSI memakai WiX dan pada Windows dapat membutuhkan optional feature VBSCRIPT. Jika build MSI gagal pada `light.exe`, aktifkan VBSCRIPT melalui Windows Optional Features lalu ulangi build.
+
+### Smoke test installer
+
+Uji NSIS terlebih dahulu, lalu MSI bila build MSI tersedia:
+
+1. install VectorForge;
+2. jalankan aplikasi dari hasil instalasi, bukan executable di `target\release`;
+3. import satu gambar nyata;
+4. buat preview;
+5. export SVG ke folder pengguna di luar folder instalasi, misalnya Documents;
+6. tutup aplikasi;
+7. uninstall VectorForge dari Windows;
+8. pastikan aplikasi terhapus tetapi file SVG hasil export pengguna tetap ada;
+9. ulangi alur dengan installer MSI bila tersedia.
+
+H02 baru dapat ditutup setelah hasil build, ukuran installer, signing status, dan smoke test Windows dicatat di `plan.md`.
 
 ## Struktur dan sumber kebenaran
 
