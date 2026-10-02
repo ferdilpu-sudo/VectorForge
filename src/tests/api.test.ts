@@ -8,6 +8,7 @@ const tauri = vi.hoisted(() => {
   const onDragDropEvent = vi.fn();
   const onCloseRequested = vi.fn();
   const close = vi.fn();
+  const destroy = vi.fn();
   const confirm = vi.fn();
   return {
     invoke,
@@ -16,6 +17,7 @@ const tauri = vi.hoisted(() => {
     onDragDropEvent,
     onCloseRequested,
     close,
+    destroy,
     confirm,
   };
 });
@@ -29,6 +31,7 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
     onCloseRequested: tauri.onCloseRequested,
     close: tauri.close,
+    destroy: tauri.destroy,
   }),
 }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -198,7 +201,7 @@ describe("native listener lifecycle", () => {
       },
     );
     tauri.confirm.mockResolvedValue(true);
-    tauri.close.mockResolvedValue(undefined);
+    tauri.destroy.mockResolvedValue(undefined);
 
     const prevented = vi.fn();
     const unlisten = await api.watchCloseRequests((preventDefault) => {
@@ -213,8 +216,9 @@ describe("native listener lifecycle", () => {
       { title: "VectorForge", kind: "warning" },
     );
 
-    await api.closeCurrentWindow();
-    expect(tauri.close).toHaveBeenCalledTimes(1);
+    await api.destroyCurrentWindow();
+    expect(tauri.destroy).toHaveBeenCalledTimes(1);
+    expect(tauri.close).not.toHaveBeenCalled();
 
     unlisten();
     expect(stop).toHaveBeenCalledTimes(1);
