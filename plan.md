@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, dan I02 selesai. I02 lulus walkthrough native Windows untuk import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, export SVG/PDF/EPS, open output folder, batch normal, cancel, serta failure → retry. PowerShell output yang dibagikan membuktikan artefak SVG/PDF tersimpan dengan ukuran nonzero; EPS dinyatakan PASS oleh user tetapi tidak tampak pada listing yang ditempel. H01 belum diizinkan.
+Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, dan I02 selesai. User memerintahkan **lanjut H01**. H01 sekarang DOING dengan fokus hardening recovery, accessibility/focus, benchmark reproducible, DPI/window-size, dataset besar, serta sinkronisasi dokumentasi produksi. H02 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -53,7 +53,8 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | User kemudian menyetujui G2 dengan instruksi lanjut |
 | 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
-| 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | H01 belum diizinkan |
+| 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
+| 2026-10-02 | H01 | DOING | User memerintahkan **lanjut H01**; audit awal menemukan README stale dan coverage storage atomic-failure belum spesifik | Hardening recovery/accessibility + benchmark/DPI/memory evidence |
 
 ## Catatan izin fase
 
@@ -67,6 +68,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 1 Oktober 2026: user mengonfirmasi smoke test preview → release → re-import file yang sama **normal** setelah custom protocol `vfsource` diterapkan. Ini menutup blocker boundary pra-G2, tetapi bukan persetujuan G2 atau izin I01.
 - 1 Oktober 2026: setelah backend P2 dan boundary hardening selesai, user memerintahkan **lanjut**. Ini dicatat sebagai persetujuan **G2** dan izin mengerjakan **I01 saja**. I02/P4 belum otomatis diizinkan.
 - 2 Oktober 2026: user memerintahkan **lanjut I02: uji alur desktop lengkap**. Ini menjadi izin mengerjakan I02 saja. H01/P4 belum otomatis diizinkan.
+- 2 Oktober 2026: user memerintahkan **lanjut H01**. Ini menjadi izin mengerjakan H01 saja. H02/G3 belum otomatis diizinkan.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
 ## Target performa
