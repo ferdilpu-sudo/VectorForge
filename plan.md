@@ -54,7 +54,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
 | 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
-| 2026-10-02 | H01 | DOING | User memerintahkan **lanjut H01**; audit awal menemukan README stale dan coverage storage atomic-failure belum spesifik | Hardening recovery/accessibility + benchmark/DPI/memory evidence |
+| 2026-10-02 | H01 | DOING | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark attempt belum valid karena env path masih placeholder `C:\PATH\KE\GAMBAR.png` dan menghasilkan FILE_NOT_FOUND. Frontend modal test harness sudah diperbaiki sesudah run ini; rerun 13/13 masih menunggu bukti. | Jalankan ulang frontend test, preview benchmark dengan path nyata, memory 20 MP, lalu DPI/keyboard/manual close checks |
 
 ## Catatan izin fase
 
@@ -350,3 +350,40 @@ Walkthrough desktop produksi dijalankan langsung pada Windows dan seluruh checkl
 Bukti artefak yang ditempel user menunjukkan banyak file SVG/PDF tersimpan dengan ukuran nonzero, termasuk output batch dan pengulangan nama dengan suffix. Contoh: `RUANG TAMU.svg` 797190 bytes, `RUANG TAMU.pdf` 310052 bytes, `download.svg` 362089 bytes. EPS dinyatakan PASS oleh user, tetapi file EPS tidak muncul pada listing PowerShell yang ditempel, sehingga bukti EPS untuk I02 bersifat user-confirmed dan bukan artifact-list-confirmed.
 
 Dengan bukti ini, **I02 = DONE**. H01/P4 belum diizinkan.
+
+
+### H01 bukti awal — 2 Oktober 2026
+
+Hardening yang sudah diterapkan:
+- storage atomic-replace failure test Windows menjaga target lama dan membersihkan temp file;
+- modal memakai accessible name dari heading dan focus-return setelah ditutup;
+- close window saat batch aktif memakai native Tauri close-request + confirm, bukan hanya browser beforeunload;
+- minimum native window diturunkan ke 800×480 agar tetap masuk pada skenario scaling tinggi;
+- border/focus contrast dikunci dengan checker otomatis; dark/light seluruh target yang diuji lulus;
+- README diselaraskan dengan status produksi;
+- benchmark startup, preview nyata, dan process-tree memory dibuat reproducible.
+
+Bukti Windows yang sudah diterima:
+- `npm run lint`: PASS;
+- `npm run h01:contrast`: PASS seluruh checks; border dark 3.11:1, border light 3.06:1;
+- `npm run build`: PASS;
+- `cargo check`: PASS;
+- `cargo test`: PASS 75, ignored 1 benchmark manual;
+- test storage atomic failure Windows: PASS;
+- `cargo clippy --all-targets -- -D warnings`: PASS;
+- `cargo fmt -- --check`: PASS;
+- `cargo build --release`: PASS;
+- startup benchmark 10 run pada Windows 11 Enterprise LTSC, Intel i7-1165G7, 8 logical processors, RAM 7.8 GiB:
+  - startup median 48.2 ms;
+  - startup p95 1453.5 ms;
+  - idle working-set median 26.7 MiB;
+  - idle working-set p95 39 MiB;
+  - release executable 15.17 MiB.
+  Target startup <2 s lulus, termasuk sampel pertama 1453.5 ms.
+
+Catatan bukti belum lengkap:
+- run frontend pertama menghasilkan 12 PASS / 1 FAIL karena jsdom mock `showModal()` tidak menambahkan atribut `open`; harness sudah diperbaiki pada commit `a12c71f`, tetapi rerun 13/13 belum diterima;
+- preview benchmark attempt tidak valid sebagai angka performa karena `VECTORFORGE_BENCH_IMAGE` masih literal placeholder `C:\PATH\KE\GAMBAR.png`; hasil `File sumber tidak ditemukan` bukan kegagalan engine;
+- memory skenario satu source ~20 MP, batch besar, DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
+
+H01 tetap **DOING** sampai bukti di atas selesai. H02 belum diizinkan.
