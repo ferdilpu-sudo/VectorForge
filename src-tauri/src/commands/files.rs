@@ -162,12 +162,9 @@ pub async fn choose_destination(
     let display_path = normalized.to_string_lossy().into_owned();
     let output_dir = match kind {
         DestinationKind::Directory => normalized.clone(),
-        DestinationKind::File => normalized
-            .parent()
-            .map(Path::to_path_buf)
-            .ok_or_else(|| {
-                AppError::new(ErrorCode::InvalidParams, "Folder tujuan file tidak valid.")
-            })?,
+        DestinationKind::File => normalized.parent().map(Path::to_path_buf).ok_or_else(|| {
+            AppError::new(ErrorCode::InvalidParams, "Folder tujuan file tidak valid.")
+        })?,
     };
 
     let _ = super::preferences::run_storage(app, move |dir| {
