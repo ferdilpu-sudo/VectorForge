@@ -80,12 +80,11 @@ export function App() {
   useEffect(() => {
     let disposed = false;
     let stop: (() => void) | undefined;
-    let allowClose = false;
     let asking = false;
 
     void api
       .watchCloseRequests((preventDefault) => {
-        if (allowClose || !useProject.getState().batchBusy) return;
+        if (!useProject.getState().batchBusy) return;
 
         preventDefault();
         if (asking) return;
@@ -96,8 +95,7 @@ export function App() {
           .confirmCloseWhileBusy(language)
           .then((confirmed) => {
             if (!confirmed || disposed) return;
-            allowClose = true;
-            return api.closeCurrentWindow();
+            return api.destroyCurrentWindow();
           })
           .catch((error) => {
             if (!disposed) {
