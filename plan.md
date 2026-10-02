@@ -397,6 +397,7 @@ Catatan bukti belum lengkap:
 - attempt preview awal dengan placeholder path tetap dicatat sebagai run tidak valid; run pengganti dengan file nyata di atas menjadi evidence performa yang berlaku;
 - batch memory 106-image initial run: 178 samples, median 654.9 MiB, p95 1085.4 MiB, peak 1361.9 MiB. Target PRD <500 MiB tidak berlaku untuk batch; source menunjukkan scheduler mendukung 1–4 worker dan default memakai min(logical CPU, 4).
 - rerun dataset 106 gambar yang sama pada workerCount=2: 178 samples, median 723.6 MiB, p95 1079.4 MiB, peak 1099.9 MiB. Peak turun ~19.2%, tetapi p95 nyaris tidak berubah dan median justru lebih tinggi; hasil ini menunjukkan concurrency bukan satu-satunya faktor dan retention/resource lifetime batch perlu diaudit sebelum H01 ditutup;
+- diagnostic process breakdown untuk run batch berikutnya menunjukkan individual process peaks: `vectorforge.exe` 590.2 MiB; WebView2 children 223.8, 161.4, 129.1, 41.9, 19.9, dan 18.4 MiB. Peak individual dapat terjadi pada timestamp berbeda, jadi nilainya tidak dijumlahkan sebagai peak tree. Bukti final working-set root/children masih diperlukan untuk membedakan high-water sementara dari retention;
 - DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
 
 H01 tetap **DOING** sampai bukti di atas selesai. H02 belum diizinkan.
