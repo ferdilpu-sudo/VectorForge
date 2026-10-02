@@ -164,6 +164,18 @@ Kode frontend berada di `src/`, backend native di `src-tauri/`, dan spike depend
 - output memakai commit/replace aman dan tidak boleh merusak input;
 - mock/demo tidak menjadi fallback produksi.
 
-## Belum release-ready
+## Status release
 
-VectorForge belum dinyatakan release-ready sampai H02 dan G3 selesai. H01 hardening/benchmark/accessibility sudah selesai; installer production, signing status, serta packaging smoke test masih harus dibuktikan.
+H01 dan H02 selesai. G3 release-readiness audit sedang berjalan.
+
+Yang sudah terbukti pada Windows nyata: alur desktop produksi, hardening/performance/accessibility, NSIS+MSI build, install/run/import/preview/export/uninstall, serta user-file retention setelah uninstall.
+
+Yang masih harus ditutup sebelum klaim release-ready penuh:
+- final verification setelah dua fix G3 (last output directory dan logical-core worker cap), lalu rebuild installer;
+- lisensi aplikasi VectorForge belum ditentukan pemilik;
+- installer masih Authenticode `NotSigned`;
+- Windows 10 target belum memiliki distribution smoke evidence; Windows 11 sudah diuji;
+- compatibility output browser/Inkscape/Illustrator belum seluruhnya memiliki bukti final;
+- icon bundle saat ini masih bootstrap teknis, bukan branding final.
+
+Dependency license audit sudah lulus untuk Rust yang diaudit pada fase backend dan untuk 362 package eksternal NPM pada G3 (0 package tanpa deklarasi license).
