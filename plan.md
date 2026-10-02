@@ -438,6 +438,13 @@ Acceptance mapping sementara:
 - AC08 Recovery: PASS berdasarkan B04/B05/I02/H01;
 - AC09 Accessibility: PASS berdasarkan H01 keyboard, modal focus, contrast, DPI.
 
+Final verification pertama setelah fix G3:
+- frontend tests PASS: 5 files / 13 tests;
+- frontend production build PASS;
+- `cargo check` FAIL karena `commands::preferences::run_storage` masih private saat dipanggil dari sibling module `commands::files`;
+- root cause diperbaiki dengan menjadikan helper tersebut `pub(crate)` tanpa memperluas API publik aplikasi. Commit fix: `20871f1bb1d677626c7cfb9bce86ddece70246ea`;
+- final verification harus diulang dari source gate Rust dan packaging.
+
 Release gate yang masih terbuka:
 - final Rust check/test/clippy/fmt setelah fix G3;
 - final installer rebuild + smoke minimal setelah fix G3 karena artefak H02 dibuat sebelum dua fix acceptance di atas;
