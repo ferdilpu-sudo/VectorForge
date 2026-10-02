@@ -48,16 +48,27 @@ try {
 
     Write-Host "Tauri CLI: $tauriVersion"
 
-    $lockedBuildProcesses = @(
-        Get-Process -Name "esbuild", "node", "vectorforge" -ErrorAction SilentlyContinue
+    $projectProcesses = @(
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $name = $_.Name
+                $commandLine = [string]$_.CommandLine
+
+                ($name -ieq "vectorforge.exe") -or (
+                    $name -in @("node.exe", "esbuild.exe") -and
+                    $commandLine -and
+                    $commandLine.IndexOf($root, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+                )
+            }
     )
-    if ($lockedBuildProcesses.Count -gt 0) {
+
+    if ($projectProcesses.Count -gt 0) {
         Write-Host ""
-        Write-Warning "Proses build/aplikasi masih aktif dan dapat mengunci node_modules atau target release."
-        $lockedBuildProcesses |
-            Select-Object ProcessName, Id, Path |
+        Write-Warning "Proses VectorForge/Vite/esbuild yang terkait repo masih aktif dan dapat mengunci node_modules atau target release."
+        $projectProcesses |
+            Select-Object Name, ProcessId, CommandLine |
             Format-Table -AutoSize
-        throw "Tutup VectorForge serta Vite/dev server, atau hentikan proses Node/esbuild yang terkait proyek, lalu jalankan ulang H02."
+        throw "Tutup proses yang terkait VectorForge di atas, lalu jalankan ulang H02."
     }
 
     if (-not $SkipSourceGates) {
