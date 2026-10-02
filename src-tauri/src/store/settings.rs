@@ -30,6 +30,12 @@ pub fn save_settings(app_data_dir: &Path, settings: AppSettings) -> Result<AppSe
     Ok(settings)
 }
 
+pub fn save_last_out_dir(app_data_dir: &Path, output_dir: &Path) -> Result<AppSettings, AppError> {
+    let mut settings = get_settings(app_data_dir)?;
+    settings.last_out_dir = Some(output_dir.to_string_lossy().into_owned());
+    save_settings(app_data_dir, settings)
+}
+
 fn read_settings_file(path: &Path) -> Result<Option<SettingsFile>, AppError> {
     let file: Option<SettingsFile> = read_versioned(path, SETTINGS_VERSION, "Pengaturan")?;
 
@@ -56,7 +62,7 @@ mod tests {
     use crate::models::preferences::{Language, Theme};
     use crate::models::{AppSettings, ErrorCode};
 
-    use super::{get_settings, save_settings};
+    use super::{get_settings, save_last_out_dir, save_settings};
 
     struct TempDir(PathBuf);
 
@@ -103,6 +109,30 @@ mod tests {
         save_settings(&dir.0, expected.clone()).map_err(|error| error.message)?;
         let actual = get_settings(&dir.0).map_err(|error| error.message)?;
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn last_output_directory_update_preserves_other_settings() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        let expected = settings();
+        save_settings(&dir.0, expected.clone()).map_err(|error| error.message)?;
+
+        let output_dir = dir.0.join("exports");
+        fs::create_dir(&output_dir).map_err(|error| error.to_string())?;
+        let updated =
+            save_last_out_dir(&dir.0, &output_dir).map_err(|error| error.message)?;
+
+        assert_eq!(
+            updated.last_out_dir.as_deref(),
+            Some(output_dir.to_string_lossy().as_ref())
+        );
+        assert_eq!(updated.language, expected.language);
+        assert_eq!(updated.theme, expected.theme);
+        assert_eq!(updated.worker_count, expected.worker_count);
+        assert_eq!(updated.auto_preview, expected.auto_preview);
+        assert_eq!(updated.preview_max_side, expected.preview_max_side);
+        assert_eq!(updated.last_preset_id, expected.last_preset_id);
         Ok(())
     }
 
