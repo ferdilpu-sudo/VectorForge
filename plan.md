@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, H01, dan H02 selesai. H02 ditutup setelah NSIS+MSI build, ukuran installer, install/run/import/preview/export/uninstall, serta user-file retention lulus pada Windows nyata. G3 belum diizinkan.
+Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, H01, dan H02 selesai. User memerintahkan **lanjut G3**. G3 sekarang DOING untuk release-readiness audit, final acceptance mapping, dan final release-candidate verification.
 
 ## Backlog dan gate
 
@@ -24,7 +24,7 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 | I02 | Uji alur desktop lengkap | I01 | Import → parameter → preview → export; batch recovery |
 | H01 | Hardening, benchmark, accessibility | I02 | DONE 2026-10-02: matriks testing, angka aktual dan issue tersisa terdokumentasi |
 | H02 | Build installer Windows dan smoke test | H01 | DONE 2026-10-02: NSIS/MSI build + install/run/import/preview/export/uninstall PASS |
-| G3 | Release readiness | H02 | Bukti gate rilis; signing/lisensi/OS dicatat |
+| G3 | Release readiness | H02 | DOING 2026-10-02: bukti gate rilis, acceptance mapping, signing/lisensi/OS, final RC verification |
 
 ## Batas fase
 
@@ -56,6 +56,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
 | 2026-10-02 | H01 | DONE | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark file nyata PASS: source 1122×1402, 10 run, output 819×1024, 1817 paths / 838653 SVG bytes; median 486.2 ms, p95 520.7 ms, min 472.1 ms, max 520.7 ms; target preview tipikal 1024 px <1.5 s PASS. Frontend modal test harness sudah diperbaiki dan rerun final 5 files / 13 tests PASS. Memory single-source ~20 MP PASS: 88 samples @ 500 ms, median 403.3 MiB, p95 441.3 MiB, peak 445.9 MiB; target <500 MiB PASS. Batch 106-image initial run: 178 samples @ 500 ms, median 654.9 MiB, p95 1085.4 MiB, peak 1361.9 MiB; tidak ada target <500 MiB untuk batch, tetapi memory pressure perlu dikarakterisasi terhadap worker concurrency sebelum H01 ditutup. | DPI 100/125/150 PASS; keyboard accessibility walkthrough PASS; native close-confirm awal menemukan bug, fix `close()` → `destroy()` + capability + regression test diterapkan dan rerun Windows PASS; H01 selesai |
 | 2026-10-02 | H02 | DONE | Packaging Windows build PASS pada Tauri CLI 2.12.0. NSIS: `VectorForge_0.1.0_x64-setup.exe`, 3.74 MiB, SHA-256 `6BAF433FFB07AB1F62451E3CF160203C9483DF41D20DC081C4318378107DDD35`, Authenticode `NotSigned`. MSI: `VectorForge_0.1.0_x64_en-US.msi`, 5.57 MiB, SHA-256 `75E8C49FE97877701190E89120D6CE8B1DA2F21AE819B0E67DB5FCDCAB117480`, Authenticode `NotSigned`. Keduanya di bawah target installer <25 MiB di luar WebView2 runtime; mode WebView2 `downloadBootstrapper`, NSIS `currentUser`. Warning identifier `.app` dicatat sebagai non-blocking untuk target Windows-only v1. | NSIS dan MSI smoke PASS termasuk install/run/import/preview/export/uninstall; file hasil pengguna tetap ada setelah uninstall pada keduanya |
+| 2026-10-02 | G3 | DOING | Audit release menemukan dua acceptance gap implementasi: AC06 `lastOutDir` belum benar-benar dipakai, dan AC05 runtime worker belum eksplisit dibatasi logical cores. Fix sudah committed: native last-output-dir persistence + dialog reuse; frontend settings save mempertahankan field native; batch worker limit sekarang `min(setting, 4, logical cores, gate, work count)` dengan regression test. Source audit juga mengonfirmasi production CSP tidak mengizinkan remote connect dan dependency aplikasi tidak menambahkan HTTP client eksplisit. | Perlu verifikasi Rust final + rebuild installer karena binary berubah; application license belum ditentukan; Authenticode masih unsigned; Windows 10 distribution test dan browser/Inkscape/Illustrator compatibility belum memiliki bukti final |
 
 ## Catatan izin fase
 
@@ -71,6 +72,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 - 2 Oktober 2026: user memerintahkan **lanjut I02: uji alur desktop lengkap**. Ini menjadi izin mengerjakan I02 saja. H01/P4 belum otomatis diizinkan.
 - 2 Oktober 2026: user memerintahkan **lanjut H01**. Ini menjadi izin mengerjakan H01 saja. H02/G3 belum otomatis diizinkan.
 - 2 Oktober 2026: setelah H01 ditutup, user memerintahkan **lanjut**. Ini menjadi izin mengerjakan **H02 saja**. G3 belum otomatis diizinkan.
+- 2 Oktober 2026: setelah H02 ditutup, user memerintahkan **lanjut G3**. Ini menjadi izin mengerjakan G3 release-readiness audit dan perbaikan acceptance gap dalam scope v1.
 - Isi tanggal, pesan persetujuan dan cakupan nyata ketika izin diterima. Jangan mengisi asumsi sebagai persetujuan.
 
 ## Target performa
@@ -421,3 +423,29 @@ Dengan seluruh bukti Windows di atas, **H01 = DONE** pada 2 Oktober 2026. H02 be
 - MSI smoke test Windows: PASS berdasarkan konfirmasi user; aplikasi hasil instalasi dapat digunakan hingga export, uninstall selesai, dan file export pengguna di Documents tetap ada setelah uninstall.
 - Dengan build NSIS+MSI, target ukuran, hashing/signing status, dan smoke install/run/import/preview/export/uninstall selesai, **H02 = DONE**. G3 belum diizinkan.
 
+
+
+### G3 audit release readiness — 2 Oktober 2026
+
+Acceptance mapping sementara:
+- AC01 Import: PASS berdasarkan B02/I02;
+- AC02 Compare: PASS berdasarkan frontend flow + H01 keyboard/DPI;
+- AC03 Parameter/preview: PASS berdasarkan B03/I02/H01 benchmark;
+- AC04 Export: PASS berdasarkan B04/I02;
+- AC05 Batch: FIXED PENDING FINAL VERIFY — runtime worker kini dibatasi logical cores selain setting/4/gate/work count; cancel/retry/partial sudah PASS dari B06/I02;
+- AC06 Settings: FIXED PENDING FINAL VERIFY — `lastPresetId` sudah aktif sebelumnya; G3 menambahkan persistence/reuse `lastOutDir` pada boundary native dan mencegah frontend settings save menghapus field native;
+- AC07 Privacy: SOURCE AUDIT PASS — runtime production CSP hanya mengizinkan self/IPC/local `vfsource`; package/Cargo dependency langsung tidak memiliki HTTP client eksplisit; installer WebView2 bootstrapper dapat membutuhkan internet hanya saat instalasi bila runtime belum tersedia;
+- AC08 Recovery: PASS berdasarkan B04/B05/I02/H01;
+- AC09 Accessibility: PASS berdasarkan H01 keyboard, modal focus, contrast, DPI.
+
+Release gate yang masih terbuka:
+- final Rust check/test/clippy/fmt setelah fix G3;
+- final installer rebuild + smoke minimal setelah fix G3 karena artefak H02 dibuat sebelum dua fix acceptance di atas;
+- lisensi aplikasi VectorForge belum dipilih pemilik; dependency license audit sudah PASS, tetapi public distribution tidak boleh mengarang lisensi aplikasi;
+- Authenticode installer masih `NotSigned`; status ini harus tetap dinyatakan bila distribusi unsigned;
+- Windows 11 telah diuji nyata; Windows 10 target PRD belum memiliki distribution smoke evidence;
+- compatibility output di browser/Inkscape/Illustrator belum memiliki bukti final yang tercatat; jangan klaim PASS tanpa run;
+- icon `src-tauri/icons/icon.ico` masih bootstrap teknis, bukan branding final;
+- warning bundle identifier `com.vectorforge.app` berakhiran `.app` non-blocking untuk Windows-only v1, tetapi tetap dicatat.
+
+G3 belum dapat ditutup sampai final source/installer verification selesai dan blocker keputusan/distribusi di atas diklasifikasikan secara eksplisit.
