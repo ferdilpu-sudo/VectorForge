@@ -133,9 +133,9 @@ async function confirmCloseWhileBusy(
   }
 }
 
-async function closeCurrentWindow(): Promise<void> {
+async function destroyCurrentWindow(): Promise<void> {
   try {
-    await getCurrentWindow().close();
+    await getCurrentWindow().destroy();
   } catch (error) {
     throw toNativeError(error);
   }
@@ -165,7 +165,7 @@ export const api = {
   watchNativeDrops,
   watchCloseRequests,
   confirmCloseWhileBusy,
-  closeCurrentWindow,
+  destroyCurrentWindow,
   importFiles: (paths: string[]) =>
     call<ImportResult>("import_files", { request: { paths } }),
   releaseFiles: (fileIds: string[]) =>
