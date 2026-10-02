@@ -35,7 +35,12 @@ pub async fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
 #[tauri::command]
 pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, AppError> {
     let state_app = app.clone();
-    let settings = run_storage(app, move |dir| store::save_settings(dir, settings)).await?;
+    let settings = run_storage(app, move |dir| {
+        let mut incoming = settings;
+        incoming.last_out_dir = store::get_settings(dir)?.last_out_dir;
+        store::save_settings(dir, incoming)
+    })
+    .await?;
     state_app
         .state::<AppState>()
         .heavy
@@ -43,7 +48,7 @@ pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppS
     Ok(settings)
 }
 
-async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
+pub(crate) async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
 where
     T: Send + 'static,
     F: FnOnce(&Path) -> Result<T, AppError> + Send + 'static,
