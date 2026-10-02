@@ -78,6 +78,60 @@ export function App() {
   }, [importPaths, notify]);
 
   useEffect(() => {
+    let disposed = false;
+    let stop: (() => void) | undefined;
+    let allowClose = false;
+    let asking = false;
+
+    void api
+      .watchCloseRequests((preventDefault) => {
+        if (allowClose || !useProject.getState().batchBusy) return;
+
+        preventDefault();
+        if (asking) return;
+        asking = true;
+
+        const language = useProject.getState().settings.language;
+        void api
+          .confirmCloseWhileBusy(language)
+          .then((confirmed) => {
+            if (!confirmed || disposed) return;
+            allowClose = true;
+            return api.closeCurrentWindow();
+          })
+          .catch((error) => {
+            if (!disposed) {
+              notify(
+                appErrorMessage(
+                  error,
+                  useProject.getState().settings.language,
+                ),
+              );
+            }
+          })
+          .finally(() => {
+            asking = false;
+          });
+      })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else stop = unlisten;
+      })
+      .catch((error) => {
+        if (!disposed) {
+          notify(
+            appErrorMessage(error, useProject.getState().settings.language),
+          );
+        }
+      });
+
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, [notify]);
+
+  useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: light)");
     const apply = () => {
       document.documentElement.dataset.theme =
@@ -109,17 +163,9 @@ export function App() {
       }
     };
 
-    const leave = (event: BeforeUnloadEvent) => {
-      if (useProject.getState().batchBusy) {
-        event.preventDefault();
-      }
-    };
-
     window.addEventListener("keydown", key);
-    window.addEventListener("beforeunload", leave);
     return () => {
       window.removeEventListener("keydown", key);
-      window.removeEventListener("beforeunload", leave);
     };
   }, [open]);
 

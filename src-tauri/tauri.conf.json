@@ -17,8 +17,8 @@
         "title": "VectorForge",
         "width": 1440,
         "height": 900,
-        "minWidth": 1100,
-        "minHeight": 700,
+        "minWidth": 800,
+        "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
@@ -36,7 +36,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "icon": []
   }
 }

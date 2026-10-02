@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { confirm, open } from "@tauri-apps/plugin-dialog";
 
 import type { Preset, TraceParams } from "../types/params";
 import type {
@@ -102,6 +103,44 @@ async function subscribeBatchEvents(
   }
 }
 
+async function watchCloseRequests(
+  handler: (preventDefault: () => void) => void,
+): Promise<UnlistenFn> {
+  try {
+    return await getCurrentWindow().onCloseRequested((event) => {
+      handler(() => event.preventDefault());
+    });
+  } catch (error) {
+    throw toNativeError(error);
+  }
+}
+
+async function confirmCloseWhileBusy(
+  language: AppSettings["language"],
+): Promise<boolean> {
+  try {
+    return await confirm(
+      language === "id"
+        ? "Batch masih berjalan. Tutup VectorForge dan hentikan pekerjaan aktif?"
+        : "A batch is still running. Close VectorForge and stop active work?",
+      {
+        title: "VectorForge",
+        kind: "warning",
+      },
+    );
+  } catch (error) {
+    throw toNativeError(error);
+  }
+}
+
+async function closeCurrentWindow(): Promise<void> {
+  try {
+    await getCurrentWindow().close();
+  } catch (error) {
+    throw toNativeError(error);
+  }
+}
+
 async function watchNativeDrops(
   handler: (event: NativeDropEvent) => void,
 ): Promise<UnlistenFn> {
@@ -124,6 +163,9 @@ export const api = {
   mode: "native" as const,
   pickSourcePaths,
   watchNativeDrops,
+  watchCloseRequests,
+  confirmCloseWhileBusy,
+  closeCurrentWindow,
   importFiles: (paths: string[]) =>
     call<ImportResult>("import_files", { request: { paths } }),
   releaseFiles: (fileIds: string[]) =>
