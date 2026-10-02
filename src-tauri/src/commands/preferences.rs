@@ -47,7 +47,10 @@ pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppS
     Ok(settings)
 }
 
-pub(crate) fn preserve_native_settings(mut incoming: AppSettings, current: &AppSettings) -> AppSettings {
+pub(crate) fn preserve_native_settings(
+    mut incoming: AppSettings,
+    current: &AppSettings,
+) -> AppSettings {
     incoming.last_out_dir = current.last_out_dir.clone();
     incoming
 }
