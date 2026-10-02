@@ -139,7 +139,7 @@ Uji NSIS terlebih dahulu, lalu MSI bila build MSI tersedia:
 8. pastikan aplikasi terhapus tetapi file SVG hasil export pengguna tetap ada;
 9. ulangi alur dengan installer MSI bila tersedia.
 
-H02 baru dapat ditutup setelah hasil build, ukuran installer, signing status, dan smoke test Windows dicatat di `plan.md`.
+H02 selesai pada 2 Oktober 2026: NSIS dan MSI berhasil dibangun, keduanya di bawah target 25 MiB, smoke test install/run/import/preview/export/uninstall lulus, dan file hasil pengguna tetap ada setelah uninstall. Kedua installer masih `NotSigned`; signing tetap menjadi status rilis yang harus dinyatakan jujur.
 
 ## Struktur dan sumber kebenaran
 
