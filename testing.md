@@ -1,6 +1,6 @@
 # Testing — Bukti Kualitas dan Rilis
 
-Status awal: seluruh tes implementasi belum dijalankan. Checklist ini adalah rencana, bukan laporan lulus. Simpan hasil aktual di plan task log; fixture provenance/lisensi dicatat di tests/fixtures saat dibuat.
+Dokumen ini adalah metodologi dan gate pengujian. Hasil aktual tidak disimpulkan dari checklist ini; sumber status dan evidence nyata berada di `plan.md`. Per 2 Oktober 2026, implementasi telah melewati H01/H02 dan sedang diaudit pada G3.
 
 ## Dataset wajib
 
