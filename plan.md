@@ -438,6 +438,14 @@ Acceptance mapping sementara:
 - AC08 Recovery: PASS berdasarkan B04/B05/I02/H01;
 - AC09 Accessibility: PASS berdasarkan H01 keyboard, modal focus, contrast, DPI.
 
+Final verification kedua setelah fix G3:
+- frontend tests PASS: 5 files / 13 tests;
+- frontend production build PASS;
+- `cargo check` PASS;
+- `cargo test` FAIL hanya pada compile test karena import `Theme` salah dari `crate::models`; enum tersebut memang berada di `crate::models::preferences::Theme`;
+- import test diperbaiki tanpa mengubah production behavior. Commit fix: `641880e9f63e6f44ec16cdfb6372078cf25da38b`;
+- final verification harus diulang lagi sampai seluruh Rust gate dan packaging PASS.
+
 Final verification pertama setelah fix G3:
 - frontend tests PASS: 5 files / 13 tests;
 - frontend production build PASS;
