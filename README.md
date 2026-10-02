@@ -9,7 +9,7 @@ Per 2 Oktober 2026:
 - backend P2 B01–B06: DONE;
 - integrasi native I01: DONE;
 - walkthrough desktop I02: DONE;
-- H01 hardening/benchmark/accessibility: DOING;
+- H01 hardening/benchmark/accessibility: DONE;
 - installer H02 dan gate rilis G3: belum dimulai.
 
 I02 telah diuji pada Windows untuk native import, drag/drop, preview tracing nyata, perubahan parameter, pergantian source saat preview, export SVG/PDF/EPS, membuka folder output, batch, cancel, serta failure → retry.
@@ -125,4 +125,4 @@ Kode frontend berada di `src/`, backend native di `src-tauri/`, dan spike depend
 
 ## Belum release-ready
 
-VectorForge belum dinyatakan release-ready sampai H01, H02, dan G3 selesai. Installer production, signing status, benchmark final, accessibility audit, serta packaging smoke test masih harus dibuktikan.
+VectorForge belum dinyatakan release-ready sampai H02 dan G3 selesai. H01 hardening/benchmark/accessibility sudah selesai; installer production, signing status, serta packaging smoke test masih harus dibuktikan.
