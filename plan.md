@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, dan H01 selesai. User kemudian memerintahkan **lanjut**, sehingga H02 sekarang DOING untuk build installer Windows dan smoke test install/run/uninstall. G3 belum diizinkan.
+Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, I02, H01, dan H02 selesai. H02 ditutup setelah NSIS+MSI build, ukuran installer, install/run/import/preview/export/uninstall, serta user-file retention lulus pada Windows nyata. G3 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -23,7 +23,7 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 | I01 | Adapter IPC produksi + event lifecycle | G2 disetujui | Mock bukan fallback diam-diam, listeners cleanup |
 | I02 | Uji alur desktop lengkap | I01 | Import → parameter → preview → export; batch recovery |
 | H01 | Hardening, benchmark, accessibility | I02 | DONE 2026-10-02: matriks testing, angka aktual dan issue tersisa terdokumentasi |
-| H02 | Build installer Windows dan smoke test | H01 | DOING 2026-10-02: NSIS/MSI bila toolchain tersedia, install/run/uninstall |
+| H02 | Build installer Windows dan smoke test | H01 | DONE 2026-10-02: NSIS/MSI build + install/run/import/preview/export/uninstall PASS |
 | G3 | Release readiness | H02 | Bukti gate rilis; signing/lisensi/OS dicatat |
 
 ## Batas fase
@@ -55,7 +55,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
 | 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
 | 2026-10-02 | H01 | DONE | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark file nyata PASS: source 1122×1402, 10 run, output 819×1024, 1817 paths / 838653 SVG bytes; median 486.2 ms, p95 520.7 ms, min 472.1 ms, max 520.7 ms; target preview tipikal 1024 px <1.5 s PASS. Frontend modal test harness sudah diperbaiki dan rerun final 5 files / 13 tests PASS. Memory single-source ~20 MP PASS: 88 samples @ 500 ms, median 403.3 MiB, p95 441.3 MiB, peak 445.9 MiB; target <500 MiB PASS. Batch 106-image initial run: 178 samples @ 500 ms, median 654.9 MiB, p95 1085.4 MiB, peak 1361.9 MiB; tidak ada target <500 MiB untuk batch, tetapi memory pressure perlu dikarakterisasi terhadap worker concurrency sebelum H01 ditutup. | DPI 100/125/150 PASS; keyboard accessibility walkthrough PASS; native close-confirm awal menemukan bug, fix `close()` → `destroy()` + capability + regression test diterapkan dan rerun Windows PASS; H01 selesai |
-| 2026-10-02 | H02 | DOING | Packaging Windows build PASS pada Tauri CLI 2.12.0. NSIS: `VectorForge_0.1.0_x64-setup.exe`, 3.74 MiB, SHA-256 `6BAF433FFB07AB1F62451E3CF160203C9483DF41D20DC081C4318378107DDD35`, Authenticode `NotSigned`. MSI: `VectorForge_0.1.0_x64_en-US.msi`, 5.57 MiB, SHA-256 `75E8C49FE97877701190E89120D6CE8B1DA2F21AE819B0E67DB5FCDCAB117480`, Authenticode `NotSigned`. Keduanya di bawah target installer <25 MiB di luar WebView2 runtime; mode WebView2 `downloadBootstrapper`, NSIS `currentUser`. Warning identifier `.app` dicatat sebagai non-blocking untuk target Windows-only v1. | NSIS smoke PASS termasuk install/run/import/export/uninstall dan file hasil pengguna tetap ada setelah uninstall; MSI smoke masih menunggu |
+| 2026-10-02 | H02 | DONE | Packaging Windows build PASS pada Tauri CLI 2.12.0. NSIS: `VectorForge_0.1.0_x64-setup.exe`, 3.74 MiB, SHA-256 `6BAF433FFB07AB1F62451E3CF160203C9483DF41D20DC081C4318378107DDD35`, Authenticode `NotSigned`. MSI: `VectorForge_0.1.0_x64_en-US.msi`, 5.57 MiB, SHA-256 `75E8C49FE97877701190E89120D6CE8B1DA2F21AE819B0E67DB5FCDCAB117480`, Authenticode `NotSigned`. Keduanya di bawah target installer <25 MiB di luar WebView2 runtime; mode WebView2 `downloadBootstrapper`, NSIS `currentUser`. Warning identifier `.app` dicatat sebagai non-blocking untuk target Windows-only v1. | NSIS dan MSI smoke PASS termasuk install/run/import/preview/export/uninstall; file hasil pengguna tetap ada setelah uninstall pada keduanya |
 
 ## Catatan izin fase
 
@@ -418,4 +418,6 @@ Dengan seluruh bukti Windows di atas, **H01 = DONE** pada 2 Oktober 2026. H02 be
 - warning identifier `com.vectorforge.app` berakhiran `.app` tidak memblokir target Windows v1, tetapi dicatat untuk dirapikan bila identifier lintas-platform nanti dibutuhkan;
 - H02 tetap DOING sampai smoke test install/run/import/preview/export/uninstall selesai untuk artefak installer.
 - NSIS smoke test Windows: PASS berdasarkan konfirmasi user; aplikasi hasil instalasi dapat digunakan hingga export, uninstall selesai, dan file export pengguna di Documents tetap ada setelah uninstall.
+- MSI smoke test Windows: PASS berdasarkan konfirmasi user; aplikasi hasil instalasi dapat digunakan hingga export, uninstall selesai, dan file export pengguna di Documents tetap ada setelah uninstall.
+- Dengan build NSIS+MSI, target ukuran, hashing/signing status, dan smoke install/run/import/preview/export/uninstall selesai, **H02 = DONE**. G3 belum diizinkan.
 
