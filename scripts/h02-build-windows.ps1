@@ -25,7 +25,7 @@ function Invoke-Checked {
     }
 }
 
-if (-not $IsWindows) {
+if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "H02 installer build harus dijalankan pada Windows."
 }
 
