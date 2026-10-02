@@ -36,9 +36,8 @@ pub async fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
 pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, AppError> {
     let state_app = app.clone();
     let settings = run_storage(app, move |dir| {
-        let mut incoming = settings;
-        incoming.last_out_dir = store::get_settings(dir)?.last_out_dir;
-        store::save_settings(dir, incoming)
+        let current = store::get_settings(dir)?;
+        store::save_settings(dir, preserve_native_settings(settings, &current))
     })
     .await?;
     state_app
@@ -48,7 +47,12 @@ pub async fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppS
     Ok(settings)
 }
 
-pub(crate) async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
+pub(crate) fn preserve_native_settings(mut incoming: AppSettings, current: &AppSettings) -> AppSettings {
+    incoming.last_out_dir = current.last_out_dir.clone();
+    incoming
+}
+
+async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
 where
     T: Send + 'static,
     F: FnOnce(&Path) -> Result<T, AppError> + Send + 'static,
@@ -70,4 +74,25 @@ where
     })
     .await
     .map_err(|error| AppError::invalid_state("Proses storage internal gagal.", error.to_string()))?
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::models::{AppSettings, Theme};
+
+    use super::preserve_native_settings;
+
+    #[test]
+    fn frontend_settings_save_preserves_native_last_output_directory() {
+        let mut current = AppSettings::defaults();
+        current.last_out_dir = Some(r"C:\Users\Tester\Documents\VectorForge".to_owned());
+
+        let mut incoming = AppSettings::defaults();
+        incoming.theme = Theme::Light;
+        incoming.last_out_dir = None;
+
+        let merged = preserve_native_settings(incoming, &current);
+        assert_eq!(merged.theme, Theme::Light);
+        assert_eq!(merged.last_out_dir, current.last_out_dir);
+    }
 }
