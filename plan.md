@@ -438,6 +438,16 @@ Acceptance mapping sementara:
 - AC08 Recovery: PASS berdasarkan B04/B05/I02/H01;
 - AC09 Accessibility: PASS berdasarkan H01 keyboard, modal focus, contrast, DPI.
 
+Final verification ketiga setelah fix G3:
+- frontend tests PASS: 5 files / 13 tests;
+- frontend production build PASS;
+- `cargo check` PASS;
+- `cargo test` PASS: 78 passed, 0 failed, 1 ignored;
+- `cargo clippy --all-targets -- -D warnings` PASS;
+- `cargo fmt -- --check` FAIL hanya karena tiga formatting diff rustfmt pada `commands/files.rs`, `commands/preferences.rs`, dan `store/settings.rs`;
+- formatting diterapkan persis sesuai output rustfmt tanpa perubahan perilaku. Commits: `c1fb35256f5a0e09329d5afeff18fc71fde8144b`, `33fa2fb9c7c38d562f25aab022d09dd70352b0b3`, `680d945b2bc297d11c6142312142efb42a88e8d6`;
+- final verification harus diulang sampai fmt + packaging PASS.
+
 Final verification kedua setelah fix G3:
 - frontend tests PASS: 5 files / 13 tests;
 - frontend production build PASS;
