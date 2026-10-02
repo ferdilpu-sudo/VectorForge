@@ -47,6 +47,7 @@ Frontend:
 ```powershell
 npm run lint
 npm test
+npm run h01:contrast
 npm run build
 ```
 

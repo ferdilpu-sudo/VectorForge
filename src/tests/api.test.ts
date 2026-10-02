@@ -6,7 +6,18 @@ const tauri = vi.hoisted(() => {
   const listen = vi.fn();
   const open = vi.fn();
   const onDragDropEvent = vi.fn();
-  return { invoke, listen, open, onDragDropEvent };
+  const onCloseRequested = vi.fn();
+  const close = vi.fn();
+  const confirm = vi.fn();
+  return {
+    invoke,
+    listen,
+    open,
+    onDragDropEvent,
+    onCloseRequested,
+    close,
+    confirm,
+  };
 });
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: tauri.invoke }));
@@ -14,7 +25,16 @@ vi.mock("@tauri-apps/api/event", () => ({ listen: tauri.listen }));
 vi.mock("@tauri-apps/api/webview", () => ({
   getCurrentWebview: () => ({ onDragDropEvent: tauri.onDragDropEvent }),
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: tauri.open }));
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({
+    onCloseRequested: tauri.onCloseRequested,
+    close: tauri.close,
+  }),
+}));
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: tauri.open,
+  confirm: tauri.confirm,
+}));
 
 import { api } from "../services/api";
 import { defaults } from "../types/params";
@@ -164,6 +184,40 @@ describe("native listener lifecycle", () => {
 
     expect(stopProgress).toHaveBeenCalledTimes(1);
     expect(stopDone).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps native close requests and confirms active batch shutdown", async () => {
+    const stop = vi.fn();
+    let closeHandler:
+      | ((event: { preventDefault: () => void }) => void)
+      | undefined;
+    tauri.onCloseRequested.mockImplementation(
+      async (callback: typeof closeHandler) => {
+        closeHandler = callback;
+        return stop;
+      },
+    );
+    tauri.confirm.mockResolvedValue(true);
+    tauri.close.mockResolvedValue(undefined);
+
+    const prevented = vi.fn();
+    const unlisten = await api.watchCloseRequests((preventDefault) => {
+      preventDefault();
+    });
+    closeHandler?.({ preventDefault: prevented });
+
+    expect(prevented).toHaveBeenCalledTimes(1);
+    await expect(api.confirmCloseWhileBusy("id")).resolves.toBe(true);
+    expect(tauri.confirm).toHaveBeenCalledWith(
+      "Batch masih berjalan. Tutup VectorForge dan hentikan pekerjaan aktif?",
+      { title: "VectorForge", kind: "warning" },
+    );
+
+    await api.closeCurrentWindow();
+    expect(tauri.close).toHaveBeenCalledTimes(1);
+
+    unlisten();
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it("maps native drag/drop events and returns the native unlisten function", async () => {

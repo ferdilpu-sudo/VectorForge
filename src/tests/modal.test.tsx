@@ -39,11 +39,9 @@ describe("modal accessibility", () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    expect(
-      screen.getByRole("dialog", { name: "Pengaturan" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Pengaturan" })).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Close / Tutup" }));
-    expect(trigger).toHaveFocus();
+    expect(document.activeElement).toBe(trigger);
   });
 });

@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint . && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "h01:contrast": "node scripts/h01-contrast-check.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
