@@ -78,7 +78,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::models::{AppSettings, Theme};
+    use crate::models::AppSettings;
+    use crate::models::preferences::Theme;
 
     use super::preserve_native_settings;
 
