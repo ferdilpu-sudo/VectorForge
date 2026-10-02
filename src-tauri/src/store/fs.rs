@@ -219,6 +219,61 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn atomic_replace_failure_preserves_target_and_cleans_temp() -> Result<(), String> {
+        use std::os::windows::fs::OpenOptionsExt;
+
+        let dir = TempDir::create()?;
+        let path = dir.0.join("fixture.json");
+        let initial = Fixture {
+            version: 1,
+            value: "original".to_owned(),
+        };
+        write_json_atomic(&path, &initial, "fixture").map_err(|error| error.message)?;
+
+        let lock = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&path)
+            .map_err(|error| error.to_string())?;
+
+        let result = write_json_atomic(
+            &path,
+            &Fixture {
+                version: 1,
+                value: "replacement".to_owned(),
+            },
+            "fixture",
+        );
+        assert!(matches!(
+            result,
+            Err(error)
+                if error.code == crate::models::ErrorCode::WriteFailed
+                    || error.code == crate::models::ErrorCode::AccessDenied
+        ));
+
+        drop(lock);
+
+        let loaded: Fixture = read_versioned(&path, 1, "fixture")
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "fixture disappeared after failed replace".to_owned())?;
+        assert_eq!(loaded, initial);
+
+        let leftovers = fs::read_dir(&dir.0)
+            .map_err(|error| error.to_string())?
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".vectorforge-store-")
+            })
+            .count();
+        assert_eq!(leftovers, 0);
+        Ok(())
+    }
+
     #[test]
     fn atomic_json_round_trip_replaces_existing_file() -> Result<(), String> {
         let dir = TempDir::create()?;
