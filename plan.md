@@ -380,9 +380,15 @@ Bukti Windows yang sudah diterima:
   - idle working-set p95 39 MiB;
   - release executable 15.17 MiB.
   Target startup <2 s lulus, termasuk sampel pertama 1453.5 ms.
+- preview benchmark production pipeline pada file nyata, 10 run:
+  - source 1122×1402; output 819×1024;
+  - 1817 paths; 838653 SVG bytes pada setiap run;
+  - median 486.2 ms; p95 520.7 ms; min 472.1 ms; max 520.7 ms.
+  Target preview tipikal 1024 px <1.5 s lulus dengan margin besar.
 
 Catatan bukti belum lengkap:
 - run frontend pertama menghasilkan 12 PASS / 1 FAIL karena jsdom mock `showModal()` tidak menambahkan atribut `open`; harness diperbaiki pada commit `a12c71f`, dan rerun final lulus 5 files / 13 tests;
-- attempt preview awal dengan placeholder path tetap dicatat sebagai run tidak valid; run pengganti dengan file nyata di atas menjadi evidence performa yang berlaku;\n- memory skenario satu source ~20 MP, batch besar, DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
+- attempt preview awal dengan placeholder path tetap dicatat sebagai run tidak valid; run pengganti dengan file nyata di atas menjadi evidence performa yang berlaku;
+- memory skenario satu source ~20 MP, batch besar, DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
 
 H01 tetap **DOING** sampai bukti di atas selesai. H02 belum diizinkan.
