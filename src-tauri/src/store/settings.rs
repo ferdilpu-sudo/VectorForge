@@ -120,8 +120,7 @@ mod tests {
 
         let output_dir = dir.0.join("exports");
         fs::create_dir(&output_dir).map_err(|error| error.to_string())?;
-        let updated =
-            save_last_out_dir(&dir.0, &output_dir).map_err(|error| error.message)?;
+        let updated = save_last_out_dir(&dir.0, &output_dir).map_err(|error| error.message)?;
 
         assert_eq!(
             updated.last_out_dir.as_deref(),
