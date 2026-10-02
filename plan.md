@@ -444,6 +444,7 @@ Release gate yang masih terbuka:
 - lisensi aplikasi VectorForge belum dipilih pemilik; dependency license audit sudah PASS, tetapi public distribution tidak boleh mengarang lisensi aplikasi;
 - Authenticode installer masih `NotSigned`; status ini harus tetap dinyatakan bila distribusi unsigned;
 - Windows 11 telah diuji nyata; Windows 10 target PRD belum memiliki distribution smoke evidence;
+- frontend dependency license audit G3: PASS — 362 package eksternal di `package-lock.json`, 0 tanpa field `license`; deklarasi teramati meliputi MIT, ISC, Apache-2.0, BSD, MIT-0, Python-2.0, dan CC-BY-4.0. Audit dependency Rust sebelumnya PASS;
 - compatibility output di browser/Inkscape/Illustrator belum memiliki bukti final yang tercatat; jangan klaim PASS tanpa run;
 - icon `src-tauri/icons/icon.ico` masih bootstrap teknis, bukan branding final;
 - warning bundle identifier `com.vectorforge.app` berakhiran `.app` non-blocking untuk Windows-only v1, tetapi tetap dicatat.
