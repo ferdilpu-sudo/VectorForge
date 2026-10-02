@@ -209,6 +209,72 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "H01 benchmark: set VECTORFORGE_BENCH_IMAGE to a real supported image"]
+    fn h01_real_image_preview_benchmark() -> Result<(), String> {
+        use std::time::Instant;
+
+        let path = std::env::var("VECTORFORGE_BENCH_IMAGE")
+            .map(PathBuf::from)
+            .map_err(|_| "set VECTORFORGE_BENCH_IMAGE to a real image path".to_owned())?;
+        let iterations = std::env::var("VECTORFORGE_BENCH_ITERATIONS")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(10);
+        if iterations < 10 {
+            return Err("VECTORFORGE_BENCH_ITERATIONS must be at least 10".to_owned());
+        }
+
+        let probe = probe_source(&path).map_err(|error| error.message)?;
+        let mut elapsed = Vec::with_capacity(iterations);
+
+        for run in 1..=iterations {
+            let mut request = request();
+            request.request_id = Uuid::new_v4().to_string();
+            let started = Instant::now();
+            let result = render_preview(
+                PreviewWork {
+                    source: SourceSnapshot {
+                        path: path.clone(),
+                        fingerprint: probe.fingerprint.clone(),
+                    },
+                    request,
+                },
+                &CancelToken::new(),
+            )
+            .map_err(|error| error.message)?;
+            let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+            elapsed.push(elapsed_ms);
+
+            println!(
+                "H01 preview run {run}/{iterations}: {:.1} ms, {}x{}, {} paths, {} SVG bytes",
+                elapsed_ms,
+                result.stats.width,
+                result.stats.height,
+                result.stats.path_count,
+                result.stats.svg_bytes
+            );
+        }
+
+        elapsed.sort_by(f64::total_cmp);
+        let percentile = |percent: f64| -> f64 {
+            let index = ((percent / 100.0) * elapsed.len() as f64).ceil() as usize;
+            elapsed[index.saturating_sub(1).min(elapsed.len() - 1)]
+        };
+
+        println!(
+            "H01 preview summary: source={}x{}, iterations={}, median={:.1} ms, p95={:.1} ms, min={:.1} ms, max={:.1} ms",
+            probe.width,
+            probe.height,
+            iterations,
+            percentile(50.0),
+            percentile(95.0),
+            elapsed[0],
+            elapsed[elapsed.len() - 1]
+        );
+        Ok(())
+    }
+
+    #[test]
     fn preview_svg_limit_accepts_boundary_and_rejects_next_byte() {
         assert!(validate_preview_svg_size(MAX_PREVIEW_SVG_BYTES).is_ok());
         assert!(matches!(

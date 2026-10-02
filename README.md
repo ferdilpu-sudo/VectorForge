@@ -80,7 +80,25 @@ Lalu ukur startup-to-main-window dan idle working set sebanyak 10 run:
 powershell -ExecutionPolicy Bypass -File .\scripts\h01-startup-benchmark.ps1
 ```
 
-Script melaporkan OS, CPU, jumlah logical processor, RAM, ukuran executable, startup median/p95, dan idle working-set median/p95. Angka benchmark hanya dianggap bukti setelah dijalankan pada Windows nyata dan dicatat di `plan.md`.
+Script melaporkan OS, CPU, jumlah logical processor, RAM, ukuran executable, startup median/p95, dan idle working-set median/p95.
+
+Benchmark preview production pipeline dengan file nyata:
+
+```powershell
+$env:VECTORFORGE_BENCH_IMAGE="C:\path\to\representative-image.png"
+$env:VECTORFORGE_BENCH_ITERATIONS="10"
+cd src-tauri
+cargo test --release h01_real_image_preview_benchmark -- --ignored --nocapture
+cd ..
+```
+
+Untuk memory process-tree, jalankan executable release, lalu di terminal lain:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\h01-memory-watch.ps1 -Seconds 60
+```
+
+Selama watcher aktif, lakukan skenario yang sedang diukur, misalnya satu source sekitar 20 MP atau batch besar. Angka benchmark hanya dianggap bukti setelah dijalankan pada Windows nyata dan dicatat di `plan.md`.
 
 ## Struktur dan sumber kebenaran
 
