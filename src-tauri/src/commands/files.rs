@@ -11,6 +11,7 @@ use crate::models::{
 };
 use crate::source_protocol::preview_url;
 use crate::state::AppState;
+use crate::store;
 
 #[tauri::command]
 pub async fn import_files(
@@ -104,6 +105,7 @@ pub fn release_files(state: State<'_, AppState>, file_ids: Vec<String>) -> Resul
 
 #[tauri::command]
 pub async fn choose_destination(
+    app: AppHandle,
     window: WebviewWindow,
     state: State<'_, AppState>,
     request: DestinationRequest,
@@ -113,7 +115,19 @@ pub async fn choose_destination(
     let kind = request.kind;
     let format = request.format;
     let suggested_name = request.suggested_name.clone();
-    let dialog = window.dialog().file();
+    let last_out_dir = super::preferences::run_storage(app.clone(), |dir| {
+        store::get_settings(dir).map(|settings| settings.last_out_dir)
+    })
+    .await
+    .ok()
+    .flatten()
+    .map(PathBuf::from)
+    .filter(|path| path.is_dir());
+
+    let mut dialog = window.dialog().file();
+    if let Some(directory) = last_out_dir {
+        dialog = dialog.set_directory(directory);
+    }
 
     let selected = tauri::async_runtime::spawn_blocking(move || match kind {
         DestinationKind::Directory => dialog
@@ -146,6 +160,20 @@ pub async fn choose_destination(
     let normalized = normalize_destination(&selected_path, kind)?;
     let overwrite_confirmed = kind == DestinationKind::File && normalized.exists();
     let display_path = normalized.to_string_lossy().into_owned();
+    let output_dir = match kind {
+        DestinationKind::Directory => normalized.clone(),
+        DestinationKind::File => normalized
+            .parent()
+            .map(Path::to_path_buf)
+            .ok_or_else(|| {
+                AppError::new(ErrorCode::InvalidParams, "Folder tujuan file tidak valid.")
+            })?,
+    };
+
+    let _ = super::preferences::run_storage(app, move |dir| {
+        store::save_last_out_dir(dir, &output_dir).map(|_| ())
+    })
+    .await;
 
     let id = {
         let mut registry = state.registry.lock().map_err(|error| {
