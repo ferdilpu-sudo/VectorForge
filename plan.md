@@ -433,7 +433,7 @@ Acceptance mapping sementara:
 - AC03 Parameter/preview: PASS berdasarkan B03/I02/H01 benchmark;
 - AC04 Export: PASS berdasarkan B04/I02;
 - AC05 Batch: FIXED PENDING FINAL VERIFY — runtime worker kini dibatasi logical cores selain setting/4/gate/work count; cancel/retry/partial sudah PASS dari B06/I02;
-- AC06 Settings: FIXED PENDING FINAL VERIFY — `lastPresetId` sudah aktif sebelumnya; G3 menambahkan persistence/reuse `lastOutDir` pada boundary native dan mencegah frontend settings save menghapus field native;
+- AC06 Settings: FIXED PENDING FINAL VERIFY — `lastPresetId` sudah aktif sebelumnya; G3 menambahkan persistence/reuse `lastOutDir` pada boundary native, mencegah frontend settings save menghapus field native, dan menambahkan regression test untuk preserve field native;
 - AC07 Privacy: SOURCE AUDIT PASS — runtime production CSP hanya mengizinkan self/IPC/local `vfsource`; package/Cargo dependency langsung tidak memiliki HTTP client eksplisit; installer WebView2 bootstrapper dapat membutuhkan internet hanya saat instalasi bila runtime belum tersedia;
 - AC08 Recovery: PASS berdasarkan B04/B05/I02/H01;
 - AC09 Accessibility: PASS berdasarkan H01 keyboard, modal focus, contrast, DPI.
