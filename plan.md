@@ -54,7 +54,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
 | 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | User kemudian mengizinkan H01 |
-| 2026-10-02 | H01 | DOING | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark file nyata PASS: source 1122×1402, 10 run, output 819×1024, 1817 paths / 838653 SVG bytes; median 486.2 ms, p95 520.7 ms, min 472.1 ms, max 520.7 ms; target preview tipikal 1024 px <1.5 s PASS. Frontend modal test harness sudah diperbaiki dan rerun final 5 files / 13 tests PASS. | Memory single-source ~20 MP, batch besar, lalu DPI/keyboard/manual close checks |
+| 2026-10-02 | H01 | DOING | Hardening awal + gate source berjalan. Windows evidence: `npm run lint` PASS, contrast checker PASS seluruh dark/light target, `npm run build` PASS, `cargo check` PASS, Rust 75 PASS + 1 benchmark ignored, Clippy PASS, rustfmt PASS, release build PASS. Startup benchmark Windows 11 / i7-1165G7 / 7.8 GiB: median 48.2 ms, p95 1453.5 ms, idle working-set median 26.7 MiB, p95 39 MiB, executable 15.17 MiB; target startup <2 s PASS. Preview benchmark file nyata PASS: source 1122×1402, 10 run, output 819×1024, 1817 paths / 838653 SVG bytes; median 486.2 ms, p95 520.7 ms, min 472.1 ms, max 520.7 ms; target preview tipikal 1024 px <1.5 s PASS. Frontend modal test harness sudah diperbaiki dan rerun final 5 files / 13 tests PASS. Memory single-source ~20 MP PASS: 88 samples @ 500 ms, median 403.3 MiB, p95 441.3 MiB, peak 445.9 MiB; target <500 MiB PASS. | Batch memory 50×~2 MP, lalu DPI/keyboard/manual close checks |
 
 ## Catatan izin fase
 
@@ -385,10 +385,16 @@ Bukti Windows yang sudah diterima:
   - 1817 paths; 838653 SVG bytes pada setiap run;
   - median 486.2 ms; p95 520.7 ms; min 472.1 ms; max 520.7 ms.
   Target preview tipikal 1024 px <1.5 s lulus dengan margin besar.
+- memory process-tree single-source ~20 MP, 60 detik watcher:
+  - 88 samples pada interval 500 ms;
+  - median 403.3 MiB;
+  - p95 441.3 MiB;
+  - peak 445.9 MiB.
+  Target single-source 20 MP <500 MiB lulus; peak menyisakan margin 54.1 MiB.
 
 Catatan bukti belum lengkap:
 - run frontend pertama menghasilkan 12 PASS / 1 FAIL karena jsdom mock `showModal()` tidak menambahkan atribut `open`; harness diperbaiki pada commit `a12c71f`, dan rerun final lulus 5 files / 13 tests;
 - attempt preview awal dengan placeholder path tetap dicatat sebagai run tidak valid; run pengganti dengan file nyata di atas menjadi evidence performa yang berlaku;
-- memory skenario satu source ~20 MP, batch besar, DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
+- batch memory 50×~2 MP, DPI 100/125/150, keyboard walkthrough dan native close-confirm masih menunggu bukti Windows.
 
 H01 tetap **DOING** sampai bukti di atas selesai. H02 belum diizinkan.
