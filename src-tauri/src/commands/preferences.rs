@@ -52,7 +52,7 @@ pub(crate) fn preserve_native_settings(mut incoming: AppSettings, current: &AppS
     incoming
 }
 
-async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
+pub(crate) async fn run_storage<T, F>(app: AppHandle, task: F) -> Result<T, AppError>
 where
     T: Send + 'static,
     F: FnOnce(&Path) -> Result<T, AppError> + Send + 'static,
