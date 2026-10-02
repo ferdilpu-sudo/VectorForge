@@ -1,6 +1,6 @@
 # Plan — Urutan Kerja dan Kendali Scope
 
-Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, dan I01 selesai. User memerintahkan **lanjut I02: uji alur desktop lengkap**. I02 sekarang DOING dengan fokus bukti Windows nyata untuk import → parameter → preview → export, source-switch saat preview, batch normal, cancel, retry setelah failure, dan recovery dasar. H01 belum diizinkan.
+Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary hardening, checkpoint G2, I01, dan I02 selesai. I02 lulus walkthrough native Windows untuk import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, export SVG/PDF/EPS, open output folder, batch normal, cancel, serta failure → retry. PowerShell output yang dibagikan membuktikan artefak SVG/PDF tersimpan dengan ukuran nonzero; EPS dinyatakan PASS oleh user tetapi tidak tampak pada listing yang ditempel. H01 belum diizinkan.
 
 ## Backlog dan gate
 
@@ -53,7 +53,7 @@ Tujuan pengguna jelas, acceptance test jelas, kontrak tersedia, izin fase valid,
 | 2026-10-01 | B02 boundary hardening | DONE | Custom local protocol `vfsource` berbasis opaque `fileId` menggantikan revocation asset-scope one-way; handler registry-gated memverifikasi fingerprint sebelum/sesudah read; `cargo check` PASS, 74/74 tests PASS, Clippy PASS, rustfmt PASS, smoke preview → release → re-import PASS | User kemudian menyetujui G2 dengan instruksi lanjut |
 | 2026-10-01 | G2 | DONE | Backend P2 ditinjau dengan seluruh gate B01–B06 dan boundary hardening hijau; user memerintahkan **lanjut** | I01 diizinkan; I02 belum diizinkan |
 | 2026-10-01 | I01 | DONE | Adapter IPC produksi selesai; native dialog/drop, preview/export/batch/settings/preset tersambung; event subscribe/resync/sequence filter/stale run cleanup teruji; frontend lint PASS, 11/11 tests PASS, build PASS; Rust 74/74 tests PASS, Clippy PASS, rustfmt PASS; `@tauri-apps/api 2.12.0` + `@tauri-apps/plugin-dialog 2.8.0` terkunci pada `07f995b`; working tree clean | User kemudian mengizinkan I02 |
-| 2026-10-02 | I02 | DOING | User memerintahkan **lanjut I02: uji alur desktop lengkap** | Jalankan walkthrough native Windows: import/preview/export, source switch, batch, cancel, retry/recovery |
+| 2026-10-02 | I02 | DONE | User melaporkan seluruh walkthrough native Windows PASS: import dialog, drag/drop, preview nyata, parameter → preview, source-switch saat preview, SVG/PDF/EPS export, open output folder, batch normal, cancel, failure → retry. Listing PowerShell menunjukkan banyak artefak SVG/PDF nonzero; EPS PASS berdasarkan konfirmasi user | H01 belum diizinkan |
 
 ## Catatan izin fase
 
@@ -329,3 +329,22 @@ Bukti Windows final:
 - working tree pengguna clean setelah push.
 
 Dengan bukti ini, **I01 = DONE**. I02 tetap menunggu instruksi eksplisit user.
+
+
+### I02 ditutup — 2 Oktober 2026
+
+Walkthrough desktop produksi dijalankan langsung pada Windows dan seluruh checklist I02 dilaporkan PASS oleh user:
+- import melalui native dialog;
+- import tambahan melalui drag/drop;
+- original tampil dan preview vektor nyata dibuat oleh engine lokal;
+- perubahan parameter/preset memicu preview baru tanpa freeze;
+- berpindah source saat preview berjalan tidak menampilkan hasil silang antar gambar;
+- export SVG, PDF, dan EPS berhasil;
+- `open_output_folder` membuka folder hasil;
+- batch multi-file normal selesai;
+- batch cancel mengembalikan UI ke state usable dan item sisa tidak menggantung;
+- source yang dipindahkan setelah import memicu failure, lalu setelah source dikembalikan retry berhasil.
+
+Bukti artefak yang ditempel user menunjukkan banyak file SVG/PDF tersimpan dengan ukuran nonzero, termasuk output batch dan pengulangan nama dengan suffix. Contoh: `RUANG TAMU.svg` 797190 bytes, `RUANG TAMU.pdf` 310052 bytes, `download.svg` 362089 bytes. EPS dinyatakan PASS oleh user, tetapi file EPS tidak muncul pada listing PowerShell yang ditempel, sehingga bukti EPS untuk I02 bersifat user-confirmed dan bukan artifact-list-confirmed.
+
+Dengan bukti ini, **I02 = DONE**. H01/P4 belum diizinkan.
