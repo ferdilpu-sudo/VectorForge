@@ -79,10 +79,15 @@ impl BatchScheduler {
 
         let batch_id = Uuid::new_v4().to_string();
         let run_id = Uuid::new_v4().to_string();
-        let worker_limit = requested_workers
-            .clamp(1, 4)
-            .min(self.shared.gate.capacity())
-            .min(works.len());
+        let logical_cores = std::thread::available_parallelism()
+            .map(|value| value.get())
+            .unwrap_or(1);
+        let worker_limit = effective_worker_limit(
+            requested_workers,
+            self.shared.gate.capacity(),
+            works.len(),
+            logical_cores,
+        );
 
         let mut stem_counts = HashMap::<String, u32>::new();
         let items = works
@@ -283,6 +288,19 @@ impl BatchScheduler {
         );
         Ok(handle)
     }
+}
+
+fn effective_worker_limit(
+    requested_workers: usize,
+    gate_capacity: usize,
+    work_count: usize,
+    logical_cores: usize,
+) -> usize {
+    requested_workers
+        .clamp(1, 4)
+        .min(logical_cores.max(1))
+        .min(gate_capacity.max(1))
+        .min(work_count.max(1))
 }
 
 fn spawn_workers(
@@ -806,7 +824,7 @@ fn lock_error<T>(error: std::sync::PoisonError<T>) -> AppError {
 mod tests {
     use crate::models::{BatchOutput, ExportFormat};
 
-    use super::{derive_item_status, queued_output, reset_for_retry};
+    use super::{derive_item_status, effective_worker_limit, queued_output, reset_for_retry};
     use crate::models::{BatchItem, ItemStatus, JobStage, OutputStatus};
 
     fn done_output(format: ExportFormat) -> BatchOutput {
@@ -818,6 +836,14 @@ mod tests {
             bytes: Some(10),
             error: None,
         }
+    }
+
+    #[test]
+    fn worker_limit_never_exceeds_logical_cores_or_other_caps() {
+        assert_eq!(effective_worker_limit(4, 4, 20, 2), 2);
+        assert_eq!(effective_worker_limit(4, 3, 20, 8), 3);
+        assert_eq!(effective_worker_limit(4, 4, 2, 8), 2);
+        assert_eq!(effective_worker_limit(1, 4, 20, 8), 1);
     }
 
     #[test]
