@@ -8,7 +8,7 @@ Logo flat 2–8 warna; logo dengan hole; ilustrasi detail; foto; sumber alpha no
 
 ## Regresi kualitas logo — QV-001 (26 Oktober 2026)
 
-Synthetic fixture dengan delapan bentuk gelap terpisah adalah pengganti aman untuk menguji kehilangan area foreground, bukan bukti bahwa seluruh glyph font dunia nyata aman. Tes regresi opsional `gallery_computer_wordmark_retains_all_seven_dark_letters` memerlukan PNG milik pengguna pada `VECTORFORGE_QUALITY_IMAGE` (1536×1024); fixture itu tidak dicommit. Jika tes gagal, bandingkan output segmentasi, fit, dan serialisasi sebelum mengubah engine. Jalankan juga matriks maxSide 1024 vs 2048 dan ekspor resolusi penuh; `path_count > 0` saja tidak cukup untuk mengklaim bentuk lengkap. Status hingga run Windows: **NOT RUN**.
+Synthetic fixture dengan delapan bentuk gelap terpisah adalah pengganti aman untuk menguji kehilangan area foreground, bukan bukti bahwa seluruh glyph font dunia nyata aman. Tes regresi opsional `gallery_computer_wordmark_retains_all_seven_dark_letters` memeriksa tujuh huruf GALLERY dan delapan huruf COMPUTER; tes memerlukan PNG milik pengguna pada `VECTORFORGE_QUALITY_IMAGE` (1536×1024); fixture itu tidak dicommit. Jika tes gagal, bandingkan output segmentasi, fit, dan serialisasi sebelum mengubah engine. Jalankan juga matriks maxSide 1024 vs 2048 dan ekspor resolusi penuh; `path_count > 0` saja tidak cukup untuk mengklaim bentuk lengkap. Status hingga run Windows: **NOT RUN**.
 
 ## Matriks pengujian
 

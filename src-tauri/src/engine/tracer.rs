@@ -138,14 +138,15 @@ mod tests {
 
     // A path_count > 0 assertion cannot detect a logo reduced to one glyph.
     // Require visible dark geometry within every separated foreground region.
-    fn dark_shape_region_coverage(
+    fn painted_region_coverage(
         doc: &VectorDoc,
         regions: &[(f64, f64, f64, f64)],
+        accept_color: impl Fn(u8, u8, u8, u8) -> bool,
     ) -> Vec<bool> {
         let mut found = vec![false; regions.len()];
         for shape in &doc.shapes {
             let color = shape.paint.color();
-            if color.r >= 125 || color.g >= 125 || color.b >= 125 || color.a == 0 {
+            if !accept_color(color.r, color.g, color.b, color.a) {
                 continue;
             }
             for subpath in &shape.path.subpaths {
@@ -210,7 +211,9 @@ mod tests {
                 (x - 3.0, x + 29.0, 27.0, 87.0)
             })
             .collect();
-        let covered = dark_shape_region_coverage(&doc, &regions);
+        let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+            r < 125 && g < 125 && b < 125 && a > 0
+        });
         assert!(covered.iter().all(|value| *value), "missing shapes: {covered:?}");
         Ok(())
     }
@@ -240,8 +243,27 @@ mod tests {
             (999.0, 1102.0, 581.0, 715.0),
             (1117.0, 1236.0, 581.0, 715.0),
         ];
-        let covered = dark_shape_region_coverage(&doc, &regions);
-        assert!(covered.iter().all(|value| *value), "missing wordmark letters: {covered:?}");
+        let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+            r < 125 && g < 125 && b < 125 && a > 0
+        });
+        assert!(covered.iter().all(|value| *value), "missing GALLERY letters: {covered:?}");
+
+        // Check the second, gold wordmark separately.
+        let gold_regions = [
+            (436.0, 492.0, 746.0, 805.0),
+            (528.0, 588.0, 746.0, 805.0),
+            (626.0, 686.0, 747.0, 804.0),
+            (728.0, 771.0, 747.0, 804.0),
+            (808.0, 855.0, 747.0, 805.0),
+            (893.0, 938.0, 747.0, 804.0),
+            (977.0, 1015.0, 747.0, 804.0),
+            (1056.0, 1101.0, 747.0, 804.0),
+        ];
+        let gold_covered = painted_region_coverage(&doc, &gold_regions, |r, g, b, a| {
+            a > 0 && r > 110 && i16::from(r) - i16::from(g) > 12
+                && i16::from(g) - i16::from(b) > 14
+        });
+        assert!(gold_covered.iter().all(|value| *value), "missing COMPUTER letters: {gold_covered:?}");
         Ok(())
     }
 
