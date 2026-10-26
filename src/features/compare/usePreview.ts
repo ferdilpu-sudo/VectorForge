@@ -12,12 +12,13 @@ export function usePreview(manual: number) {
   const language = useProject((state) => state.settings.language);
   const [result, setResult] = useState<{
     url: string;
-    fileId: string;
     signature: string;
+    requestId: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const signature = JSON.stringify(params);
+  // Invalidate on every property that can change the generated SVG.
+  const signature = JSON.stringify({ fileId, params, maxSide });
   const lastManual = useRef(manual);
 
   useEffect(
@@ -30,30 +31,45 @@ export function usePreview(manual: number) {
   useEffect(() => {
     const requested = lastManual.current !== manual;
     lastManual.current = manual;
-    if (!fileId || (!auto && !requested)) return;
+    if (!fileId) {
+      setBusy(false);
+      setError("");
+      return;
+    }
+    if (!auto && !requested) {
+      setBusy(false);
+      return;
+    }
 
     const requestId = crypto.randomUUID();
     let disposed = false;
     let submitted = false;
+    setBusy(true);
+    setError("");
 
     const timer = window.setTimeout(() => {
       submitted = true;
-      setBusy(true);
-      setError("");
-
       void api
         .generatePreview({
           fileId,
-          params: JSON.parse(signature),
+          params: JSON.parse(signature).params,
           maxSide,
           requestId,
         })
         .then((response) => {
           if (disposed) return;
+          if (response.requestId !== requestId || response.fileId !== fileId) {
+            setError(
+              language === "id"
+                ? "Respons preview tidak cocok dengan permintaan."
+                : "Preview response does not match the request.",
+            );
+            return;
+          }
           const url = URL.createObjectURL(
             new Blob([response.svg], { type: "image/svg+xml" }),
           );
-          setResult({ url, fileId, signature });
+          setResult({ url, signature, requestId });
         })
         .catch((reason) => {
           if (!disposed) setError(appErrorMessage(reason, language));
@@ -66,19 +82,20 @@ export function usePreview(manual: number) {
     return () => {
       disposed = true;
       window.clearTimeout(timer);
-      setBusy(false);
       if (submitted) {
         void api.cancelPreview(requestId).catch(() => {
-          // Cleanup cancellation is best-effort; stale results are discarded locally.
+          // Cancellation is best-effort. Disposed responses are always ignored.
         });
       }
     };
   }, [fileId, signature, auto, maxSide, manual, language]);
 
+  const current = Boolean(fileId && result?.signature === signature);
   return {
-    url: result?.fileId === fileId ? result.url : "",
+    url: current ? (result?.url ?? "") : "",
     busy,
     error,
-    stale: result?.signature !== signature,
+    stale: Boolean(fileId && !current),
+    needsRefresh: Boolean(fileId && !auto && !current),
   };
 }

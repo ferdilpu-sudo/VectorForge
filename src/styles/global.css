@@ -480,6 +480,21 @@ details[open] summary:before {
 .right-label {
   right: 14px;
 }
+.trace-empty {
+  position: absolute;
+  inset: 20%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
 .preview-caption {
   position: absolute;
   bottom: 46px;

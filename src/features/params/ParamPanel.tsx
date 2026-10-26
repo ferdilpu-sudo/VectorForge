@@ -150,7 +150,7 @@ export function ParamPanel() {
       </label>
       <button
         className="wide"
-        onClick={() => choosePreset("builtin-balanced")}
+        onClick={() => choosePreset(presetId)}
       >
         {t("Reset Parameter", "Reset parameters")}
       </button>
