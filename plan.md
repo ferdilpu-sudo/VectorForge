@@ -26,6 +26,19 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 | H02 | Build installer Windows dan smoke test | H01 | DONE 2026-10-02: NSIS/MSI build + install/run/import/preview/export/uninstall PASS |
 | G3 | Release readiness | H02 | DOING 2026-10-02: bukti gate rilis, acceptance mapping, signing/lisensi/OS, final RC verification |
 
+## QV-001–QV-003 — Visual quality defect (26 Oktober 2026)
+
+Status: **IMPLEMENTED / NOT YET VERIFIED ON WINDOWS** pada branch `fix/vector-quality-missing-shapes`.
+User memerintahkan "execute" setelah menerima patch plan P0: missing shapes.
+Perubahan terpisah dari `main`:
+- Preview signature mencakup fileId, parameter, dan previewMaxSide; respons yang terlambat/salah tidak tampil sebagai hasil terbaru.
+- Result mode menampilkan status eksplisit ketika SVG belum tersedia; Reset Parameter menggunakan preset aktif.
+- Fixture sintetis multi-bentuk menolak hilangnya sebagian besar objek. Tes opsional Gallery Computer menggunakan `VECTORFORGE_QUALITY_IMAGE` tanpa mengunggah foto berlogo ke repo publik.
+- Split alpha sumber opaque dilewati tanpa mengubah mask; bukan klaim bahwa perubahan ini memperbaiki bug satu huruf.
+- Tes preview tanpa resize dibandingkan dengan jalur trace resolusi penuh; tes belum dijalankan pada Windows.
+
+**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA PASS atau merge sampai tes Rust, frontend, dan visual pada Windows dijalankan.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

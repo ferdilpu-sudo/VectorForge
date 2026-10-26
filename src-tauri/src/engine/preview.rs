@@ -100,6 +100,7 @@ mod tests {
     use vtracer::CancelToken;
 
     use crate::files::{SourceSnapshot, probe_source};
+    use crate::engine::{decode_full, trace_image, write_alpha_svg};
     use crate::models::{ErrorCode, HierarchicalMode, PreviewRequest, TraceMode, TraceParams};
 
     use super::{MAX_PREVIEW_SVG_BYTES, PreviewWork, render_preview, validate_preview_svg_size};
@@ -180,6 +181,44 @@ mod tests {
             return Err(format!("unexpected preview result: {:?}", result.stats));
         }
 
+        Ok(())
+    }
+
+
+    #[test]
+    fn max_side_above_source_matches_full_resolution_trace() -> Result<(), String> {
+        let fixture = TempPng::create(&RgbaImage::from_fn(240, 120, |x, y| {
+            if (0..6).any(|index| {
+                let left = 12 + index * 36;
+                x >= left && x < left + 23 && (20..90).contains(&y)
+            }) {
+                Rgba([18, 22, 27, 255])
+            } else {
+                Rgba([248, 248, 247, 255])
+            }
+        }))?;
+        let probe = probe_source(fixture.path()).map_err(|error| error.message)?;
+        let mut request = request();
+        request.max_side = 2048;
+        let actual = render_preview(
+            PreviewWork {
+                source: SourceSnapshot {
+                    path: fixture.path().to_path_buf(),
+                    fingerprint: probe.fingerprint.clone(),
+                },
+                request: request.clone(),
+            },
+            &CancelToken::new(),
+        )
+        .map_err(|error| error.message)?;
+        let full = decode_full(fixture.path(), probe.orientation).map_err(|error| error.message)?;
+        let vector = trace_image(full, &request.params, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "full-resolution trace unexpectedly empty".to_owned())?;
+        let expected = write_alpha_svg(&vector);
+        assert_eq!((actual.stats.width, actual.stats.height), (240, 120));
+        assert_eq!(actual.svg, expected.svg);
+        assert_eq!(actual.stats.path_count, expected.path_count);
         Ok(())
     }
 
