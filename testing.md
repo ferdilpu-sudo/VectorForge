@@ -30,6 +30,21 @@ Metrik visual perlu hasil pengukuran nyata; jangan menandai smoothness meningkat
 
 **QA Windows 29 Oktober 2026 (dilaporkan pengguna):** `cargo test`: **86 PASS / 0 FAIL / 2 ignored**, `cargo clippy --all-targets -- -D warnings`: **PASS**, `cargo fmt -- --check`: **FAIL** dengan empat perubahan format pada `preview.rs` dan `presets.rs`. Patch formatting diterapkan dalam commit berikutnya; rerun `cargo fmt -- --check` **belum dilaporkan**. Gate frontend `npm run lint`, `npm test`, `npm run build` dan evaluasi visual gambar AI **belum dilaporkan**.
 
+## QV-006 — Professional Segmentation (QA belum dijalankan)
+
+| ID | Fixture & gate | Acceptance |
+|---|---|---|
+| TEST-QV006-01 | DTO TS/Rust v1 tanpa field baru | `segmentationMode=color-cluster`, `paletteLimit=0`, semua valid |
+| TEST-QV006-02 | Nilai invalid palet dan enum | Rust dan TypeScript tolak >64, fractional / enum invalid |
+| TEST-QV006-03 | Config mapping ColorCluster vs Watershed | Default klasik, mode profesional, `max_colors=24`, cutout sesuai preset |
+| TEST-QV006-04 | Preset profesional dan nama preset lama | Builtin ID stabil, preset lama tetap dapat dibaca |
+| TEST-QV006-05 | Preview IPC dan perubahan parameter | Segmentation dan palette diteruskan, hasil lama diinvalidasi saat setting berubah |
+| TEST-QV006-06 | Synthetic multi-object segmented input | Tidak ada objek gelap terpisah yang hilang akibat watershed/cutout/palette |
+| TEST-QV006-07 | Logo asli, dua AI illustration, alpha parsial | Uji warna, outline, ruang negatif, tepi, dan bentuk kecil secara visual |
+| TEST-QV006-08 | Ekspor full-res SVG/PDF/EPS dan batch | File benar-benar vektor, transparansi tidak berubah, ukuran memori/latensi dicatat |
+
+Tes QV-006 belum diuji lokal karena toolchain Rust dan environment aplikasi Windows tidak tersedia dalam sesi assistant. Pengguna harus menjalankan gate Windows; PR tetap Draft hingga bukti hasil. Akurasi kontur profesional, straight-edge fitting, primitive fitting, dan quality scoring **belum diterapkan** oleh milestone ini.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |

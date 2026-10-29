@@ -24,6 +24,10 @@ Aplikasi Windows offline untuk desainer, pembuat logo/stiker/aset game dan pengg
 
 AC10 (tambahan setelah v1): gambar raster dari generator AI dapat ditrace memakai preset `AI Smooth Illustration` dan slider kehalusan kurva tanpa instal SDK AI, server, atau perubahan workflow ekspor. `smoothness=0` menjaga perilaku lama, preset tersimpan sebelumnya tetap dapat dibaca, parameter >3/tidak finite ditolak, dan nilai kehalusan sama diteruskan ke preview serta SVG/PDF/EPS. Kriteria mutu visual: objek/huruf penting tetap ada dan kontur harus dievaluasi pada beberapa fixture AI, bukan dijanjikan otomatis lebih halus. Tidak termasuk generasi gambar, background removal otomatis, denoise adaptif atau konversi foto fotorealistis lossless.
 
+## Professional Vector Engine — tahap segmentasi QV-006
+
+AC11 (eksperimental): pengguna dapat memilih `color-cluster` atau `watershed`, membatasi palet 0–64 warna (`0=off`), dan memakai preset opt-in `Professional Logo` / `Professional Illustration`. Kriteria kontrak: hasil preset lama tidak berubah; preset custom versi 1 tetap dapat dimuat; PNG berwarna dan alpha serta ekspor SVG/PDF/EPS mempertahankan kebijakan sebelumnya; mode baru tidak boleh menyebabkan hilangnya seluruh komponen/objek penting. Kriteria mutu pada fixture AI: bandingkan kontur, ketajaman garis, keutuhan lubang, warna dan jumlah node dengan baseline. Status **belum dibuktikan** sampai tes di Windows dan inspeksi manusia. Ini tahap segmentasi, belum mengimplementasikan primitive fitting, constrained Bézier, atau penilaian kualitas otomatis.
+
 ## Parameter
 
 Sumber angka/default kanonis: `schema.md`. UI tidak menyalin default secara terpisah di banyak komponen. Semua format memakai parameter yang sama; EPS memiliki kebijakan transparansi yang dijelaskan di bawah.

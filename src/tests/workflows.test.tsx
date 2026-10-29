@@ -267,6 +267,33 @@ describe("AI Smooth preview integration", () => {
   });
 });
 
+describe("professional segmentation preview integration", () => {
+  it("passes the selected segmentation and palette to native tracing", async () => {
+    const preset = builtIns.find(
+      (candidate) => candidate.id === "builtin-professional-illustration",
+    );
+    if (!preset) throw new Error("professional illustration preset missing");
+
+    act(() => {
+      useProject.setState({ presetId: preset.id, params: { ...preset.params } });
+    });
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          segmentationMode: "watershed",
+          paletteLimit: 24,
+          hierarchical: "cutout",
+        }),
+      }),
+    );
+    expect(result.current.url).toMatch(/^blob:/);
+  });
+});
+
 describe("batch event lifecycle", () => {
   it("resyncs after start, filters stale sequence/run events, and cleans listeners", async () => {
     const handle = {

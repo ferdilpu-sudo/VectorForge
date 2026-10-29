@@ -397,6 +397,39 @@ mod tests {
     }
 
     #[test]
+    fn old_user_preset_with_professional_builtin_name_is_preserved() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        let data = serde_json::json!({
+            "version": 1,
+            "presets": [{
+                "id": "00000000-0000-4000-8000-000000000124",
+                "name": "Professional Illustration",
+                "params": {
+                    "colorPrecision": 6,
+                    "filterSpeckle": 4,
+                    "layerDifference": 16,
+                    "cornerThreshold": 60,
+                    "lengthThreshold": 4,
+                    "mode": "spline",
+                    "hierarchical": "stacked"
+                },
+                "createdAt": "2026-10-01T00:00:00Z",
+                "builtIn": false
+            }]
+        });
+        fs::write(dir.0.join("presets.json"), data.to_string())
+            .map_err(|error| error.to_string())?;
+        let presets = list_presets(&dir.0).map_err(|error| error.message)?;
+        let legacy = presets
+            .iter()
+            .find(|preset| preset.id == "00000000-0000-4000-8000-000000000124")
+            .ok_or_else(|| "legacy custom preset missing".to_owned())?;
+        assert_eq!(legacy.params.segmentation_mode, SegmentationMode::ColorCluster);
+        assert_eq!(legacy.params.palette_limit, 0);
+        Ok(())
+    }
+
+    #[test]
     fn user_preset_round_trip_and_delete() -> Result<(), String> {
         let dir = TempDir::create()?;
         let saved = save_preset(&dir.0, request("Saya")).map_err(|error| error.message)?;

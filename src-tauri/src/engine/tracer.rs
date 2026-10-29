@@ -234,6 +234,49 @@ mod tests {
     }
 
     #[test]
+    fn professional_modes_keep_separated_opaque_shapes() -> Result<(), String> {
+        let source = RgbaImage::from_fn(180, 100, |x, y| {
+            let foreground = (0..3).any(|index| {
+                let left = 15 + index * 55;
+                x >= left && x < left + 28 && (24..78).contains(&y)
+            });
+            if foreground {
+                Rgba([20, 24, 29, 255])
+            } else {
+                Rgba([250, 247, 241, 255])
+            }
+        });
+        let regions: Vec<(f64, f64, f64, f64)> = (0..3)
+            .map(|index| {
+                let left = (15 + index * 55) as f64;
+                (left - 3.0, left + 31.0, 21.0, 81.0)
+            })
+            .collect();
+
+        for segmentation_mode in [
+            SegmentationMode::ColorCluster,
+            SegmentationMode::Watershed,
+        ] {
+            let mut options = params();
+            options.segmentation_mode = segmentation_mode;
+            options.hierarchical = HierarchicalMode::Cutout;
+            options.palette_limit = 24;
+
+            let doc = trace_image(source.clone(), &options, &CancelToken::new())
+                .map_err(|error| error.message)?
+                .ok_or_else(|| "unexpected empty trace".to_owned())?;
+            let coverage = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+                r < 125 && g < 125 && b < 125 && a > 0
+            });
+            assert!(
+                coverage.iter().all(|hit| *hit),
+                "missing foreground shape with {segmentation_mode:?}: {coverage:?}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
     fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
         let source = RgbaImage::from_fn(392, 120, |x, y| {
             let foreground = (0..8).any(|index| {

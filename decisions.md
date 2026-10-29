@@ -19,6 +19,7 @@
 | D13 | Sumber >30 MP ditolak; tidak auto resize | Pilih cabang paling sederhana dari opsi PRD lama; kualitas export tidak berubah diam-diam |
 | D14 | Engine/output limitations menjadi blocker, bukan silent fallback | Hindari file raster berbungkus SVG/PDF |
 | D15 | QV-005 AI Smooth Illustration adalah preset tracing offline opsional, bukan layanan AI | Gunakan `Config.simplify` VTracer pada mode spline dengan toleransi 0–3 px; nilai default 0 mempertahankan output lama dan data preset legacy kompatibel. Risiko: detail tipis bisa berkurang, sehingga perlu QA per jenis aset. Tidak menambah dependency/jaringan atau otomatis menghapus background. |
+| D16 | QV-006 professional segmentation = opsi VTracer color-cluster / watershed + maxColors, bukan mengganti engine | Fitur opt-in dengan preset Logo Presisi & Ilustrasi Profesional eksperimental, menggunakan mode cutout pada kedua preset. Nilai lama (color-cluster, tanpa cap warna) tetap default. Kualitas watershed+cutout, memory dan waktu ekspor 30MP masih memerlukan uji Windows; tidak memaksakan perubahan pada file lama. |
 
 ## Pertanyaan teknis yang wajib diselesaikan B01
 
