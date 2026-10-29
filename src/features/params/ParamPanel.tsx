@@ -147,8 +147,12 @@ export function ParamPanel() {
               })
             }
           >
-            <option value="color-cluster">{t("Warna (Klasik)", "Color clustering (classic)")}</option>
-            <option value="watershed">{t("Tepi Objek (Eksperimen)", "Object edges (experimental)")}</option>
+            <option value="color-cluster">
+              {t("Warna (Klasik)", "Color clustering (classic)")}
+            </option>
+            <option value="watershed">
+              {t("Tepi Objek (Eksperimen)", "Object edges (experimental)")}
+            </option>
           </select>
         </label>
         {field("paletteLimit", t("Batas Jumlah Warna", "Color palette limit"))}

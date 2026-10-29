@@ -278,7 +278,9 @@ mod tests {
 
     use uuid::Uuid;
 
-    use crate::models::{ErrorCode, HierarchicalMode, SavePresetRequest, SegmentationMode, TraceMode, TraceParams};
+    use crate::models::{
+        ErrorCode, HierarchicalMode, SavePresetRequest, SegmentationMode, TraceMode, TraceParams,
+    };
 
     use super::{built_in_presets, delete_preset, list_presets, save_preset};
 
@@ -392,7 +394,10 @@ mod tests {
             .find(|preset| preset.id == "builtin-professional-illustration");
         assert_eq!(logo.map(|preset| preset.params.smoothness), Some(0.0));
         assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
-        assert_eq!(illustration.map(|preset| preset.params.segmentation_mode), Some(SegmentationMode::Watershed));
+        assert_eq!(
+            illustration.map(|preset| preset.params.segmentation_mode),
+            Some(SegmentationMode::Watershed)
+        );
         assert_eq!(illustration.map(|preset| preset.params.palette_limit), Some(24));
     }
 

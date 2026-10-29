@@ -2,8 +2,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use image::RgbaImage;
 use vtracer::{
-    CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError, FitMode,
-    Hierarchical as VTracerHierarchical, VectorDoc,
+    CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError,
+    FitMode, Hierarchical as VTracerHierarchical, VectorDoc,
 };
 
 use crate::models::{
@@ -121,7 +121,9 @@ fn cancelled_error() -> AppError {
 mod tests {
     use image::{Rgba, RgbaImage};
     use vtracer::ir::PathCmd;
-    use vtracer::{CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc};
+    use vtracer::{
+        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc,
+    };
 
     use crate::models::{HierarchicalMode, SegmentationMode, TraceMode, TraceParams};
 
