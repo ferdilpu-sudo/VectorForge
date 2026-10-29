@@ -28,7 +28,7 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 
 ## QV-001–QV-003 — Visual quality defect (26 Oktober 2026)
 
-Status: **IMPLEMENTED / NOT YET VERIFIED ON WINDOWS** pada branch `fix/vector-quality-missing-shapes`.
+Status: **IMPLEMENTED / PARTIAL WINDOWS QA PASS** pada branch `fix/vector-quality-missing-shapes`.
 User memerintahkan "execute" setelah menerima patch plan P0: missing shapes.
 Perubahan terpisah dari `main`:
 - Preview signature mencakup fileId, parameter, dan previewMaxSide; respons yang terlambat/salah tidak tampil sebagai hasil terbaru.
@@ -43,7 +43,9 @@ Perubahan terpisah dari `main`:
 
 **QA Windows 29 Oktober 2026 (format rerun):** `git pull --ff-only` fast-forward ke commit `0f4a710`, lalu `cargo fmt -- --check` selesai tanpa output (**PASS** menurut log pengguna). Gate Rust saat ini: `cargo test` 81 PASS / 0 FAIL / 2 ignored, Clippy PASS, rustfmt PASS. Hasil belum mencakup fixture logo yang ignored, frontend npm gates, dan inspeksi visual.
 
-**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA lengkap atau merge sampai tes frontend, regression fixture aktual dan visual pada Windows lulus.
+**QA Windows 29 Oktober 2026 (real-image fixture):** pengguna menjalankan `Test-Path` pada `Gallery Computer charcoal laptop logo.png` (**True**) dan `cargo test gallery_computer_wordmark_retains_all_seven_dark_letters -- --ignored --nocapture`: **1 PASS, 0 FAIL, 82 filtered out**, durasi tes 1,68 detik. Ini menunjukkan bentuk gelap GALLERY dan emas COMPUTER terdeteksi pada area yang diharapkan; belum membuktikan kesesuaian setiap huruf secara visual. `cargo test` umum tetap 81 PASS / 0 FAIL / 2 ignored; Clippy dan rustfmt PASS.
+
+**Belum terselesaikan:** akar penyebab laporan hanya satu huruf belum terbukti dan perlu reproduksi/inspeksi visual. Jangan beri status QA lengkap atau merge sampai frontend npm gates, preview 1024/2048, ekspor SVG, serta perbandingan visual pada Windows lulus.
 
 ## Batas fase
 
