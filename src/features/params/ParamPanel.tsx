@@ -24,7 +24,7 @@ function presetLabel(
     case "builtin-poster":
       return t("Poster Halus", "Smooth Poster");
     case "builtin-ai-smooth":
-      return t("AI Ilustrasi Halus", "AI Smooth Illustration");
+      return t("AI Ilustrasi Halus (Bawaan)", "AI Smooth Illustration (Built-in)");
     default:
       return fallback;
   }
