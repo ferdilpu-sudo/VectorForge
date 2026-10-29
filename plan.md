@@ -41,7 +41,9 @@ Perubahan terpisah dari `main`:
 
 **QA Windows 29 Oktober 2026 (rerun):** pengguna melaporkan `cargo test` **81 PASS, 0 FAIL, 2 ignored**; `cargo clippy --all-targets -- -D warnings` **PASS** (5,87 detik). `cargo fmt -- --check` **FAIL** dengan 9 perbedaan tata letak pada `alpha.rs`, `preview.rs`, dan `tracer.rs`. Perbedaan tersebut sudah diterapkan pada commit formatting lanjutan; rerun `cargo fmt -- --check` **belum dilaporkan**.
 
-**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA lengkap atau merge sampai rustfmt, tes frontend, regression fixture aktual dan visual pada Windows lulus.
+**QA Windows 29 Oktober 2026 (format rerun):** `git pull --ff-only` fast-forward ke commit `0f4a710`, lalu `cargo fmt -- --check` selesai tanpa output (**PASS** menurut log pengguna). Gate Rust saat ini: `cargo test` 81 PASS / 0 FAIL / 2 ignored, Clippy PASS, rustfmt PASS. Hasil belum mencakup fixture logo yang ignored, frontend npm gates, dan inspeksi visual.
+
+**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA lengkap atau merge sampai tes frontend, regression fixture aktual dan visual pada Windows lulus.
 
 ## Batas fase
 
