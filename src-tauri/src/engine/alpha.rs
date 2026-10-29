@@ -59,11 +59,7 @@ fn split_with_budget(
     check_cancel(cancel)?;
     // An opaque source does not need an alpha-mask split. Preserve the
     // segmentation exactly and avoid the additional mask allocations.
-    if source
-        .pixels
-        .chunks_exact(4)
-        .all(|rgba| rgba[3] == 255)
-    {
+    if source.pixels.as_chunks::<4>().0.iter().all(|rgba| rgba[3] == 255) {
         return Ok(segmentation);
     }
 
@@ -264,7 +260,7 @@ mod tests {
     #[test]
     fn opaque_source_keeps_existing_segmentation_masks() -> Result<(), String> {
         let (segmentation, mut source) = fixture();
-        for rgba in source.pixels.chunks_exact_mut(4) {
+        for rgba in source.pixels.as_chunks_mut::<4>().0 {
             rgba[3] = 255;
         }
         let before_offset = segmentation.layers[0].mask.offset;

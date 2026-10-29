@@ -37,7 +37,9 @@ Perubahan terpisah dari `main`:
 - Split alpha sumber opaque dilewati tanpa mengubah mask; bukan klaim bahwa perubahan ini memperbaiki bug satu huruf.
 - Tes preview tanpa resize dibandingkan dengan jalur trace resolusi penuh; tes belum dijalankan pada Windows.
 
-**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA PASS atau merge sampai tes Rust, frontend, dan visual pada Windows dijalankan.
+**QA Windows 29 Oktober 2026 (hasil dilaporkan pengguna):** `cargo test` 81 PASS, 0 FAIL, 2 ignored; `cargo clippy --all-targets -- -D warnings` FAIL karena dua lint `chunks_exact_to_as_chunks` pada `src-tauri/src/engine/alpha.rs` (baris 64 dan 267). Kedua baris diganti ke `as_chunks::<4>()` dan `as_chunks_mut::<4>()` pada patch berikutnya; hasil rerun Clippy dan `cargo fmt -- --check` belum dilaporkan. Jangan menandai Clippy PASS sebelum dijalankan ulang.
+
+**Belum terselesaikan:** penyebab spesifik hilangnya huruf pada kasus nyata belum dibuktikan. Jangan beri status QA lengkap atau merge sampai lint, tes frontend, regression fixture aktual dan visual pada Windows lulus.
 
 ## Batas fase
 
