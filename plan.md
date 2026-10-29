@@ -47,6 +47,8 @@ Perubahan terpisah dari `main`:
 
 **Belum terselesaikan:** akar penyebab laporan hanya satu huruf belum terbukti dan perlu reproduksi/inspeksi visual. Jangan beri status QA lengkap atau merge sampai frontend npm gates, preview 1024/2048, ekspor SVG, serta perbandingan visual pada Windows lulus.
 
+**Inspeksi visual sumber & SVG — 29 Oktober 2026:** pengguna mengirim screenshot tampilan tab Hasil dan SVG ekspor untuk Gallery Computer. Pemeriksaan independen atas SVG: dimensi 1536×1024; 24 elemen `<path>`, tidak ada `<image>`; seluruh simbol laptop, huruf GALLERY dan COMPUTER terlihat ketika SVG dirender pada 1536×1024; SSIM seluruh gambar ~0,985 terhadap PNG asli. **PASS terbatas pada fixture ini**: reproduksi kehilangan sebagian besar huruf tidak terjadi pada kondisi screenshot terbaru. Kekurangan yang terlihat: gradasi/tekstur disederhanakan dan warna krem background tertanam sebagai path penuh (SVG tidak transparan). Ini tidak membuktikan bug awal telah terselesaikan untuk semua preset atau ukuran preview. Tetap menunggu npm gates dan pemeriksaan perilaku pada preview 1024 versus 2048 sebelum merge.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.
