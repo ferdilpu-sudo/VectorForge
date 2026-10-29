@@ -143,6 +143,8 @@ mod tests {
                 corner_threshold: 60,
                 length_threshold: 4.0,
                 smoothness: 0.0,
+                segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+                palette_limit: 0,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },

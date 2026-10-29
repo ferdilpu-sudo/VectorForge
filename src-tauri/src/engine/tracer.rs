@@ -2,11 +2,13 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use image::RgbaImage;
 use vtracer::{
-    CancelToken, ColorImage, Config, Error as VTracerError, FitMode,
+    CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError, FitMode,
     Hierarchical as VTracerHierarchical, VectorDoc,
 };
 
-use crate::models::{AppError, ErrorCode, HierarchicalMode, TraceMode, TraceParams};
+use crate::models::{
+    AppError, ErrorCode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+};
 
 use super::alpha::split_by_source_alpha;
 
@@ -52,6 +54,15 @@ fn trace_inner(
 
 fn config_from_params(params: &TraceParams) -> Config {
     Config {
+        clustering: match params.segmentation_mode {
+            SegmentationMode::ColorCluster => VTracerClustering::ColorCluster,
+            SegmentationMode::Watershed => VTracerClustering::Watershed,
+        },
+        max_colors: if params.palette_limit == 0 {
+            None
+        } else {
+            Some(usize::from(params.palette_limit))
+        },
         hierarchical: match params.hierarchical {
             HierarchicalMode::Stacked => VTracerHierarchical::Stacked,
             HierarchicalMode::Cutout => VTracerHierarchical::Cutout,
@@ -110,9 +121,9 @@ fn cancelled_error() -> AppError {
 mod tests {
     use image::{Rgba, RgbaImage};
     use vtracer::ir::PathCmd;
-    use vtracer::{CancelToken, VectorDoc};
+    use vtracer::{CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc};
 
-    use crate::models::{HierarchicalMode, TraceMode, TraceParams};
+    use crate::models::{HierarchicalMode, SegmentationMode, TraceMode, TraceParams};
 
     use super::{config_from_params, trace_image};
 
@@ -124,6 +135,8 @@ mod tests {
             corner_threshold: 60,
             length_threshold: 4.0,
             smoothness: 0.0,
+            segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+            palette_limit: 0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -140,6 +153,20 @@ mod tests {
         assert_eq!(config.corner_threshold, 60);
         assert_eq!(config.length_threshold, 4.0);
         assert_eq!(config.simplify, None);
+        assert_eq!(config.clustering, VTracerClustering::ColorCluster);
+        assert_eq!(config.max_colors, None);
+    }
+
+    #[test]
+    fn professional_segmentation_and_palette_are_explicit() {
+        let mut params = params();
+        params.segmentation_mode = SegmentationMode::Watershed;
+        params.palette_limit = 24;
+        params.hierarchical = HierarchicalMode::Cutout;
+        let config = config_from_params(&params);
+        assert_eq!(config.clustering, VTracerClustering::Watershed);
+        assert_eq!(config.hierarchical, VTracerHierarchical::Cutout);
+        assert_eq!(config.max_colors, Some(24));
     }
 
     #[test]
@@ -199,6 +226,8 @@ mod tests {
             corner_threshold: 60,
             length_threshold: 4.0,
             smoothness: 0.0,
+            segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+            palette_limit: 0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

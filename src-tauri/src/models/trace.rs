@@ -17,6 +17,14 @@ pub enum HierarchicalMode {
     Cutout,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SegmentationMode {
+    #[default]
+    ColorCluster,
+    Watershed,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceParams {
@@ -28,6 +36,11 @@ pub struct TraceParams {
     // Old preset JSON omits this field. Zero leaves VTracer simplification disabled.
     #[serde(default)]
     pub smoothness: f64,
+    // Old preset JSON uses the classic segmentation with no palette cap.
+    #[serde(default)]
+    pub segmentation_mode: SegmentationMode,
+    #[serde(default)]
+    pub palette_limit: u8,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -41,7 +54,8 @@ impl TraceParams {
             && self.length_threshold.is_finite()
             && (3.5..=10.0).contains(&self.length_threshold)
             && self.smoothness.is_finite()
-            && (0.0..=3.0).contains(&self.smoothness);
+            && (0.0..=3.0).contains(&self.smoothness)
+            && self.palette_limit <= 64;
 
         if valid {
             Ok(())
@@ -112,7 +126,7 @@ fn validate_uuid(value: &str, label: &str) -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{HierarchicalMode, PreviewRequest, TraceMode, TraceParams};
+    use super::{HierarchicalMode, PreviewRequest, SegmentationMode, TraceMode, TraceParams};
 
     fn params() -> TraceParams {
         TraceParams {
@@ -122,6 +136,8 @@ mod tests {
             corner_threshold: 60,
             length_threshold: 4.0,
             smoothness: 0.0,
+            segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+            palette_limit: 0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -141,6 +157,8 @@ mod tests {
         let parsed: TraceParams =
             serde_json::from_str(legacy).map_err(|error| error.to_string())?;
         assert_eq!(parsed.smoothness, 0.0);
+        assert_eq!(parsed.segmentation_mode, SegmentationMode::ColorCluster);
+        assert_eq!(parsed.palette_limit, 0);
         parsed.validate().map_err(|error| error.message)?;
 
         let serialized = serde_json::to_value(parsed).map_err(|error| error.to_string())?;
@@ -157,6 +175,24 @@ mod tests {
         }
         params.smoothness = 1.5;
         assert!(params.validate().is_ok());
+    }
+
+    #[test]
+    fn professional_trace_options_deserialize_and_validate() -> Result<(), String> {
+        let mut params = params();
+        params.segmentation_mode = SegmentationMode::Watershed;
+        params.palette_limit = 24;
+        let json = serde_json::to_string(&params).map_err(|error| error.to_string())?;
+        assert!(json.contains("\"segmentationMode\":\"watershed\""));
+        assert!(json.contains("\"paletteLimit\":24"));
+        let restored: TraceParams =
+            serde_json::from_str(&json).map_err(|error| error.to_string())?;
+        assert_eq!(restored, params);
+        restored.validate().map_err(|error| error.message)?;
+
+        params.palette_limit = 65;
+        assert!(params.validate().is_err());
+        Ok(())
     }
 
     #[test]
