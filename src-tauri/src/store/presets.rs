@@ -138,7 +138,7 @@ fn default_params() -> TraceParams {
         layer_difference: 16,
         corner_threshold: 60,
         length_threshold: 4.0,
-            smoothness: 0.0,
+        smoothness: 0.0,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -264,7 +264,7 @@ mod tests {
                 layer_difference: 16,
                 corner_threshold: 60,
                 length_threshold: 4.0,
-            smoothness: 0.0,
+                smoothness: 0.0,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },
@@ -293,8 +293,12 @@ mod tests {
     #[test]
     fn ai_smooth_preset_is_opt_in_and_old_presets_stay_unchanged() {
         let presets = built_in_presets();
-        let balanced = presets.iter().find(|preset| preset.id == "builtin-balanced");
-        let ai = presets.iter().find(|preset| preset.id == "builtin-ai-smooth");
+        let balanced = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-balanced");
+        let ai = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-ai-smooth");
         assert_eq!(balanced.map(|preset| preset.params.smoothness), Some(0.0));
         assert_eq!(ai.map(|preset| preset.params.smoothness), Some(1.5));
     }

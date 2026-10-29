@@ -59,6 +59,9 @@ User melanjutkan pengembangan setelah usulan mode AI Image to Smooth Vector. Mil
 - **AC10-4:** tests kontrak, mapping engine, preset, dan request preview terpasang; quality check visual memakai PNG AI asli dengan detail, teks, transparansi. Output lebih smooth belum diklaim tanpa metrik/penilaian.
 - **Status:** KODE DITULIS, BELUM DIUJI WINDOWS. Gate: `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check`, `npm run lint`, `npm test`, `npm run build`; preview 1024/2048, SVG/PDF/EPS, preset lama dan gambar alpha harus diperiksa. PR disiapkan Draft.
 
+
+**QA Windows 29 Oktober 2026 (dilaporkan pengguna):** `cargo test`: **86 PASS / 0 FAIL / 2 ignored**, `cargo clippy --all-targets -- -D warnings`: **PASS**, `cargo fmt -- --check`: **FAIL** dengan empat perubahan format pada `preview.rs` dan `presets.rs`. Patch formatting diterapkan dalam commit berikutnya; rerun `cargo fmt -- --check` **belum dilaporkan**. Gate frontend `npm run lint`, `npm test`, `npm run build` dan evaluasi visual gambar AI **belum dilaporkan**.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

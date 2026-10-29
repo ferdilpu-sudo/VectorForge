@@ -27,6 +27,9 @@ Inspeksi visual dilaporkan 29 Oktober 2026 berdasarkan screenshot dan file SVG y
 
 Metrik visual perlu hasil pengukuran nyata; jangan menandai smoothness meningkatkan fidelitas hanya dari PASS tes yang memverifikasi parameter mapping. Tidak ada jaringan atau AI SDK baru. Tahap berikutnya (preprocessing/gradient) belum diimplementasikan.
 
+
+**QA Windows 29 Oktober 2026 (dilaporkan pengguna):** `cargo test`: **86 PASS / 0 FAIL / 2 ignored**, `cargo clippy --all-targets -- -D warnings`: **PASS**, `cargo fmt -- --check`: **FAIL** dengan empat perubahan format pada `preview.rs` dan `presets.rs`. Patch formatting diterapkan dalam commit berikutnya; rerun `cargo fmt -- --check` **belum dilaporkan**. Gate frontend `npm run lint`, `npm test`, `npm run build` dan evaluasi visual gambar AI **belum dilaporkan**.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |
