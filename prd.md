@@ -20,6 +20,10 @@ Aplikasi Windows offline untuk desainer, pembuat logo/stiker/aset game dan pengg
 | AC08 | Recovery | File hilang/berubah, disk penuh, folder readonly, collision dan partial output ditangani tanpa merusak sumber |
 | AC09 | Accessibility | Alur utama keyboard, fokus jelas, label/status tekstual, perbandingan tanpa drag, DPI/teks panjang tetap dapat dipakai |
 
+## Peningkatan opsional — AI Smooth Vector (QV-005)
+
+AC10 (tambahan setelah v1): gambar raster dari generator AI dapat ditrace memakai preset `AI Smooth Illustration` dan slider kehalusan kurva tanpa instal SDK AI, server, atau perubahan workflow ekspor. `smoothness=0` menjaga perilaku lama, preset tersimpan sebelumnya tetap dapat dibaca, parameter >3/tidak finite ditolak, dan nilai kehalusan sama diteruskan ke preview serta SVG/PDF/EPS. Kriteria mutu visual: objek/huruf penting tetap ada dan kontur harus dievaluasi pada beberapa fixture AI, bukan dijanjikan otomatis lebih halus. Tidak termasuk generasi gambar, background removal otomatis, denoise adaptif atau konversi foto fotorealistis lossless.
+
 ## Parameter
 
 Sumber angka/default kanonis: `schema.md`. UI tidak menyalin default secara terpisah di banyak komponen. Semua format memakai parameter yang sama; EPS memiliki kebijakan transparansi yang dijelaskan di bawah.

@@ -12,6 +12,21 @@ Synthetic fixture dengan delapan bentuk gelap terpisah adalah pengganti aman unt
 
 Inspeksi visual dilaporkan 29 Oktober 2026 berdasarkan screenshot dan file SVG yang diunggah: **24 path, viewBox 0 0 1536 1024, tanpa raster embedded, ikon dan kedua wordmark utuh**; hasil SSIM ~0,985 saat SVG dirender pada 1536×1024 dan dibandingkan dengan PNG. Ini adalah verifikasi untuk fixture Gallery Computer pada hasil yang diunggah, bukan konfirmasi semua skenario dan bukan pengganti perbandingan pada beberapa resolusi preview. Catatan produk: path background krem penuh masih ada; mode latar checkerboard pada kanvas tidak otomatis membuat ekspor transparan.
 
+## QV-005 — AI Smooth Illustration (belum diuji di Windows)
+
+| ID | Kasus uji | Kriteria |
+|---|---|---|
+| TEST-QV005-01 | Default, logo, foto, poster lama | `smoothness=0`, tracing legacy tidak berubah |
+| TEST-QV005-02 | JSON preset versi 1 tanpa smoothness | Rust deserialize memberi 0, preset dapat dipakai |
+| TEST-QV005-03 | Slider/input 0–3 dan nilai invalid | Batas valid, nonfinite ditolak oleh Rust dan TS |
+| TEST-QV005-04 | Mapping pipeline VTracer | Spline 1.5 → `simplify=Some(1.5)`; Polygon → `None` |
+| TEST-QV005-05 | Preset AI via frontend preview | IPC `generatePreview` mengandung `smoothness=1.5` |
+| TEST-QV005-06 | Dua PNG AI detail tinggi berbeda | Compare 100%/200%, contour legibility, hilangnya elemen, path count, ukuran SVG, perubahan warna |
+| TEST-QV005-07 | PNG alpha parsial + logo huruf kecil | Tidak ada hole hilang, alpha tetap benar, tidak menggabungkan huruf |
+| TEST-QV005-08 | SVG/PDF/EPS dan batch | Punya output vektor valid, semantics EPS flatten tetap sama |
+
+Metrik visual perlu hasil pengukuran nyata; jangan menandai smoothness meningkatkan fidelitas hanya dari PASS tes yang memverifikasi parameter mapping. Tidak ada jaringan atau AI SDK baru. Tahap berikutnya (preprocessing/gradient) belum diimplementasikan.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |
