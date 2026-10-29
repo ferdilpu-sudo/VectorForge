@@ -65,6 +65,11 @@ fn config_from_params(params: &TraceParams) -> Config {
         },
         corner_threshold: i32::from(params.corner_threshold),
         length_threshold: params.length_threshold,
+        simplify: if params.mode == TraceMode::Spline && params.smoothness > 0.0 {
+            Some(params.smoothness)
+        } else {
+            None
+        },
         ..Config::default()
     }
 }
@@ -118,6 +123,7 @@ mod tests {
             layer_difference: 16,
             corner_threshold: 60,
             length_threshold: 4.0,
+            smoothness: 0.0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -133,6 +139,17 @@ mod tests {
         assert_eq!(config.layer_difference, 16);
         assert_eq!(config.corner_threshold, 60);
         assert_eq!(config.length_threshold, 4.0);
+        assert_eq!(config.simplify, None);
+    }
+
+    #[test]
+    fn smoothness_only_enables_spline_curve_simplification() {
+        let mut params = params();
+        params.smoothness = 1.5;
+        assert_eq!(config_from_params(&params).simplify, Some(1.5));
+
+        params.mode = TraceMode::Polygon;
+        assert_eq!(config_from_params(&params).simplify, None);
     }
 
     // A path_count > 0 assertion cannot detect a logo reduced to one glyph.
@@ -181,6 +198,7 @@ mod tests {
             layer_difference: 32,
             corner_threshold: 60,
             length_threshold: 4.0,
+            smoothness: 0.0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

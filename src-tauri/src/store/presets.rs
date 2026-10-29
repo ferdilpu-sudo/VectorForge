@@ -113,6 +113,21 @@ pub fn built_in_presets() -> Vec<Preset> {
             created_at: BUILTIN_CREATED_AT.to_owned(),
             built_in: true,
         },
+        Preset {
+            id: "builtin-ai-smooth".to_owned(),
+            name: "AI Smooth Illustration".to_owned(),
+            params: TraceParams {
+                color_precision: 6,
+                filter_speckle: 5,
+                layer_difference: 20,
+                corner_threshold: 75,
+                smoothness: 1.5,
+                mode: TraceMode::Spline,
+                ..defaults
+            },
+            created_at: BUILTIN_CREATED_AT.to_owned(),
+            built_in: true,
+        },
     ]
 }
 
@@ -123,6 +138,7 @@ fn default_params() -> TraceParams {
         layer_difference: 16,
         corner_threshold: 60,
         length_threshold: 4.0,
+            smoothness: 0.0,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -243,6 +259,7 @@ mod tests {
                 layer_difference: 16,
                 corner_threshold: 60,
                 length_threshold: 4.0,
+            smoothness: 0.0,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },
@@ -260,11 +277,21 @@ mod tests {
                 "builtin-balanced",
                 "builtin-logo",
                 "builtin-photo",
-                "builtin-poster"
+                "builtin-poster",
+                "builtin-ai-smooth"
             ]
         );
         assert!(!dir.0.join("presets.json").exists());
         Ok(())
+    }
+
+    #[test]
+    fn ai_smooth_preset_is_opt_in_and_old_presets_stay_unchanged() {
+        let presets = built_in_presets();
+        let balanced = presets.iter().find(|preset| preset.id == "builtin-balanced");
+        let ai = presets.iter().find(|preset| preset.id == "builtin-ai-smooth");
+        assert_eq!(balanced.map(|preset| preset.params.smoothness), Some(0.0));
+        assert_eq!(ai.map(|preset| preset.params.smoothness), Some(1.5));
     }
 
     #[test]
