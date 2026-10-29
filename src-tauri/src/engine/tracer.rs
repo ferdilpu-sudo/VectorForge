@@ -277,6 +277,31 @@ mod tests {
     }
 
     #[test]
+    fn watershed_cutout_keeps_partially_transparent_and_opaque_shapes() -> Result<(), String> {
+        let source = RgbaImage::from_fn(144, 96, |x, y| {
+            if (10..61).contains(&x) && (10..84).contains(&y) {
+                Rgba([45, 70, 130, 128])
+            } else if (82..134).contains(&x) && (10..84).contains(&y) {
+                Rgba([220, 75, 30, 255])
+            } else {
+                Rgba([0, 0, 0, 0])
+            }
+        });
+        let mut options = params();
+        options.segmentation_mode = SegmentationMode::Watershed;
+        options.hierarchical = HierarchicalMode::Cutout;
+        options.palette_limit = 24;
+
+        let doc = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let alphas: Vec<u8> = doc.shapes.iter().map(|shape| shape.paint.color().a).collect();
+        assert!(alphas.contains(&128), "semi-transparent shape lost: {alphas:?}");
+        assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
+        Ok(())
+    }
+
+    #[test]
     fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
         let source = RgbaImage::from_fn(392, 120, |x, y| {
             let foreground = (0..8).any(|index| {
