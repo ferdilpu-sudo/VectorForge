@@ -30,6 +30,30 @@ describe("parameter contract", () => {
     for (const value of [NaN, Infinity, 0, 9, 1.5])
       expect(validParams({ ...defaults, colorPrecision: value })).toBe(false);
   });
+  it("exposes opt-in professional modes and retains the classic legacy defaults", () => {
+    expect(defaults.segmentationMode).toBe("color-cluster");
+    expect(defaults.paletteLimit).toBe(0);
+    const logo = builtIns.find((preset) => preset.id === "builtin-professional-logo");
+    const illustration = builtIns.find(
+      (preset) => preset.id === "builtin-professional-illustration",
+    );
+    expect(logo?.params.hierarchical).toBe("cutout");
+    expect(logo?.params.smoothness).toBe(0);
+    expect(illustration?.params.segmentationMode).toBe("watershed");
+    expect(illustration?.params.paletteLimit).toBe(24);
+    expect(
+      builtIns.find((p) => p.id === "builtin-logo")?.params.segmentationMode,
+    ).toBe("color-cluster");
+  });
+  it("rejects invalid segmentation choices and palette limits", () => {
+    expect(
+      validParams({ ...defaults, segmentationMode: "watershed", paletteLimit: 24 }),
+    ).toBe(true);
+    expect(validParams({ ...defaults, paletteLimit: 65 })).toBe(false);
+    expect(validParams({ ...defaults, paletteLimit: -1 })).toBe(false);
+    expect(validParams({ ...defaults, paletteLimit: 1.5 })).toBe(false);
+    expect(validParams({ ...defaults, segmentationMode: "invalid" as "watershed" })).toBe(false);
+  });
   it("rejects duplicate preset names ignoring case and surrounding spaces", () => {
     expect(validPresetName("  seimbang  ", builtIns)).toBe(false);
     expect(validPresetName(" ", builtIns)).toBe(false);

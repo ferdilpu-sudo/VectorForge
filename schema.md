@@ -12,6 +12,8 @@ interface TraceParams {
   cornerThreshold: number; // integer 0–180, default 60
   lengthThreshold: number; // finite 3.5–10, default 4; UI step 0.1
   smoothness: number; // finite 0–3 px, default 0; UI step 0.25
+  segmentationMode: 'color-cluster' | 'watershed'; // default color-cluster
+  paletteLimit: number; // integer 0–64, default 0 (= no quantization cap)
   mode: 'spline' | 'polygon'; // default spline
   hierarchical: 'stacked' | 'cutout'; // default stacked
 }
@@ -28,6 +30,16 @@ interface SavePresetRequest { name: string; params: TraceParams }
 SavePreset v1 membuat baru; tidak ada update built-in atau overwrite nama diam-diam. Built-in IDs stabil: builtin-balanced, builtin-logo, builtin-photo, builtin-poster, builtin-ai-smooth. Seimbang default; Logo & Flat override colorPrecision=4/filterSpeckle=8/layerDifference=32; Foto Detail =8/2/8; Poster Halus colorPrecision=7/cornerThreshold=90/mode=spline; AI Smooth Illustration colorPrecision=6/filterSpeckle=5/layerDifference=20/cornerThreshold=75/smoothness=1.5/mode=spline. Field lainnya selalu default.
 
 Kontrak tambahan QV-005: `smoothness` mengontrol toleransi simplify kurva VTracer dalam piksel input tracing (bukan skala layar), hanya aktif pada mode `spline`. `smoothness=0` setara konfigurasi engine lama (`simplify=None`). Backend menerima JSON preset lama yang belum memiliki field tersebut dengan nilai default 0 (`#[serde(default)]`). Field negatif, di atas 3, NaN dan Infinity ditolak; versi `PresetsFile` tetap 1 karena perubahan bersifat aditif dan kompatibel. Jika nama preset user versi 1 secara kebetulan sama dengan nama preset AI Smooth yang baru, file tetap dibaca (nama baru tidak dianggap reserved historis), namun penyimpanan preset baru tetap menolak duplikasi nama. Preview dan ekspor harus memakai nilai yang sama; kualitas visual belum dijamin tanpa evaluasi fixture.
+
+## Kontrak tambahan QV-006 (Professional Segmentation)
+
+Mode eksperimen, **opt-in**: `segmentationMode='color-cluster'` memakai segmentasi VTracer klasik; `'watershed'` memakai frontend watershed default VTracer (detail 128 pada versi dikunci). `paletteLimit=0` tidak memakai quantization cap; nilai positif (1–64) dipetakan ke `Config.max_colors` agar VTracer mengurangi palet setelah segmentasi. Kombinasi `hierarchical='cutout'` memakai mosaic shared-boundary untuk mengurangi celah antar area warna. Tidak otomatis menambah `cutout` saat user memilih watershed; pengguna dapat menguji setiap kombinasi.
+
+Preset baru:
+- `builtin-professional-logo` = colorPrecision 5, filterSpeckle 3, layerDifference 20, cornerThreshold 45, smoothness 0, cutout, color-cluster, paletteLimit 0.
+- `builtin-professional-illustration` = colorPrecision 6, filterSpeckle 5, layerDifference 18, cornerThreshold 75, smoothness 0.5, cutout, watershed, paletteLimit 24.
+
+Seluruh field baru memiliki default serde yang kompatibel dengan JSON preset lama: `SegmentationMode::ColorCluster` dan `palette_limit=0`. Nilai paletteLimit >64 ditolak di Rust dan TypeScript; field terpisah tidak mengubah kebijakan alpha/EPS. PresetsFile tetap version 1. Nama custom lama yang sama dengan built-in baru tetap dapat dibaca untuk mencegah regressi data. Perubahan kualitas wajib dinilai dengan kasus nyata; nama `Professional` adalah pilihan UX **eksperimental**, bukan jaminan hasil seperti gambar manual.
 
 ## Import dan destination
 

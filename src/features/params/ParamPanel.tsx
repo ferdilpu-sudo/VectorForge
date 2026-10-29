@@ -25,6 +25,10 @@ function presetLabel(
       return t("Poster Halus", "Smooth Poster");
     case "builtin-ai-smooth":
       return t("AI Ilustrasi Halus (Bawaan)", "AI Smooth Illustration (Built-in)");
+    case "builtin-professional-logo":
+      return t("Logo Presisi (Eksperimen)", "Precision Logo (Experimental)");
+    case "builtin-professional-illustration":
+      return t("Ilustrasi Profesional (Eksperimen)", "Professional Illustration (Experimental)");
     default:
       return fallback;
   }
@@ -132,6 +136,32 @@ export function ParamPanel() {
       </p>
       <details>
         <summary>{t("Pengaturan Lanjutan", "Advanced settings")}</summary>
+        <label className="field">
+          {t("Segmentasi Gambar", "Image segmentation")}
+          <select
+            value={params.segmentationMode}
+            onChange={(e) =>
+              setParams({
+                ...params,
+                segmentationMode: e.target.value as "color-cluster" | "watershed",
+              })
+            }
+          >
+            <option value="color-cluster">
+              {t("Warna (Klasik)", "Color clustering (classic)")}
+            </option>
+            <option value="watershed">
+              {t("Tepi Objek (Eksperimen)", "Object edges (experimental)")}
+            </option>
+          </select>
+        </label>
+        {field("paletteLimit", t("Batas Jumlah Warna", "Color palette limit"))}
+        <p className="helper">
+          {t(
+            "0 = tanpa batas palet tambahan. Nilai lain menyederhanakan warna dan dapat menghapus gradasi.",
+            "0 = no additional palette limit. Other values simplify colors and may remove gradients.",
+          )}
+        </p>
         {field("layerDifference", t("Selisih Layer", "Layer difference"))}
         {field("cornerThreshold", t("Sudut Tajam", "Corner threshold"))}
         {field("lengthThreshold", t("Panjang Segmen", "Segment length"))}

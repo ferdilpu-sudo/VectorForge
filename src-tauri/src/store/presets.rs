@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::models::{
     AppError, ErrorCode, HierarchicalMode, PRESETS_VERSION, Preset, PresetsFile, SavePresetRequest,
+    SegmentationMode,
     TraceMode, TraceParams,
 };
 
@@ -128,6 +129,42 @@ pub fn built_in_presets() -> Vec<Preset> {
             created_at: BUILTIN_CREATED_AT.to_owned(),
             built_in: true,
         },
+        Preset {
+            id: "builtin-professional-logo".to_owned(),
+            name: "Professional Logo".to_owned(),
+            params: TraceParams {
+                color_precision: 5,
+                filter_speckle: 3,
+                layer_difference: 20,
+                corner_threshold: 45,
+                smoothness: 0.0,
+                segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+                palette_limit: 0,
+                hierarchical: HierarchicalMode::Cutout,
+                segmentation_mode: SegmentationMode::ColorCluster,
+                palette_limit: 0,
+                ..defaults
+            },
+            created_at: BUILTIN_CREATED_AT.to_owned(),
+            built_in: true,
+        },
+        Preset {
+            id: "builtin-professional-illustration".to_owned(),
+            name: "Professional Illustration".to_owned(),
+            params: TraceParams {
+                color_precision: 6,
+                filter_speckle: 5,
+                layer_difference: 18,
+                corner_threshold: 75,
+                smoothness: 0.5,
+                hierarchical: HierarchicalMode::Cutout,
+                segmentation_mode: SegmentationMode::Watershed,
+                palette_limit: 24,
+                ..defaults
+            },
+            created_at: BUILTIN_CREATED_AT.to_owned(),
+            built_in: true,
+        },
     ]
 }
 
@@ -139,6 +176,8 @@ fn default_params() -> TraceParams {
         corner_threshold: 60,
         length_threshold: 4.0,
         smoothness: 0.0,
+        segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+        palette_limit: 0,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -194,9 +233,14 @@ fn validate_user_presets(presets: &[Preset]) -> Result<(), AppError> {
     }
 
     for builtin in built_in_presets() {
-        // This name was not reserved before QV-005. A v1 user preset
-        // with the same name must remain readable after upgrading.
-        if builtin.id == "builtin-ai-smooth" {
+        // New built-in names must not invalidate custom presets created
+        // before their introduction (presets.json remains version 1).
+        if matches!(
+            builtin.id.as_str(),
+            "builtin-ai-smooth"
+                | "builtin-professional-logo"
+                | "builtin-professional-illustration"
+        ) {
             continue;
         }
         if names.contains(&builtin.name.to_lowercase()) {
@@ -234,7 +278,9 @@ mod tests {
 
     use uuid::Uuid;
 
-    use crate::models::{ErrorCode, HierarchicalMode, SavePresetRequest, TraceMode, TraceParams};
+    use crate::models::{
+        ErrorCode, HierarchicalMode, SavePresetRequest, SegmentationMode, TraceMode, TraceParams,
+    };
 
     use super::{built_in_presets, delete_preset, list_presets, save_preset};
 
@@ -265,6 +311,8 @@ mod tests {
                 corner_threshold: 60,
                 length_threshold: 4.0,
                 smoothness: 0.0,
+                segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+                palette_limit: 0,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },
@@ -283,7 +331,9 @@ mod tests {
                 "builtin-logo",
                 "builtin-photo",
                 "builtin-poster",
-                "builtin-ai-smooth"
+                "builtin-ai-smooth",
+                "builtin-professional-logo",
+                "builtin-professional-illustration"
             ]
         );
         assert!(!dir.0.join("presets.json").exists());
@@ -332,6 +382,55 @@ mod tests {
             .find(|preset| preset.id == "00000000-0000-4000-8000-000000000123")
             .ok_or_else(|| "legacy user preset not found".to_owned())?;
         assert_eq!(user.params.smoothness, 0.0);
+        Ok(())
+    }
+
+    #[test]
+    fn professional_presets_match_contract() {
+        let presets = built_in_presets();
+        let logo = presets.iter().find(|preset| preset.id == "builtin-professional-logo");
+        let illustration = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-professional-illustration");
+        assert_eq!(logo.map(|preset| preset.params.smoothness), Some(0.0));
+        assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
+        assert_eq!(
+            illustration.map(|preset| preset.params.segmentation_mode),
+            Some(SegmentationMode::Watershed)
+        );
+        assert_eq!(illustration.map(|preset| preset.params.palette_limit), Some(24));
+    }
+
+    #[test]
+    fn old_user_preset_with_professional_builtin_name_is_preserved() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        let data = serde_json::json!({
+            "version": 1,
+            "presets": [{
+                "id": "00000000-0000-4000-8000-000000000124",
+                "name": "Professional Illustration",
+                "params": {
+                    "colorPrecision": 6,
+                    "filterSpeckle": 4,
+                    "layerDifference": 16,
+                    "cornerThreshold": 60,
+                    "lengthThreshold": 4,
+                    "mode": "spline",
+                    "hierarchical": "stacked"
+                },
+                "createdAt": "2026-10-01T00:00:00Z",
+                "builtIn": false
+            }]
+        });
+        fs::write(dir.0.join("presets.json"), data.to_string())
+            .map_err(|error| error.to_string())?;
+        let presets = list_presets(&dir.0).map_err(|error| error.message)?;
+        let legacy = presets
+            .iter()
+            .find(|preset| preset.id == "00000000-0000-4000-8000-000000000124")
+            .ok_or_else(|| "legacy custom preset missing".to_owned())?;
+        assert_eq!(legacy.params.segmentation_mode, SegmentationMode::ColorCluster);
+        assert_eq!(legacy.params.palette_limit, 0);
         Ok(())
     }
 

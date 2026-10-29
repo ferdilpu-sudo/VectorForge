@@ -62,6 +62,19 @@ User melanjutkan pengembangan setelah usulan mode AI Image to Smooth Vector. Mil
 
 **QA Windows 29 Oktober 2026 (dilaporkan pengguna):** `cargo test`: **86 PASS / 0 FAIL / 2 ignored**, `cargo clippy --all-targets -- -D warnings`: **PASS**, `cargo fmt -- --check`: **FAIL** dengan empat perubahan format pada `preview.rs` dan `presets.rs`. Patch formatting diterapkan dalam commit berikutnya; rerun `cargo fmt -- --check` **belum dilaporkan**. Gate frontend `npm run lint`, `npm test`, `npm run build` dan evaluasi visual gambar AI **belum dilaporkan**.
 
+## QV-006 — Professional Vector Segmentation (29 Oktober 2026)
+
+User memerintahkan "eksekusi" setelah menerima roadmap Professional Vector Engine. Scope milestone yang dapat diverifikasi: opt-in VTracer `Clustering::Watershed` / `ColorCluster`, color palette limiter `Config.max_colors`, dua preset professional eksperimen (logo: classic+cutout; ilustrasi: watershed+cutout), dan kontrol panel bilingual. Tidak mengganti engine, tidak memakai model neural, dan tidak mengimplementasikan QV-007 constrained geometry atau QV-008 automated quality scoring (backlog berikutnya).
+
+- **AC11-1:** default klasik (`segmentationMode=color-cluster`, `paletteLimit=0`) setara perilaku lama; `Config.max_colors=None` dan `Clustering::ColorCluster`.
+- **AC11-2:** parameter valid (wat​ershed dan palet 0–64) mencapai backend dan dipetakan ke engine; `hierarchical=cutout` tetap opsional di setiap parameter dan dipilih oleh preset baru.
+- **AC11-3:** preset lama v1 tanpa properti baru terbaca dengan default; versi preset tetap 1; nama custom bertabrakan dengan built-in baru tidak memblokir pembacaan.
+- **AC11-4:** tes serialisasi Rust, validasi, pemetaan Config, preview IPC, preset, dan multi-bentuk disertakan. **BELUM DIJALANKAN DI WINDOWS**; penilaian kualitas tidak dapat diasumsikan hanya dari jumlah path.
+- **QA gates:** `npm run lint`, `npm test`, `npm run build`, `cargo check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check`; lalu visual membandingkan PNG Gallery Computer + dua ilustrasi AI pada 1024/2048/full-res dan output SVG/PDF/EPS.
+- **Risiko terbuka:** watershed+cutout di ukuran 20–30 MP dapat menghabiskan waktu/memori lebih besar dan mungkin mengubah topologi; belum ada adaptive fallback otomatis (hindari silent fallback). Uji alpha parsial dan input besar wajib sebelum merge.
+
+Urutan dependensi PR: #1 `fix/vector-quality-missing-shapes` → #2 `feature/ai-smooth-vector-m1` → PR milestone QV-006. `main` tidak disentuh.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

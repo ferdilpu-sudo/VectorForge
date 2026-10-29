@@ -6,6 +6,9 @@ export interface TraceParams {
   lengthThreshold: number;
   // Curve simplification tolerance in source pixels; 0 preserves legacy output.
   smoothness: number;
+  segmentationMode: "color-cluster" | "watershed";
+  // 0 disables palette reduction; positive values target a maximum color count.
+  paletteLimit: number;
   mode: "spline" | "polygon";
   hierarchical: "stacked" | "cutout";
 }
@@ -23,6 +26,8 @@ export const defaults: TraceParams = {
   cornerThreshold: 60,
   lengthThreshold: 4,
   smoothness: 0,
+  segmentationMode: "color-cluster",
+  paletteLimit: 0,
   mode: "spline",
   hierarchical: "stacked",
 };
@@ -33,6 +38,7 @@ export const ranges = {
   cornerThreshold: [0, 180, 1],
   lengthThreshold: [3.5, 10, 0.1],
   smoothness: [0, 3, 0.25],
+  paletteLimit: [0, 64, 1],
 } as const;
 export function validParams(p: TraceParams): boolean {
   return (
@@ -45,6 +51,7 @@ export function validParams(p: TraceParams): boolean {
         (step !== 1 || Number.isInteger(n))
       );
     }) &&
+    ["color-cluster", "watershed"].includes(p.segmentationMode) &&
     ["spline", "polygon"].includes(p.mode) &&
     ["stacked", "cutout"].includes(p.hierarchical)
   );
@@ -72,6 +79,34 @@ export const builtIns: Preset[] = [
       cornerThreshold: 75,
       smoothness: 1.5,
       mode: "spline",
+    },
+  ],
+  [
+    "professional-logo",
+    "Professional Logo",
+    {
+      colorPrecision: 5,
+      filterSpeckle: 3,
+      layerDifference: 20,
+      cornerThreshold: 45,
+      smoothness: 0,
+      hierarchical: "cutout",
+      segmentationMode: "color-cluster",
+      paletteLimit: 0,
+    },
+  ],
+  [
+    "professional-illustration",
+    "Professional Illustration",
+    {
+      colorPrecision: 6,
+      filterSpeckle: 5,
+      layerDifference: 18,
+      cornerThreshold: 75,
+      smoothness: 0.5,
+      hierarchical: "cutout",
+      segmentationMode: "watershed",
+      paletteLimit: 24,
     },
   ],
 ].map(([id, name, params]) => ({

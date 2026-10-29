@@ -2,11 +2,13 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use image::RgbaImage;
 use vtracer::{
-    CancelToken, ColorImage, Config, Error as VTracerError, FitMode,
-    Hierarchical as VTracerHierarchical, VectorDoc,
+    CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError,
+    FitMode, Hierarchical as VTracerHierarchical, VectorDoc,
 };
 
-use crate::models::{AppError, ErrorCode, HierarchicalMode, TraceMode, TraceParams};
+use crate::models::{
+    AppError, ErrorCode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+};
 
 use super::alpha::split_by_source_alpha;
 
@@ -52,6 +54,15 @@ fn trace_inner(
 
 fn config_from_params(params: &TraceParams) -> Config {
     Config {
+        clustering: match params.segmentation_mode {
+            SegmentationMode::ColorCluster => VTracerClustering::ColorCluster,
+            SegmentationMode::Watershed => VTracerClustering::Watershed,
+        },
+        max_colors: if params.palette_limit == 0 {
+            None
+        } else {
+            Some(usize::from(params.palette_limit))
+        },
         hierarchical: match params.hierarchical {
             HierarchicalMode::Stacked => VTracerHierarchical::Stacked,
             HierarchicalMode::Cutout => VTracerHierarchical::Cutout,
@@ -110,9 +121,11 @@ fn cancelled_error() -> AppError {
 mod tests {
     use image::{Rgba, RgbaImage};
     use vtracer::ir::PathCmd;
-    use vtracer::{CancelToken, VectorDoc};
+    use vtracer::{
+        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc,
+    };
 
-    use crate::models::{HierarchicalMode, TraceMode, TraceParams};
+    use crate::models::{HierarchicalMode, SegmentationMode, TraceMode, TraceParams};
 
     use super::{config_from_params, trace_image};
 
@@ -124,6 +137,8 @@ mod tests {
             corner_threshold: 60,
             length_threshold: 4.0,
             smoothness: 0.0,
+            segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+            palette_limit: 0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -140,6 +155,20 @@ mod tests {
         assert_eq!(config.corner_threshold, 60);
         assert_eq!(config.length_threshold, 4.0);
         assert_eq!(config.simplify, None);
+        assert_eq!(config.clustering, VTracerClustering::ColorCluster);
+        assert_eq!(config.max_colors, None);
+    }
+
+    #[test]
+    fn professional_segmentation_and_palette_are_explicit() {
+        let mut params = params();
+        params.segmentation_mode = SegmentationMode::Watershed;
+        params.palette_limit = 24;
+        params.hierarchical = HierarchicalMode::Cutout;
+        let config = config_from_params(&params);
+        assert_eq!(config.clustering, VTracerClustering::Watershed);
+        assert_eq!(config.hierarchical, VTracerHierarchical::Cutout);
+        assert_eq!(config.max_colors, Some(24));
     }
 
     #[test]
@@ -199,9 +228,79 @@ mod tests {
             corner_threshold: 60,
             length_threshold: 4.0,
             smoothness: 0.0,
+            segmentation_mode: crate::models::SegmentationMode::ColorCluster,
+            palette_limit: 0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
+    }
+
+    #[test]
+    fn professional_modes_keep_separated_opaque_shapes() -> Result<(), String> {
+        let source = RgbaImage::from_fn(180, 100, |x, y| {
+            let foreground = (0..3).any(|index| {
+                let left = 15 + index * 55;
+                x >= left && x < left + 28 && (24..78).contains(&y)
+            });
+            if foreground {
+                Rgba([20, 24, 29, 255])
+            } else {
+                Rgba([250, 247, 241, 255])
+            }
+        });
+        let regions: Vec<(f64, f64, f64, f64)> = (0..3)
+            .map(|index| {
+                let left = (15 + index * 55) as f64;
+                (left - 3.0, left + 31.0, 21.0, 81.0)
+            })
+            .collect();
+
+        for segmentation_mode in [
+            SegmentationMode::ColorCluster,
+            SegmentationMode::Watershed,
+        ] {
+            let mut options = params();
+            options.segmentation_mode = segmentation_mode;
+            options.hierarchical = HierarchicalMode::Cutout;
+            options.palette_limit = 24;
+
+            let doc = trace_image(source.clone(), &options, &CancelToken::new())
+                .map_err(|error| error.message)?
+                .ok_or_else(|| "unexpected empty trace".to_owned())?;
+            let coverage = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+                r < 125 && g < 125 && b < 125 && a > 0
+            });
+            assert!(
+                coverage.iter().all(|hit| *hit),
+                "missing foreground shape with {segmentation_mode:?}: {coverage:?}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn watershed_cutout_keeps_partially_transparent_and_opaque_shapes() -> Result<(), String> {
+        let source = RgbaImage::from_fn(144, 96, |x, y| {
+            if (10..61).contains(&x) && (10..84).contains(&y) {
+                Rgba([45, 70, 130, 128])
+            } else if (82..134).contains(&x) && (10..84).contains(&y) {
+                Rgba([220, 75, 30, 255])
+            } else {
+                Rgba([0, 0, 0, 0])
+            }
+        });
+        let mut options = params();
+        options.segmentation_mode = SegmentationMode::Watershed;
+        options.hierarchical = HierarchicalMode::Cutout;
+        options.palette_limit = 24;
+
+        let doc = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let alphas: Vec<u8> = doc.shapes.iter().map(|shape| shape.paint.color().a).collect();
+        assert!(alphas.contains(&128), "semi-transparent shape lost: {alphas:?}");
+        assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
+        Ok(())
     }
 
     #[test]
