@@ -135,7 +135,6 @@ mod tests {
         assert_eq!(config.length_threshold, 4.0);
     }
 
-
     // A path_count > 0 assertion cannot detect a logo reduced to one glyph.
     // Require visible dark geometry within every separated foreground region.
     fn painted_region_coverage(
@@ -152,9 +151,7 @@ mod tests {
             for subpath in &shape.path.subpaths {
                 for command in &subpath.commands {
                     let mut mark = |x: f64, y: f64| {
-                        for (hit, &(min_x, max_x, min_y, max_y)) in
-                            found.iter_mut().zip(regions)
-                        {
+                        for (hit, &(min_x, max_x, min_y, max_y)) in found.iter_mut().zip(regions) {
                             if x >= min_x && x <= max_x && y >= min_y && y <= max_y {
                                 *hit = true;
                             }
@@ -214,7 +211,10 @@ mod tests {
         let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
             r < 125 && g < 125 && b < 125 && a > 0
         });
-        assert!(covered.iter().all(|value| *value), "missing shapes: {covered:?}");
+        assert!(
+            covered.iter().all(|value| *value),
+            "missing shapes: {covered:?}"
+        );
         Ok(())
     }
 
@@ -246,7 +246,10 @@ mod tests {
         let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
             r < 125 && g < 125 && b < 125 && a > 0
         });
-        assert!(covered.iter().all(|value| *value), "missing GALLERY letters: {covered:?}");
+        assert!(
+            covered.iter().all(|value| *value),
+            "missing GALLERY letters: {covered:?}"
+        );
 
         // Check the second, gold wordmark separately.
         let gold_regions = [
@@ -260,10 +263,12 @@ mod tests {
             (1056.0, 1101.0, 747.0, 804.0),
         ];
         let gold_covered = painted_region_coverage(&doc, &gold_regions, |r, g, b, a| {
-            a > 0 && r > 110 && i16::from(r) - i16::from(g) > 12
-                && i16::from(g) - i16::from(b) > 14
+            a > 0 && r > 110 && i16::from(r) - i16::from(g) > 12 && i16::from(g) - i16::from(b) > 14
         });
-        assert!(gold_covered.iter().all(|value| *value), "missing COMPUTER letters: {gold_covered:?}");
+        assert!(
+            gold_covered.iter().all(|value| *value),
+            "missing COMPUTER letters: {gold_covered:?}"
+        );
         Ok(())
     }
 

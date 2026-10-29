@@ -99,8 +99,8 @@ mod tests {
     use uuid::Uuid;
     use vtracer::CancelToken;
 
-    use crate::files::{SourceSnapshot, probe_source};
     use crate::engine::{decode_full, trace_image, write_alpha_svg};
+    use crate::files::{SourceSnapshot, probe_source};
     use crate::models::{ErrorCode, HierarchicalMode, PreviewRequest, TraceMode, TraceParams};
 
     use super::{MAX_PREVIEW_SVG_BYTES, PreviewWork, render_preview, validate_preview_svg_size};
@@ -183,7 +183,6 @@ mod tests {
 
         Ok(())
     }
-
 
     #[test]
     fn max_side_above_source_matches_full_resolution_trace() -> Result<(), String> {

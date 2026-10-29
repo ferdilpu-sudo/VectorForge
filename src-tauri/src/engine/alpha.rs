@@ -59,7 +59,13 @@ fn split_with_budget(
     check_cancel(cancel)?;
     // An opaque source does not need an alpha-mask split. Preserve the
     // segmentation exactly and avoid the additional mask allocations.
-    if source.pixels.as_chunks::<4>().0.iter().all(|rgba| rgba[3] == 255) {
+    if source
+        .pixels
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .all(|rgba| rgba[3] == 255)
+    {
         return Ok(segmentation);
     }
 
