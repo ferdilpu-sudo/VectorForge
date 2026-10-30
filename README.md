@@ -57,6 +57,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\qv010-quality-qa.ps1 -ImagePa
 
 Tes ini bersifat offline; gambar tidak diunggah atau disimpan dalam repo. Hasil per konfigurasi menampilkan `QV010 label`, `score` (kesalahan visual, lebih rendah lebih baik), `baseline`, `paths`, `cubics`, `bytes`, dan `elapsedMs`. Perlu Windows Rust toolchain; fixture maksimal 8 megapiksel. Visual inspeksi hasil ekspor tetap wajib, dan tes benchmark ini tidak otomatis membuktikan semua output profesional.
 
+## QV-011 — Satu perintah untuk QA Windows
+
+Pada branch `feature/pro-vector-acceptance-qv011`, jalankan dari root repository:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\qv011-acceptance.ps1
+```
+
+Skrip menjalankan gate frontend dan native Rust, lalu membuat folder log di `%TEMP%\VectorForge-QA` dengan `qa-summary.csv`. Opsional: tambah `-ImagePaths @("C:\\path\\gallery.png", "C:\\path\\ai-art.png")` untuk menjalankan laporan QV-010 pada file lokal. Hasil FAIL mengembalikan exit code nonzero. QA masih perlu pemeriksaan visual manual dan file pengguna tidak diunggah.
+
 ## Gate source
 
 Frontend:

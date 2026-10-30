@@ -126,6 +126,16 @@ User memerintahkan **lanjut** setelah PR #6 QV-009. Fokus QV-010 adalah **membua
 
 Stacked branch: `feature/pro-vector-quality-audit-qv010` berbasis QV-009 PR #6; tetap Draft sampai QA. `main` tidak disentuh.
 
+## QV-011 — Geometric Negative-Space Regression & Reproducible QA (30 Oktober 2026)
+
+User melanjutkan setelah QV-010 Draft PR #7. Langkah ini menjaga disiplin QA sebelum menambah algoritma: fixture geometri negatif (cincin berlubang), renderer-based assertion, dan skrip lokal untuk mengumpulkan hasil gate + log di satu tempat. PR ini stacked di atas #7; `main` tetap aman.
+
+- **AC16-1:** Fixture 160×160 memiliki kontur gelap mengelilingi lubang berwarna terang; pada Spline+Cutout+Smoothness 2,5+Line-aware+QualityGuard+RasterFeedback, SVG harus berisi path asli dan **tidak** mengandung `<image>`; render harus mempertahankan ring gelap, lubang terang, dan latar terang.
+- **AC16-2:** Skrip `scripts/qv011-acceptance.ps1` menjalankan 8 gate frontend/Rust, dengan log per gate dan `qa-summary.csv` berisi PASS/FAIL, durasi, serta lokasi log. Kegagalan dilaporkan; tidak menyembunyikan status salah satu gate.
+- **AC16-3:** Opsional daftar file PNG/JPG untuk menjalankan `qv010-quality-qa.ps1` secara lokal per fixture. Tidak mengunggah gambar atau artefak ke GitHub.
+- **AC16-4:** Tidak ada perubahan parameter, engine runtime atau semantik ekspor; penambahan hanya tes dan script QA. Kualitas manual belum dapat dibuktikan sampai Windows QA dijalankan.
+- **Status:** code committed; **Windows QA belum dilaporkan**, semua PR #2–#7 tetap Draft dan belum merge. Perbaiki gate gagal pada branch ini, jangan membuka milestone fitur baru sambil baseline belum terbukti.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.
