@@ -455,6 +455,63 @@ mod tests {
     }
 
     #[test]
+    fn qv011_quality_feedback_keeps_logo_hole_and_straight_ring() -> Result<(), String> {
+        use resvg::{tiny_skia, usvg};
+
+        // Opaque geometric logo fixture: a separated dark ring with a
+        // genuinely empty centre. An all-foreground result must fail this test.
+        let source = RgbaImage::from_fn(160, 160, |x, y| {
+            let outer = (30..130).contains(&x) && (30..130).contains(&y);
+            let hole = (60..100).contains(&x) && (60..100).contains(&y);
+            if outer && !hole {
+                Rgba([20, 24, 28, 255])
+            } else {
+                Rgba([246, 244, 239, 255])
+            }
+        });
+        let mut settings = params();
+        settings.hierarchical = HierarchicalMode::Cutout;
+        settings.smoothness = 2.5;
+        settings.geometry_mode = GeometryMode::LineAware;
+        settings.quality_guard = true;
+        settings.raster_feedback = true;
+        let result = trace_image(source, &settings, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing vector geometry".to_owned())?;
+        let svg = crate::engine::write_alpha_svg(&result).svg;
+        assert!(svg.contains("<path"), "no vector geometry");
+        assert!(!svg.contains("<image"), "output must not embed a raster");
+
+        let tree = usvg::Tree::from_str(&svg, &usvg::Options::default())
+            .map_err(|error| error.to_string())?;
+        let mut pixmap = tiny_skia::Pixmap::new(160, 160)
+            .ok_or_else(|| "cannot allocate SVG renderer pixmap".to_owned())?;
+        resvg::render(
+            &tree,
+            tiny_skia::Transform::identity(),
+            &mut pixmap.as_mut(),
+        );
+        let at = |x: usize, y: usize| pixmap.pixels()[y * 160 + x];
+        let dark_ring = at(45, 45);
+        let center_hole = at(80, 80);
+        let background = at(10, 10);
+
+        assert!(
+            dark_ring.red() < 110 && dark_ring.green() < 110,
+            "ring foreground has disappeared"
+        );
+        assert!(
+            center_hole.red() > 200 && center_hole.green() > 200,
+            "negative-space hole has been filled"
+        );
+        assert!(
+            background.red() > 200 && background.green() > 200,
+            "outside background has changed"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn raster_feedback_8mp_limit_is_explicit() {
         let source = vtracer::ColorImage {
             width: 8_000_001,
