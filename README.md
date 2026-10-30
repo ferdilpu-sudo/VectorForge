@@ -41,6 +41,12 @@ cd src-tauri
 cargo run
 ```
 
+## Uji eksperimental Raster Feedback (QV-009)
+
+Pada branch `feature/pro-vector-raster-feedback-qv009`, buka pengaturan lanjutan di aplikasi lalu aktifkan **Evaluasi Visual Raster (Eksperimen)**. Gunakan gambar <=8MP dengan mode Spline dan Smoothness >0 (atau Geometry Mode Line-aware), lalu bandingkan ekspor dengan opsi OFF/ON. Saat ON, engine memilih antara hasil modifikasi geometri dan baseline tanpa smoothing tambahan; keduanya berasal dari segmentasi yang sama. Pembandingan menggunakan render maksimal 384 px sehingga tidak mengganti resolusi SVG/PDF/EPS yang diekspor. Bila source >8MP atau kandidat terlalu kompleks untuk evaluasi, operasi menghasilkan error eksplisit dan user dapat mematikan opsi tersebut.
+
+Ini mode beta opt-in, belum lolos QA Windows/performa; lakukan pengujian pada salinan input dan jangan menganggap outputnya sudah setara gambar ulang ilustrator.
+
 ## Gate source
 
 Frontend:

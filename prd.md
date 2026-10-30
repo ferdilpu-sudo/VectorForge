@@ -36,6 +36,10 @@ AC12 (eksperimental): pengguna dapat memilih `geometryMode='classic'` atau `'lin
 
 AC13 (eksperimental): opsi `qualityGuard` pada mode spline menilai kontur hasil simplifikasi/perapian garis terhadap kontur vektor sebelum pasca-proses, dengan rollback per kontur jika deviasi geometris berlebihan atau terjadi perubahan area/orientasi pada ring. Penolakan tidak diam-diam mengganti input atau menurunkan resolusi; fallback hanya mengabaikan modifikasi kurva dalam kontur yang tidak aman. Preset lama harus identik saat guard dimatikan dan JSON lama valid. Kriteria QA: unit-test untuk guard, preview IPC, verifikasi visual gambar AI serta logo, dan benchmark performa kontur banyak. **Bukan** pemeriksaan akhir kesamaan SVG dengan PNG atau optimasi pemilihan mode otomatis; hal tersebut berada di fase evaluasi raster berikutnya.
 
+## Professional Vector Engine — tahap raster feedback QV-009
+
+AC14 (eksperimental): pengguna dapat mengaktifkan `rasterFeedback` dan memeriksa apakah hasil SVG setelah smoothing/perapian garis menurunkan kesetiaan visual dibanding baseline geometrinya. Engine merender dua kandidat pada sisi evaluasi maksimal 384 px dan memilih baseline bila skor RGBA/edge-weighted memburuk melewati toleransi. Source dibatasi 8 MP saat evaluasi aktif; ekspor tetap full-resolution. Tidak ada perubahan pada preset existing (default false), tidak ada operasi jaringan atau GPU, dan user mendapat error eksplisit untuk input terlalu besar/kandidat SVG evaluasi melebihi 8 MiB. QA memerlukan unit/integration render tests dan visual Gallery Computer + dua ilustrasi AI. Ini bukan vector reconstruction generatif, full-resolution SSIM atau janji hasil setara desain manual.
+
 ## Parameter
 
 Sumber angka/default kanonis: `schema.md`. UI tidak menyalin default secara terpisah di banyak komponen. Semua format memakai parameter yang sama; EPS memiliki kebijakan transparansi yang dijelaskan di bawah.
