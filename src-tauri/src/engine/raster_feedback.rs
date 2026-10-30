@@ -91,6 +91,7 @@ fn valid_rgba_buffer(source: &ColorImage) -> bool {
 
 /// Score one real vector document for *diagnostic QA only*; does not
 /// independently pick a tracing configuration or mutate a vector document.
+#[cfg(test)]
 pub(crate) fn render_score(source: &ColorImage, doc: &VectorDoc) -> Result<f64, AppError> {
     if source.width != doc.width as usize || source.height != doc.height as usize {
         return Err(evaluation_error("Dimensi sumber dan dokumen SVG tidak sama."));
