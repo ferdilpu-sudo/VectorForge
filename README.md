@@ -65,7 +65,7 @@ Pada branch `feature/pro-vector-acceptance-qv011`, jalankan dari root repository
 powershell -ExecutionPolicy Bypass -File .\scripts\qv011-acceptance.ps1
 ```
 
-Skrip menjalankan gate frontend dan native Rust, lalu membuat folder log di `%TEMP%\VectorForge-QA` dengan `qa-summary.csv`. Opsional: tambah `-ImagePaths @("C:\\path\\gallery.png", "C:\\path\\ai-art.png")` untuk menjalankan laporan QV-010 pada file lokal. Hasil FAIL mengembalikan exit code nonzero. QA masih perlu pemeriksaan visual manual dan file pengguna tidak diunggah.
+Skrip menjalankan **9 gate** frontend dan native Rust (termasuk `h01:contrast`), lalu membuat folder log di `%TEMP%\VectorForge-QA` dengan `qa-summary.csv` dan `qa-context.json` yang mencatat commit Git pengujian. Opsional: tambah `-ImagePaths @("C:\\path\\gallery.png", "C:\\path\\ai-art.png")` untuk menjalankan laporan QV-010 pada file lokal. Hasil FAIL mengembalikan exit code nonzero. QA masih perlu pemeriksaan visual manual dan file pengguna tidak diunggah.
 
 ## Gate source
 

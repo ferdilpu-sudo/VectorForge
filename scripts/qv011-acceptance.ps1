@@ -17,6 +17,25 @@ $runDir = Join-Path $ReportRoot ("QV011-" + (Get-Date -Format "yyyyMMdd-HHmmss")
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 $results = [System.Collections.Generic.List[object]]::new()
 
+# Record the exact revision, not user image paths, so each report is attributable.
+$gitHead = "unknown"
+$gitBranch = "unknown"
+try {
+    $readHead = & git -C $repoRoot rev-parse HEAD 2>$null
+    if ($LASTEXITCODE -eq 0) { $gitHead = [string]$readHead }
+    $readBranch = & git -C $repoRoot branch --show-current 2>$null
+    if ($LASTEXITCODE -eq 0) { $gitBranch = [string]$readBranch }
+}
+catch {
+    Write-Host "Git metadata unavailable; QA gates will still run."
+}
+[pscustomobject]@{
+    GeneratedUtc = (Get-Date).ToUniversalTime().ToString("o")
+    GitCommit = $gitHead
+    GitBranch = $gitBranch
+    PowerShellVersion = $PSVersionTable.PSVersion.ToString()
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runDir "qa-context.json") -Encoding UTF8
+
 function Invoke-Check {
     param(
         [string]$Name,
@@ -64,16 +83,17 @@ function Invoke-Check {
 Invoke-Check "01-npm-ci" $repoRoot "npm" @("ci")
 Invoke-Check "02-npm-lint" $repoRoot "npm" @("run", "lint")
 Invoke-Check "03-npm-test" $repoRoot "npm" @("test")
-Invoke-Check "04-npm-build" $repoRoot "npm" @("run", "build")
-Invoke-Check "05-cargo-check" $rustDir "cargo" @("check", "--locked")
-Invoke-Check "06-cargo-test" $rustDir "cargo" @("test", "--locked")
-Invoke-Check "07-cargo-clippy" $rustDir "cargo" @("clippy", "--all-targets", "--locked", "--", "-D", "warnings")
-Invoke-Check "08-cargo-fmt" $rustDir "cargo" @("fmt", "--", "--check")
+Invoke-Check "04-npm-contrast" $repoRoot "npm" @("run", "h01:contrast")
+Invoke-Check "05-npm-build" $repoRoot "npm" @("run", "build")
+Invoke-Check "06-cargo-check" $rustDir "cargo" @("check", "--locked")
+Invoke-Check "07-cargo-test" $rustDir "cargo" @("test", "--locked")
+Invoke-Check "08-cargo-clippy" $rustDir "cargo" @("clippy", "--all-targets", "--locked", "--", "-D", "warnings")
+Invoke-Check "09-cargo-fmt" $rustDir "cargo" @("fmt", "--", "--check")
 
 $index = 0
 foreach ($image in $ImagePaths) {
     $index++
-    $name = "09-image-" + $index.ToString("00")
+    $name = "10-image-" + $index.ToString("00")
     $resolvedItem = Resolve-Path -LiteralPath $image -ErrorAction SilentlyContinue
     if ($null -eq $resolvedItem -or -not (Test-Path -LiteralPath $resolvedItem.Path -PathType Leaf)) {
         $logFile = Join-Path $runDir ($name + ".log")

@@ -23,6 +23,15 @@ pub fn trace_image(
     if cancel.is_cancelled() {
         return Err(cancelled_error());
     }
+    // Validate before the fully-transparent early return. Otherwise oversized
+    // transparent images silently bypass the documented 8 MP feedback limit.
+    if feedback_limit_exceeded(
+        params.raster_feedback,
+        image.width() as usize,
+        image.height() as usize,
+    ) {
+        return Err(feedback_limit_error());
+    }
 
     let source = rgba_to_color_image(image);
     if is_fully_transparent(&source) {
@@ -43,13 +52,8 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    if params.raster_feedback
-        && source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS
-    {
-        return Err(AppError::new(
-            ErrorCode::InvalidParams,
-            "Evaluasi raster maksimal 8 megapiksel. Nonaktifkan opsi untuk sumber lebih besar.",
-        ));
+    if feedback_limit_exceeded(params.raster_feedback, source.width, source.height) {
+        return Err(feedback_limit_error());
     }
     let mut config = config_from_params(params);
     // With the guard enabled, simplification must run inside the guarded pass,
@@ -113,6 +117,17 @@ fn trace_inner(
     } else {
         Ok(baseline)
     }
+}
+
+fn feedback_limit_exceeded(enabled: bool, width: usize, height: usize) -> bool {
+    enabled && width.saturating_mul(height) > MAX_FEEDBACK_PIXELS
+}
+
+fn feedback_limit_error() -> AppError {
+    AppError::new(
+        ErrorCode::InvalidParams,
+        "Evaluasi raster maksimal 8 megapiksel. Nonaktifkan opsi untuk sumber lebih besar.",
+    )
 }
 
 fn config_from_params(params: &TraceParams) -> Config {
@@ -189,10 +204,10 @@ mod tests {
     };
 
     use crate::models::{
-        GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+        ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
     };
 
-    use super::{config_from_params, trace_image};
+    use super::{config_from_params, feedback_limit_exceeded, trace_image};
 
     fn params() -> TraceParams {
         TraceParams {
@@ -509,6 +524,26 @@ mod tests {
             "outside background has changed"
         );
         Ok(())
+    }
+
+    #[test]
+    fn raster_feedback_limit_is_opt_in_and_inclusive_at_8mp() {
+        assert!(!feedback_limit_exceeded(false, 4_000, 2_001));
+        assert!(!feedback_limit_exceeded(true, 4_000, 2_000));
+        assert!(feedback_limit_exceeded(true, 4_000, 2_001));
+        assert!(feedback_limit_exceeded(true, usize::MAX, 2));
+    }
+
+    #[test]
+    fn transparent_source_above_8mp_must_not_bypass_feedback_limit() {
+        let mut options = params();
+        options.raster_feedback = true;
+        let transparent = RgbaImage::new(4_000, 2_001);
+        let result = trace_image(transparent, &options, &CancelToken::new());
+        assert!(matches!(
+            result,
+            Err(error) if error.code == ErrorCode::InvalidParams
+        ));
     }
 
     #[test]
