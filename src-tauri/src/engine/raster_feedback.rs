@@ -37,8 +37,9 @@ pub(crate) fn prefer_candidate(
     if max_side == 0 || source.pixels.len() != source.width * source.height * 4 {
         return Err(evaluation_error("Buffer gambar sumber tidak valid."));
     }
-    let width = (source.width * MAX_EVAL_SIDE / max_side).max(1) as u32;
-    let height = (source.height * MAX_EVAL_SIDE / max_side).max(1) as u32;
+    let side = max_side.min(MAX_EVAL_SIDE);
+    let width = (source.width * side / max_side).max(1) as u32;
+    let height = (source.height * side / max_side).max(1) as u32;
     let reference = reference_rgba(source, width as usize, height as usize);
     let baseline_score = compare_svg(source, baseline, width, height, &reference)?;
     let candidate_score = compare_svg(source, candidate, width, height, &reference)?;
@@ -173,9 +174,10 @@ fn pixel_error(
 #[cfg(test)]
 mod tests {
     use resvg::tiny_skia;
-    use vtracer::ColorImage;
+    use vtracer::ir::{MultiPath, Paint, PathCmd, Shape, SubPath};
+    use vtracer::{Color, ColorImage, PointF64, VectorDoc};
 
-    use super::{MAX_EVAL_SIDE, pixel_error, reference_rgba};
+    use super::{MAX_EVAL_SIDE, pixel_error, prefer_candidate, reference_rgba};
 
     #[test]
     fn samples_opaque_and_transparent_without_exposing_hidden_rgb() {
@@ -195,22 +197,62 @@ mod tests {
         let blank = vec![tiny_skia::PremultipliedColorU8::TRANSPARENT; MAX_EVAL_SIDE];
         assert_eq!(pixel_error(&pixels, &blank, MAX_EVAL_SIDE), 0.0);
         let black = vec![
-            tiny_skia::PremultipliedColorU8::from_rgba_unchecked(0, 0, 0, 255);
+            tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap();
             MAX_EVAL_SIDE
         ];
         assert!(pixel_error(&pixels, &black, MAX_EVAL_SIDE) > 50.0);
+    }
+
+    fn solid_doc(r: u8, g: u8, b: u8) -> VectorDoc {
+        let mut doc = VectorDoc::new(64, 64);
+        let point = |x, y| PointF64 { x, y };
+        doc.shapes.push(Shape {
+            paint: Paint::Solid(Color::new(r, g, b)),
+            path: MultiPath {
+                subpaths: vec![SubPath {
+                    commands: vec![
+                        PathCmd::MoveTo(point(0.0, 0.0)),
+                        PathCmd::LineTo(point(64.0, 0.0)),
+                        PathCmd::LineTo(point(64.0, 64.0)),
+                        PathCmd::LineTo(point(0.0, 64.0)),
+                        PathCmd::Close,
+                    ],
+                }],
+            },
+        });
+        doc
+    }
+
+    #[test]
+    fn raster_feedback_prefers_matching_svg_render() -> Result<(), String> {
+        let source = ColorImage {
+            width: 64,
+            height: 64,
+            pixels: [0, 0, 0, 255].repeat(64 * 64),
+        };
+        let black = solid_doc(0, 0, 0);
+        let white = solid_doc(255, 255, 255);
+        assert!(
+            prefer_candidate(&source, &black, &white).map_err(|e| e.message.clone())?,
+            "matching black SVG must beat white baseline"
+        );
+        assert!(
+            !prefer_candidate(&source, &white, &black).map_err(|e| e.message.clone())?,
+            "mismatched white SVG must lose to black baseline"
+        );
+        Ok(())
     }
 
     #[test]
     fn edge_pixels_carry_more_weight_than_uniform_background() {
         let source = vec![[0, 0, 0, 255], [255, 255, 255, 255]];
         let matching = vec![
-            tiny_skia::PremultipliedColorU8::from_rgba_unchecked(0, 0, 0, 255),
-            tiny_skia::PremultipliedColorU8::from_rgba_unchecked(255, 255, 255, 255),
+            tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap(),
+            tiny_skia::PremultipliedColorU8::from_rgba(255, 255, 255, 255).unwrap(),
         ];
         let reversed = vec![
-            tiny_skia::PremultipliedColorU8::from_rgba_unchecked(255, 255, 255, 255),
-            tiny_skia::PremultipliedColorU8::from_rgba_unchecked(0, 0, 0, 255),
+            tiny_skia::PremultipliedColorU8::from_rgba(255, 255, 255, 255).unwrap(),
+            tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap(),
         ];
         assert!(pixel_error(&source, &reversed, 2) > pixel_error(&source, &matching, 2));
     }

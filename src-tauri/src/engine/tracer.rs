@@ -44,7 +44,7 @@ fn trace_inner(
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
     if params.raster_feedback
-        && (source.width * source.height) > MAX_FEEDBACK_PIXELS
+        && source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS
     {
         return Err(AppError::new(
             ErrorCode::InvalidParams,

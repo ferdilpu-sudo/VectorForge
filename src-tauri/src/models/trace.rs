@@ -180,12 +180,14 @@ mod tests {
         assert_eq!(parsed.palette_limit, 0);
         assert_eq!(parsed.geometry_mode, GeometryMode::Classic);
         assert!(!parsed.quality_guard);
+        assert!(!parsed.raster_feedback);
         parsed.validate().map_err(|error| error.message)?;
 
         let serialized = serde_json::to_value(parsed).map_err(|error| error.to_string())?;
         assert_eq!(serialized["smoothness"], 0.0);
         assert_eq!(serialized["geometryMode"], "classic");
         assert_eq!(serialized["qualityGuard"], false);
+        assert_eq!(serialized["rasterFeedback"], false);
         Ok(())
     }
 
@@ -239,6 +241,18 @@ mod tests {
         let restored: TraceParams =
             serde_json::from_value(value).map_err(|error| error.to_string())?;
         assert!(restored.quality_guard);
+        restored.validate().map_err(|error| error.message)
+    }
+
+    #[test]
+    fn raster_feedback_round_trips_with_json() -> Result<(), String> {
+        let mut params = params();
+        params.raster_feedback = true;
+        let value = serde_json::to_value(params).map_err(|error| error.to_string())?;
+        assert_eq!(value["rasterFeedback"], true);
+        let restored: TraceParams =
+            serde_json::from_value(value).map_err(|error| error.to_string())?;
+        assert!(restored.raster_feedback);
         restored.validate().map_err(|error| error.message)
     }
 

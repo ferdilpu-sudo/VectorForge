@@ -410,6 +410,11 @@ mod tests {
         );
         assert_eq!(logo.map(|preset| preset.params.quality_guard), Some(true));
         assert_eq!(illustration.map(|preset| preset.params.quality_guard), Some(true));
+        assert_eq!(logo.map(|preset| preset.params.raster_feedback), Some(false));
+        assert_eq!(
+            illustration.map(|preset| preset.params.raster_feedback),
+            Some(false)
+        );
         assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
         assert_eq!(
             illustration.map(|preset| preset.params.segmentation_mode),
