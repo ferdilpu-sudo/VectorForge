@@ -172,14 +172,16 @@ fn accepted(
         return false;
     }
     // In particular, never move mosaic junctions or ring seam anchors.
-    if source[0][0] != result[0][0]
-        || source.last().map(|c| c[3]) != result.last().map(|c| c[3])
-    {
+    if source[0][0] != result[0][0] || source.last().map(|c| c[3]) != result.last().map(|c| c[3]) {
         return false;
     }
     let a = sample(source);
     let b = sample(result);
-    if !a.iter().chain(b.iter()).all(|p| p.x.is_finite() && p.y.is_finite()) {
+    if !a
+        .iter()
+        .chain(b.iter())
+        .all(|p| p.x.is_finite() && p.y.is_finite())
+    {
         return false;
     }
     if closed {
@@ -214,9 +216,7 @@ mod tests {
     }
 
     fn line(y: f64) -> FittedGeom {
-        FittedGeom::Beziers(vec![[
-            p(0.0, y), p(10.0, y), p(20.0, y), p(30.0, y),
-        ]])
+        FittedGeom::Beziers(vec![[p(0.0, y), p(10.0, y), p(20.0, y), p(30.0, y)]])
     }
 
     fn guard() -> GuardedContourPass {
@@ -239,7 +239,13 @@ mod tests {
             unreachable!()
         };
         broken[0][1].y = f64::NAN;
-        assert!(!accepted(&source, &FittedGeom::Beziers(broken), false, 0.6, 0.2));
+        assert!(!accepted(
+            &source,
+            &FittedGeom::Beziers(broken),
+            false,
+            0.6,
+            0.2
+        ));
     }
 
     #[test]
@@ -250,7 +256,13 @@ mod tests {
             unreachable!()
         };
         slight[0][1].y = 0.1;
-        assert!(accepted(&source, &FittedGeom::Beziers(slight), false, 0.6, 0.2));
+        assert!(accepted(
+            &source,
+            &FittedGeom::Beziers(slight),
+            false,
+            0.6,
+            0.2
+        ));
     }
 
     #[test]
@@ -275,15 +287,12 @@ mod tests {
 
     #[test]
     fn unsafe_geometry_falls_back_to_original_when_guard_is_strict() {
-        let original = vec![
-            [p(0.0, 0.0), p(10.0, 0.4), p(20.0, -0.4), p(30.0, 0.0)],
-        ];
+        let original = vec![[p(0.0, 0.0), p(10.0, 0.4), p(20.0, -0.4), p(30.0, 0.0)]];
         let mut strict = guard();
         strict.simplify_tolerance = 0.0;
         strict.max_deviation = 0.0;
         strict.max_mean_deviation = 0.0;
-        let FittedGeom::Beziers(result) = strict.open(FittedGeom::Beziers(original.clone()))
-        else {
+        let FittedGeom::Beziers(result) = strict.open(FittedGeom::Beziers(original.clone())) else {
             unreachable!("curve kind changed");
         };
         assert_eq!(result, original, "unsafe straightening must roll back");
@@ -296,10 +305,11 @@ mod tests {
             FittedGeom::Polyline(points) => assert_eq!(points.len(), 2),
             _ => unreachable!("polygon converted"),
         }
-        let oversized = FittedGeom::Beziers(vec![
-            [p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(3.0, 0.0)];
-            97
-        ]);
+        let oversized =
+            FittedGeom::Beziers(vec![
+                [p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(3.0, 0.0)];
+                97
+            ]);
         match guard().open(oversized) {
             FittedGeom::Beziers(curves) => assert_eq!(curves.len(), 97),
             _ => unreachable!("curve chain converted"),

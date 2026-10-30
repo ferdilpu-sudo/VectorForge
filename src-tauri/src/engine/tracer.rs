@@ -105,7 +105,9 @@ fn trace_inner(
     baseline_params.geometry_mode = GeometryMode::Classic;
     baseline_params.quality_guard = false;
     baseline_params.raster_feedback = false;
-    let baseline_pipeline = config_from_params(&baseline_params).build().map_err(vtracer_error)?;
+    let baseline_pipeline = config_from_params(&baseline_params)
+        .build()
+        .map_err(vtracer_error)?;
     let baseline = baseline_pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
         .map_err(vtracer_error)?;
@@ -200,7 +202,8 @@ mod tests {
     use image::{Rgba, RgbaImage};
     use vtracer::ir::PathCmd;
     use vtracer::{
-        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc,
+        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical,
+        VectorDoc,
     };
 
     use crate::models::{
@@ -341,10 +344,7 @@ mod tests {
             })
             .collect();
 
-        for segmentation_mode in [
-            SegmentationMode::ColorCluster,
-            SegmentationMode::Watershed,
-        ] {
+        for segmentation_mode in [SegmentationMode::ColorCluster, SegmentationMode::Watershed] {
             let mut options = params();
             options.segmentation_mode = segmentation_mode;
             options.hierarchical = HierarchicalMode::Cutout;
@@ -383,8 +383,15 @@ mod tests {
         let doc = trace_image(source, &options, &CancelToken::new())
             .map_err(|error| error.message)?
             .ok_or_else(|| "unexpected empty trace".to_owned())?;
-        let alphas: Vec<u8> = doc.shapes.iter().map(|shape| shape.paint.color().a).collect();
-        assert!(alphas.contains(&128), "semi-transparent shape lost: {alphas:?}");
+        let alphas: Vec<u8> = doc
+            .shapes
+            .iter()
+            .map(|shape| shape.paint.color().a)
+            .collect();
+        assert!(
+            alphas.contains(&128),
+            "semi-transparent shape lost: {alphas:?}"
+        );
         assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
         Ok(())
     }
@@ -417,7 +424,10 @@ mod tests {
         let hit = painted_region_coverage(&doc, &regions, |r, g, b, a| {
             r < 125 && g < 125 && b < 125 && a > 0
         });
-        assert!(hit.iter().all(|value| *value), "missing letter-like regions: {hit:?}");
+        assert!(
+            hit.iter().all(|value| *value),
+            "missing letter-like regions: {hit:?}"
+        );
         Ok(())
     }
 
@@ -609,7 +619,9 @@ mod tests {
             let score = crate::engine::raster_feedback::render_score(&original, &doc)
                 .map_err(|error| error.message)?;
             let svg = crate::engine::write_alpha_svg(&doc);
-            let cubics = doc.shapes.iter()
+            let cubics = doc
+                .shapes
+                .iter()
                 .flat_map(|shape| &shape.path.subpaths)
                 .flat_map(|subpath| &subpath.commands)
                 .filter(|command| matches!(command, PathCmd::CubicTo(..)))

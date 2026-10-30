@@ -43,8 +43,8 @@ pub(crate) fn prefer_candidate(
     let reference = reference_rgba(source, width as usize, height as usize);
     let baseline_score = compare_svg(source, baseline, width, height, &reference)?;
     let candidate_score = compare_svg(source, candidate, width, height, &reference)?;
-    Ok(candidate_score <= baseline_score + ACCEPT_ABSOLUTE_DELTA
-        + baseline_score * ACCEPT_RELATIVE_DELTA)
+    Ok(candidate_score
+        <= baseline_score + ACCEPT_ABSOLUTE_DELTA + baseline_score * ACCEPT_RELATIVE_DELTA)
 }
 
 fn evaluation_error(details: &str) -> AppError {
@@ -60,7 +60,9 @@ fn compare_svg(
 ) -> Result<f64, AppError> {
     let svg = write_alpha_svg(doc).svg;
     if svg.len() > MAX_EVAL_SVG_BYTES {
-        return Err(evaluation_error("SVG terlalu kompleks untuk evaluasi raster (8 MiB)."));
+        return Err(evaluation_error(
+            "SVG terlalu kompleks untuk evaluasi raster (8 MiB).",
+        ));
     }
     let tree = usvg::Tree::from_str(&svg, &usvg::Options::default()).map_err(|error| {
         AppError::with_details(
@@ -94,10 +96,16 @@ fn valid_rgba_buffer(source: &ColorImage) -> bool {
 #[cfg(test)]
 pub(crate) fn render_score(source: &ColorImage, doc: &VectorDoc) -> Result<f64, AppError> {
     if source.width != doc.width as usize || source.height != doc.height as usize {
-        return Err(evaluation_error("Dimensi sumber dan dokumen SVG tidak sama."));
+        return Err(evaluation_error(
+            "Dimensi sumber dan dokumen SVG tidak sama.",
+        ));
     }
-    if !valid_rgba_buffer(source) || source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS {
-        return Err(evaluation_error("Buffer sumber tidak valid atau melewati batas QA 8 MP."));
+    if !valid_rgba_buffer(source)
+        || source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS
+    {
+        return Err(evaluation_error(
+            "Buffer sumber tidak valid atau melewati batas QA 8 MP.",
+        ));
     }
     let max_side = source.width.max(source.height);
     let side = max_side.min(MAX_EVAL_SIDE);
@@ -110,9 +118,8 @@ pub(crate) fn render_score(source: &ColorImage, doc: &VectorDoc) -> Result<f64, 
 fn source_pixel(source: &ColorImage, x: usize, y: usize) -> [u8; 4] {
     let index = (y * source.width + x) * 4;
     let a = u32::from(source.pixels[index + 3]);
-    let premul = |channel: usize| {
-        ((u32::from(source.pixels[index + channel]) * a + 127) / 255) as u8
-    };
+    let premul =
+        |channel: usize| ((u32::from(source.pixels[index + channel]) * a + 127) / 255) as u8;
     [premul(0), premul(1), premul(2), a as u8]
 }
 
@@ -151,7 +158,9 @@ fn pixel_error(
         || reference.len() % width != 0
         || reference.len() != rendered.len()
     {
-        return Err(evaluation_error("Panjang buffer skor raster tidak konsisten."));
+        return Err(evaluation_error(
+            "Panjang buffer skor raster tidak konsisten.",
+        ));
     }
     let mut all = 0.0;
     let mut edge = 0.0;
@@ -233,10 +242,8 @@ mod tests {
         let pixels = vec![[0, 0, 0, 0]; MAX_EVAL_SIDE];
         let blank = vec![tiny_skia::PremultipliedColorU8::TRANSPARENT; MAX_EVAL_SIDE];
         assert_eq!(pixel_error(&pixels, &blank, MAX_EVAL_SIDE).unwrap(), 0.0);
-        let black = vec![
-            tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap();
-            MAX_EVAL_SIDE
-        ];
+        let black =
+            vec![tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap(); MAX_EVAL_SIDE];
         assert!(pixel_error(&pixels, &black, MAX_EVAL_SIDE).unwrap() > 50.0);
     }
 
@@ -296,7 +303,10 @@ mod tests {
             pixels: vec![0; 16],
         };
         assert!(render_score(&source, &solid_doc(0, 0, 0)).is_err());
-        let invalid_buffer = ColorImage { pixels: vec![0; 15], ..source };
+        let invalid_buffer = ColorImage {
+            pixels: vec![0; 15],
+            ..source
+        };
         let mut small = VectorDoc::new(2, 2);
         small.shapes.clear();
         assert!(render_score(&invalid_buffer, &small).is_err());
@@ -343,8 +353,7 @@ mod tests {
         let correct = thin_stroke_doc();
         let missing = solid_doc(255, 255, 255);
         assert!(
-            prefer_candidate(&source, &correct, &missing)
-                .map_err(|error| error.message.clone())?,
+            prefer_candidate(&source, &correct, &missing).map_err(|error| error.message.clone())?,
             "the candidate with the stroke should be preferred"
         );
         assert!(
