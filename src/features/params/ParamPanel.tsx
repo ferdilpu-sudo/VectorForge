@@ -178,6 +178,20 @@ export function ParamPanel() {
             "Straightens nearly linear Bézier handles without moving corner anchors; Spline only.",
           )}
         </p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={params.qualityGuard}
+            onChange={(e) => setParams({ ...params, qualityGuard: e.target.checked })}
+          />
+          {t("Pelindung Kualitas Kontur (Eksperimen)", "Contour Quality Guard (Experimental)")}
+        </label>
+        <p className="helper">
+          {t(
+            "Batalkan smoothing pada kontur yang terlalu berubah. Belum memeriksa kesetiaan warna atau segmentasi gambar.",
+            "Reject excessive contour drift from smoothing. Does not evaluate segmentation or color fidelity.",
+          )}
+        </p>
         {field("paletteLimit", t("Batas Jumlah Warna", "Color palette limit"))}
         <p className="helper">
           {t(

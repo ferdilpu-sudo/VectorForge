@@ -142,6 +142,7 @@ pub fn built_in_presets() -> Vec<Preset> {
                 segmentation_mode: SegmentationMode::ColorCluster,
                 palette_limit: 0,
                 geometry_mode: crate::models::GeometryMode::LineAware,
+                quality_guard: true,
                 ..defaults
             },
             created_at: BUILTIN_CREATED_AT.to_owned(),
@@ -159,6 +160,7 @@ pub fn built_in_presets() -> Vec<Preset> {
                 hierarchical: HierarchicalMode::Cutout,
                 segmentation_mode: SegmentationMode::Watershed,
                 palette_limit: 24,
+                quality_guard: true,
                 ..defaults
             },
             created_at: BUILTIN_CREATED_AT.to_owned(),
@@ -178,6 +180,7 @@ fn default_params() -> TraceParams {
         segmentation_mode: crate::models::SegmentationMode::ColorCluster,
         palette_limit: 0,
         geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -314,6 +317,7 @@ mod tests {
                 segmentation_mode: crate::models::SegmentationMode::ColorCluster,
                 palette_limit: 0,
                 geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },

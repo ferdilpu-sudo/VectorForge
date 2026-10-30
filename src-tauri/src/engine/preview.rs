@@ -146,6 +146,7 @@ mod tests {
                 segmentation_mode: crate::models::SegmentationMode::ColorCluster,
                 palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },

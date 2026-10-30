@@ -51,6 +51,8 @@ pub struct TraceParams {
     pub palette_limit: u8,
     #[serde(default)]
     pub geometry_mode: GeometryMode,
+    #[serde(default)]
+    pub quality_guard: bool,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -151,6 +153,7 @@ mod tests {
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

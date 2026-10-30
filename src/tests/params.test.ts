@@ -66,6 +66,14 @@ describe("parameter contract", () => {
     expect(validParams({ ...defaults, geometryMode: "line-aware" })).toBe(true);
     expect(validParams({ ...defaults, geometryMode: "wrong" as "classic" })).toBe(false);
   });
+  it("enables the quality guard only for professional presets", () => {
+    expect(defaults.qualityGuard).toBe(false);
+    expect(builtIns.find((p) => p.id === "builtin-logo")?.params.qualityGuard).toBe(false);
+    expect(builtIns.find((p) => p.id === "builtin-professional-logo")?.params.qualityGuard).toBe(true);
+    expect(builtIns.find((p) => p.id === "builtin-professional-illustration")?.params.qualityGuard).toBe(true);
+    expect(validParams({ ...defaults, qualityGuard: true })).toBe(true);
+    expect(validParams({ ...defaults, qualityGuard: 1 as unknown as boolean })).toBe(false);
+  });
   it("rejects duplicate preset names ignoring case and surrounding spaces", () => {
     expect(validPresetName("  seimbang  ", builtIns)).toBe(false);
     expect(validPresetName(" ", builtIns)).toBe(false);
