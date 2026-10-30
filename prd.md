@@ -32,6 +32,10 @@ AC11 (eksperimental): pengguna dapat memilih `color-cluster` atau `watershed`, m
 
 AC12 (eksperimental): pengguna dapat memilih `geometryMode='classic'` atau `'line-aware'`; preset Logo Presisi memakai `line-aware`, dan hasil mode lama tanpa perubahan. Mode baru memperbaiki handle Bézier pada segmen nyaris lurus tanpa memindahkan titik ujung atau simpul, sehingga kontur tidak berubah drastis dan shared boundaries cutout tetap konsisten. Acceptance memerlukan pengujian fixture bentuk lurus, lengkung organik, sudut, shape terpisah, dan PNG asli Gallery Computer pada zoom 200–400%. Ini belum mencakup fitting garis multi-curve, lingkaran, elips, primitive reconstruction penuh, atau pemeriksaan kualitas otomatis. Status belum dibuktikan oleh QA Windows.
 
+## Professional Vector Engine — tahap guard kualitas QV-008
+
+AC13 (eksperimental): opsi `qualityGuard` pada mode spline menilai kontur hasil simplifikasi/perapian garis terhadap kontur vektor sebelum pasca-proses, dengan rollback per kontur jika deviasi geometris berlebihan atau terjadi perubahan area/orientasi pada ring. Penolakan tidak diam-diam mengganti input atau menurunkan resolusi; fallback hanya mengabaikan modifikasi kurva dalam kontur yang tidak aman. Preset lama harus identik saat guard dimatikan dan JSON lama valid. Kriteria QA: unit-test untuk guard, preview IPC, verifikasi visual gambar AI serta logo, dan benchmark performa kontur banyak. **Bukan** pemeriksaan akhir kesamaan SVG dengan PNG atau optimasi pemilihan mode otomatis; hal tersebut berada di fase evaluasi raster berikutnya.
+
 ## Parameter
 
 Sumber angka/default kanonis: `schema.md`. UI tidak menyalin default secara terpisah di banyak komponen. Semua format memakai parameter yang sama; EPS memiliki kebijakan transparansi yang dijelaskan di bawah.

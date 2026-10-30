@@ -108,8 +108,8 @@ fn sample(curves: &[[PointF64; 4]]) -> Vec<PointF64> {
             let u = 1.0 - t;
             let weights = [u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t];
             result.push(PointF64 {
-                x: weights.iter().zip(curve).map(|(w, p)| w * p.x).sum(),
-                y: weights.iter().zip(curve).map(|(w, p)| w * p.y).sum(),
+                x: weights.iter().zip(curve).map(|(w, p)| *w * p.x).sum(),
+                y: weights.iter().zip(curve).map(|(w, p)| *w * p.y).sum(),
             });
         }
     }
@@ -267,6 +267,22 @@ mod tests {
             5.0,
             5.0,
         ));
+    }
+
+    #[test]
+    fn unsafe_geometry_falls_back_to_original_when_guard_is_strict() {
+        let original = vec![
+            [p(0.0, 0.0), p(10.0, 0.4), p(20.0, -0.4), p(30.0, 0.0)],
+        ];
+        let mut strict = guard();
+        strict.simplify_tolerance = 0.0;
+        strict.max_deviation = 0.0;
+        strict.max_mean_deviation = 0.0;
+        let FittedGeom::Beziers(result) = strict.open(FittedGeom::Beziers(original.clone()))
+        else {
+            unreachable!("curve kind changed");
+        };
+        assert_eq!(result, original, "unsafe straightening must roll back");
     }
 
     #[test]

@@ -60,6 +60,21 @@ Tes QV-006 belum diuji lokal karena toolchain Rust dan environment aplikasi Wind
 
 Belum ada hasil QA Windows untuk QV-007; tes ini sudah ditulis tetapi belum dijalankan. Perbandingan kualitas tidak boleh diganti dengan angka path-count saja. PR tetap Draft; QV-008 quality guard serta full manual-grade vector reconstruction masih deferred.
 
+## QV-008 — Contour Quality Guard (Windows QA belum dilakukan)
+
+| ID | Tes | Kriteria |
+|---|---|---|
+| TEST-QV008-01 | Identical vs shifted Bézier geometry | Kontur identik diterima, bergeser >0,6 px ditolak |
+| TEST-QV008-02 | Nonfinite geometry dan area ring berbeda | Ditolak; arah/orientasi tidak dibalik |
+| TEST-QV008-03 | Strict guard pada kurva hampir lurus | Straightening yang melanggar batas dikembalikan ke geometri awal |
+| TEST-QV008-04 | Polygon dan kontur >96 kubik | Tidak dimodifikasi, waktu komputasi dibatasi |
+| TEST-QV008-05 | Preset/serde compatibility | Preset v1 default false; preset professional true |
+| TEST-QV008-06 | Preview parameter forwarding | `qualityGuard=true` mencapai IPC untuk preset professional |
+| TEST-QV008-07 | Gallery Computer PNG + beberapa gambar AI | Sampel 0/0,5/1/2,5 dan baseline non-guard: keutuhan glyph, ruang negatif, tepian dan SVG rendering |
+| TEST-QV008-08 | Source alpha parsial, ekspor SVG/PDF/EPS, benchmark | Tidak regress alpha, tidak membuat output raster palsu, waktu/memori dilaporkan |
+
+**Status:** tes tertulis, belum ada hasil `cargo test`, lint, rustfmt, ataupun pengujian visual di Windows untuk branch QV-008. Ini guard pada kontur hasil tracing, bukan pengganti raster feedback atau metrik SSIM.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |

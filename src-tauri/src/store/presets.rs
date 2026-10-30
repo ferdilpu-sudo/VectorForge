@@ -406,6 +406,8 @@ mod tests {
             illustration.map(|preset| preset.params.geometry_mode),
             Some(crate::models::GeometryMode::Classic)
         );
+        assert_eq!(logo.map(|preset| preset.params.quality_guard), Some(true));
+        assert_eq!(illustration.map(|preset| preset.params.quality_guard), Some(true));
         assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
         assert_eq!(
             illustration.map(|preset| preset.params.segmentation_mode),
@@ -445,6 +447,7 @@ mod tests {
         assert_eq!(legacy.params.segmentation_mode, SegmentationMode::ColorCluster);
         assert_eq!(legacy.params.palette_limit, 0);
         assert_eq!(legacy.params.geometry_mode, crate::models::GeometryMode::Classic);
+        assert!(!legacy.params.quality_guard);
         Ok(())
     }
 
