@@ -51,6 +51,8 @@ pub struct TraceParams {
     pub palette_limit: u8,
     #[serde(default)]
     pub geometry_mode: GeometryMode,
+    #[serde(default)]
+    pub quality_guard: bool,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -151,6 +153,7 @@ mod tests {
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -173,11 +176,13 @@ mod tests {
         assert_eq!(parsed.segmentation_mode, SegmentationMode::ColorCluster);
         assert_eq!(parsed.palette_limit, 0);
         assert_eq!(parsed.geometry_mode, GeometryMode::Classic);
+        assert!(!parsed.quality_guard);
         parsed.validate().map_err(|error| error.message)?;
 
         let serialized = serde_json::to_value(parsed).map_err(|error| error.to_string())?;
         assert_eq!(serialized["smoothness"], 0.0);
         assert_eq!(serialized["geometryMode"], "classic");
+        assert_eq!(serialized["qualityGuard"], false);
         Ok(())
     }
 
@@ -219,6 +224,18 @@ mod tests {
         let restored: TraceParams =
             serde_json::from_str(&text).map_err(|error| error.to_string())?;
         assert_eq!(restored.geometry_mode, GeometryMode::LineAware);
+        restored.validate().map_err(|error| error.message)
+    }
+
+    #[test]
+    fn quality_guard_round_trips_in_camel_case() -> Result<(), String> {
+        let mut options = params();
+        options.quality_guard = true;
+        let value = serde_json::to_value(options).map_err(|error| error.to_string())?;
+        assert_eq!(value["qualityGuard"], true);
+        let restored: TraceParams =
+            serde_json::from_value(value).map_err(|error| error.to_string())?;
+        assert!(restored.quality_guard);
         restored.validate().map_err(|error| error.message)
     }
 

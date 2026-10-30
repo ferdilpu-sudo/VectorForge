@@ -2,6 +2,7 @@ mod alpha;
 mod decode;
 mod geometry;
 mod preview;
+mod quality_guard;
 mod scheduler;
 mod svg;
 mod tracer;

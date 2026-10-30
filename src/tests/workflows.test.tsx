@@ -319,6 +319,26 @@ describe("line-aware geometry preview integration", () => {
   });
 });
 
+describe("contour quality guard preview integration", () => {
+  it("passes guarded tracing settings to native previews", async () => {
+    const preset = builtIns.find((p) => p.id === "builtin-professional-illustration");
+    if (!preset) throw new Error("professional illustration missing");
+    act(() =>
+      useProject.setState({ presetId: preset.id, params: { ...preset.params } }),
+    );
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({ qualityGuard: true, smoothness: 0.5 }),
+      }),
+    );
+    expect(result.current.url).toMatch(/^blob:/);
+  });
+});
+
 describe("batch event lifecycle", () => {
   it("resyncs after start, filters stale sequence/run events, and cleans listeners", async () => {
     const handle = {

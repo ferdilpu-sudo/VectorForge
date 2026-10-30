@@ -88,6 +88,19 @@ User memerintahkan **lanjut** setelah QV-006 disiapkan sebagai Draft PR #3. Impl
 
 PR baru ditumpuk di atas #3, bergantung juga pada Draft #1 dan #2. Tidak ada merge ke `main`.
 
+## QV-008 — Automatic Contour Quality Guard (30 Oktober 2026)
+
+User memerintahkan **lanjut** setelah QV-007 disiapkan. Milestone ini menambahkan `src-tauri/src/engine/quality_guard.rs` sebagai pass opt-in untuk **quality screening lokal kurva**; bukan sistem evaluasi raster otomatis penuh. Saat `qualityGuard=true`, `Config.simplify` tidak dijalankan di luar guard; pipeline memakai satu `GuardedContourPass` sebelum compositing, menjaga shared boundaries cutout. Guard memeriksa deviasi sampel bidirectional, endpoint tetap, perubahan luas/orientasi cincin; bila kandidat berisiko, memakai kontur awal. Kontur >96 kubik dilewati tanpa perubahan untuk membatasi biaya. Pada mode line-aware, jika smooth+straightening gagal, guard mencoba straightening saja.
+
+- **AC13-1:** `qualityGuard=false` menjaga VTracer pipeline lama; field baru `#[serde(default)]` false agar preset v1 tidak rusak.
+- **AC13-2:** QA geometris per kontur dengan toleransi deviasi maksimal 0,6 px, mean 0,2 px, ring area 1,5%; mode polygon tidak berubah.
+- **AC13-3:** dua preset professional memilih guard, preset lain tetap false; UI checkbox bilingual; preview dan ekspor berbagi params.
+- **AC13-4:** Rust tests untuk invalid/NaN/area drift/topologi/fallback, TS tes parameter dan IPC; belum dijalankan pada Windows.
+- **Gate QA:** `npm ci`, `npm run lint`, `npm test`, `npm run build`, `cargo check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check`. Tambahan verifikasi visual 0/0.5/1.0/2.5 pada PNG Gallery Computer, dua sumber AI berbeda, alpha parsial, full-res SVG/PDF/EPS; benchmark preview dan peak memory di Windows.
+- **Risiko teknis:** sampled polyline checks bukan bukti segmentasi benar; area/hole/topology level scene memerlukan pengujian raster. Kontur >96 kubik kembali ke fit awal (lebih konservatif, dapat mengurangi manfaat simplify), dan guard menambah biaya pada kontur kecil. Perubahan harus dievaluasi terhadap output baseline QV-007.
+
+PR baru ditumpuk di atas #4; seluruh PR sebelumnya tetap Draft, tidak ada perubahan `main`.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

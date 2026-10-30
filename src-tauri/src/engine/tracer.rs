@@ -12,6 +12,7 @@ use crate::models::{
 
 use super::alpha::split_by_source_alpha;
 use super::geometry::PreserveStraightEdges;
+use super::quality_guard::GuardedContourPass;
 
 pub fn trace_image(
     image: RgbaImage,
@@ -41,8 +42,22 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    let mut pipeline = config_from_params(params).build().map_err(vtracer_error)?;
-    if params.geometry_mode == GeometryMode::LineAware && params.mode == TraceMode::Spline {
+    let mut config = config_from_params(params);
+    // With the guard enabled, simplification must run inside the guarded pass,
+    // not as an independent unguarded curve pass.
+    if params.quality_guard && params.mode == TraceMode::Spline {
+        config.simplify = None;
+    }
+    let mut pipeline = config.build().map_err(vtracer_error)?;
+    if params.quality_guard && params.mode == TraceMode::Spline {
+        pipeline.curve_passes.push(Box::new(GuardedContourPass {
+            simplify_tolerance: params.smoothness,
+            corner_threshold_radians: f64::from(params.corner_threshold).to_radians(),
+            line_aware: params.geometry_mode == GeometryMode::LineAware,
+            max_deviation: 0.6,
+            max_mean_deviation: 0.2,
+        }));
+    } else if params.geometry_mode == GeometryMode::LineAware && params.mode == TraceMode::Spline {
         // Run after the ordinary curve simplifier, still before composition.
         // VTracer applies curve passes to shared boundaries only once in cutout mode.
         pipeline.curve_passes.push(Box::new(PreserveStraightEdges {
@@ -151,6 +166,7 @@ mod tests {
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -243,6 +259,7 @@ mod tests {
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
+            quality_guard: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -345,6 +362,32 @@ mod tests {
             r < 125 && g < 125 && b < 125 && a > 0
         });
         assert!(hit.iter().all(|value| *value), "missing letter-like regions: {hit:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn guarded_polygon_tracing_matches_unguarded_output() -> Result<(), String> {
+        let source = RgbaImage::from_fn(96, 64, |x, y| {
+            if (10..70).contains(&x) && (10..46).contains(&y) {
+                Rgba([20, 25, 30, 255])
+            } else {
+                Rgba([245, 243, 239, 255])
+            }
+        });
+        let mut options = params();
+        options.mode = TraceMode::Polygon;
+        options.geometry_mode = GeometryMode::LineAware;
+        let classic = trace_image(source.clone(), &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing classic output".to_owned())?;
+        options.quality_guard = true;
+        let guarded = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing guarded output".to_owned())?;
+        assert_eq!(
+            crate::engine::write_alpha_svg(&classic).svg,
+            crate::engine::write_alpha_svg(&guarded).svg
+        );
         Ok(())
     }
 

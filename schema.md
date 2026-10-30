@@ -15,6 +15,7 @@ interface TraceParams {
   segmentationMode: 'color-cluster' | 'watershed'; // default color-cluster
   paletteLimit: number; // integer 0–64, default 0 (= no quantization cap)
   geometryMode: 'classic' | 'line-aware'; // default classic; spline only
+  qualityGuard: boolean; // default false; guard applied only in spline mode
   mode: 'spline' | 'polygon'; // default spline
   hierarchical: 'stacked' | 'cutout'; // default stacked
 }
@@ -47,6 +48,12 @@ Seluruh field baru memiliki default serde yang kompatibel dengan JSON preset lam
 `geometryMode='classic'` (default) mengabaikan pass baru agar output lama tidak berubah. `'line-aware'` menambahkan `PreserveStraightEdges` sebagai `CurvePass` setelah `Config.simplify` dan sebelum compositing; hanya berlaku untuk `mode='spline'`. Pass mendeteksi kubik dengan kedua handle mendekati chord (maksimum deviasi tegak lurus 0,6 px, panjang chord minimal 8 px, proyeksi handle berurutan tanpa overshoot). Hanya handle yang diganti dengan titik 1/3 dan 2/3 pada chord, sehingga anchor/junction dan kontur tetap. Pada `cutout`, pass ditempatkan pada batas bersama sebelum shape dibuat, untuk menghindari pengeditan dua salinan path secara terpisah.
 
 `builtin-professional-logo` mengaktifkan `geometryMode='line-aware'`; semua preset sebelumnya dan `builtin-professional-illustration` menggunakan `classic`. Field `geometry_mode` Rust memiliki `#[serde(default)]`, sehingga file preset v1 lama tetap bisa dibaca tanpa migrasi versi. Ini adalah **perbaikan terbatas pada handle kubik yang hampir lurus**, bukan pendeteksi lingkaran/garis penuh, pemulihan simetri, atau mesin vector redraw manual. Tes visual terhadap logo dan ilustrasi wajib membandingkan bentuk serta kontur, bukan hanya jumlah kurva.
+
+## Kontrak tambahan QV-008 (Contour Quality Guard)
+
+`qualityGuard=false` adalah default kompatibilitas preset lama; jika true dan mode `spline`, VTracer `Config.simplify` dimatikan dan digantikan oleh satu `GuardedContourPass`. Pass ini menerapkan `SimplifyCurves` secara terkontrol dan opsional `PreserveStraightEdges`, lalu menilai kandidat terhadap kontur yang belum diubah. Kandidat ditolak jika endpoint berpindah, koordinat tak finite, sampled bidirectional nearest-polyline deviation >0,6 piksel, rata-rata jarak >0,2 piksel, orientasi area berubah, atau selisih area cincin >max(0,5 px², 1,5%). Bila simplifikasi gagal, pass mencoba perapian garis saja jika `geometryMode=line-aware`, lalu kembali ke kontur asli bila kandidat tetap gagal.
+
+Untuk membatasi kompleksitas kuadrat, kontur dengan lebih dari 96 kubik tidak diubah oleh pass guard. Ini fallback konservatif, **bukan** pengukuran kualitas raster global. Sumber input, clustering, color quantization, dan kesalahan besar area sejak sebelum pass tidak dideteksi. Mode `polygon` tetap tidak mengaktifkan pass. `builtin-professional-logo` dan `builtin-professional-illustration` opt-in menggunakan guard, sedangkan preset lain tetap non-guard. PresetsFile v1 tetap dibaca dengan `qualityGuard=false` bila field belum ada. Jangan mengklaim SSIM atau pixel-fidelity meningkat tanpa pengujian render nyata.
 
 ## Import dan destination
 
