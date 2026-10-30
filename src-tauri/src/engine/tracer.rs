@@ -469,6 +469,69 @@ mod tests {
         assert_eq!(error.code, crate::models::ErrorCode::InvalidParams);
     }
 
+    /// Local-only acceptance benchmark; never commits image content.
+    #[test]
+    #[ignore = "Set VECTORFORGE_QUALITY_IMAGE to an authorized PNG/JPEG file for real-image QA"]
+    fn qv010_real_image_raster_feedback_quality_report() -> Result<(), String> {
+        use std::time::Instant;
+
+        let path = std::env::var("VECTORFORGE_QUALITY_IMAGE")
+            .map_err(|_| "Set VECTORFORGE_QUALITY_IMAGE to a local source file".to_owned())?;
+        let input = image::open(&path)
+            .map_err(|error| error.to_string())?
+            .to_rgba8();
+        let pixels = usize::try_from(input.width())
+            .unwrap_or(usize::MAX)
+            .saturating_mul(usize::try_from(input.height()).unwrap_or(usize::MAX));
+        if pixels == 0 || pixels > super::MAX_FEEDBACK_PIXELS {
+            return Err("QA fixture must be between 1 and 8,000,000 pixels".to_owned());
+        }
+        let original = super::rgba_to_color_image(input.clone());
+        let mut baseline_score = None;
+        for (label, smoothness, feedback, line_aware) in [
+            ("baseline_0", 0.0, false, false),
+            ("smooth_1", 1.0, false, false),
+            ("smooth_1_feedback", 1.0, true, false),
+            ("smooth_25_feedback", 2.5, true, false),
+            ("line_aware_feedback", 1.0, true, true),
+        ] {
+            let mut options = params();
+            options.smoothness = smoothness;
+            options.raster_feedback = feedback;
+            options.geometry_mode = if line_aware {
+                GeometryMode::LineAware
+            } else {
+                GeometryMode::Classic
+            };
+            options.quality_guard = true;
+            let began = Instant::now();
+            let doc = trace_image(input.clone(), &options, &CancelToken::new())
+                .map_err(|error| error.message)?
+                .ok_or_else(|| "Unexpected empty trace on QA fixture".to_owned())?;
+            let elapsed = began.elapsed().as_millis();
+            let score = crate::engine::raster_feedback::render_score(&original, &doc)
+                .map_err(|error| error.message)?;
+            let svg = crate::engine::write_alpha_svg(&doc);
+            let cubics = doc.shapes.iter()
+                .flat_map(|shape| &shape.path.subpaths)
+                .flat_map(|subpath| &subpath.commands)
+                .filter(|command| matches!(command, PathCmd::CubicTo(..)))
+                .count();
+            assert!(svg.path_count > 0, "QA fixture trace lost all paths");
+            assert!(!svg.svg.contains("<image"), "Raster image embedded in SVG");
+            if label == "baseline_0" {
+                baseline_score = Some(score);
+            }
+            println!(
+                "QV010 label={label} score={score:.4} baseline={:.4} paths={} cubics={cubics} bytes={} elapsedMs={elapsed}",
+                baseline_score.unwrap_or(score),
+                svg.path_count,
+                svg.svg.len(),
+            );
+        }
+        Ok(())
+    }
+
     #[test]
     fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
         let source = RgbaImage::from_fn(392, 120, |x, y| {

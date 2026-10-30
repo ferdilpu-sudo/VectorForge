@@ -34,7 +34,7 @@ pub(crate) fn prefer_candidate(
         return Err(evaluation_error("Dimensi kandidat vektor tidak konsisten."));
     }
     let max_side = source.width.max(source.height);
-    if max_side == 0 || source.pixels.len() != source.width * source.height * 4 {
+    if max_side == 0 || !valid_rgba_buffer(source) {
         return Err(evaluation_error("Buffer gambar sumber tidak valid."));
     }
     let side = max_side.min(MAX_EVAL_SIDE);
@@ -76,7 +76,34 @@ fn compare_svg(
         height as f32 / source.height as f32,
     );
     resvg::render(&tree, transform, &mut pixmap.as_mut());
-    Ok(pixel_error(reference, pixmap.pixels(), width as usize))
+    pixel_error(reference, pixmap.pixels(), width as usize)
+}
+
+fn valid_rgba_buffer(source: &ColorImage) -> bool {
+    source
+        .width
+        .checked_mul(source.height)
+        .and_then(|pixels| pixels.checked_mul(4))
+        == Some(source.pixels.len())
+        && source.width > 0
+        && source.height > 0
+}
+
+/// Score one real vector document for *diagnostic QA only*; does not
+/// independently pick a tracing configuration or mutate a vector document.
+pub(crate) fn render_score(source: &ColorImage, doc: &VectorDoc) -> Result<f64, AppError> {
+    if source.width != doc.width as usize || source.height != doc.height as usize {
+        return Err(evaluation_error("Dimensi sumber dan dokumen SVG tidak sama."));
+    }
+    if !valid_rgba_buffer(source) || source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS {
+        return Err(evaluation_error("Buffer sumber tidak valid atau melewati batas QA 8 MP."));
+    }
+    let max_side = source.width.max(source.height);
+    let side = max_side.min(MAX_EVAL_SIDE);
+    let width = (source.width * side / max_side).max(1) as u32;
+    let height = (source.height * side / max_side).max(1) as u32;
+    let reference = reference_rgba(source, width as usize, height as usize);
+    compare_svg(source, doc, width, height, &reference)
 }
 
 fn source_pixel(source: &ColorImage, x: usize, y: usize) -> [u8; 4] {
@@ -117,7 +144,14 @@ fn pixel_error(
     reference: &[[u8; 4]],
     rendered: &[tiny_skia::PremultipliedColorU8],
     width: usize,
-) -> f64 {
+) -> Result<f64, AppError> {
+    if width == 0
+        || reference.is_empty()
+        || reference.len() % width != 0
+        || reference.len() != rendered.len()
+    {
+        return Err(evaluation_error("Panjang buffer skor raster tidak konsisten."));
+    }
     let mut all = 0.0;
     let mut edge = 0.0;
     let mut edges = 0usize;
@@ -160,14 +194,16 @@ fn pixel_error(
             edges += 1;
         }
     }
-    if reference.is_empty() {
-        return f64::INFINITY;
-    }
     let average = all / reference.len() as f64;
-    if edges == 0 {
+    let score = if edges == 0 {
         average
     } else {
         (average + edge / edges as f64) / 2.0
+    };
+    if score.is_finite() {
+        Ok(score)
+    } else {
+        Err(evaluation_error("Hasil skor evaluasi raster tidak finite."))
     }
 }
 
@@ -177,7 +213,7 @@ mod tests {
     use vtracer::ir::{MultiPath, Paint, PathCmd, Shape, SubPath};
     use vtracer::{Color, ColorImage, PointF64, VectorDoc};
 
-    use super::{MAX_EVAL_SIDE, pixel_error, prefer_candidate, reference_rgba};
+    use super::{MAX_EVAL_SIDE, pixel_error, prefer_candidate, reference_rgba, render_score};
 
     #[test]
     fn samples_opaque_and_transparent_without_exposing_hidden_rgb() {
@@ -195,12 +231,12 @@ mod tests {
     fn perfect_transparency_scores_zero_and_opaque_mismatch_is_penalized() {
         let pixels = vec![[0, 0, 0, 0]; MAX_EVAL_SIDE];
         let blank = vec![tiny_skia::PremultipliedColorU8::TRANSPARENT; MAX_EVAL_SIDE];
-        assert_eq!(pixel_error(&pixels, &blank, MAX_EVAL_SIDE), 0.0);
+        assert_eq!(pixel_error(&pixels, &blank, MAX_EVAL_SIDE).unwrap(), 0.0);
         let black = vec![
             tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap();
             MAX_EVAL_SIDE
         ];
-        assert!(pixel_error(&pixels, &black, MAX_EVAL_SIDE) > 50.0);
+        assert!(pixel_error(&pixels, &black, MAX_EVAL_SIDE).unwrap() > 50.0);
     }
 
     fn solid_doc(r: u8, g: u8, b: u8) -> VectorDoc {
@@ -244,6 +280,28 @@ mod tests {
     }
 
     #[test]
+    fn rejects_different_pixel_buffer_lengths_instead_of_partial_zip() {
+        let rgba = [[0, 0, 0, 0], [255, 255, 255, 255]];
+        let single = [tiny_skia::PremultipliedColorU8::TRANSPARENT];
+        assert!(pixel_error(&rgba, &single, 2).is_err());
+        assert!(pixel_error(&rgba, &single, 0).is_err());
+    }
+
+    #[test]
+    fn diagnostic_render_score_rejects_invalid_dimensions() {
+        let source = ColorImage {
+            width: 2,
+            height: 2,
+            pixels: vec![0; 16],
+        };
+        assert!(render_score(&source, &solid_doc(0, 0, 0)).is_err());
+        let invalid_buffer = ColorImage { pixels: vec![0; 15], ..source };
+        let mut small = VectorDoc::new(2, 2);
+        small.shapes.clear();
+        assert!(render_score(&invalid_buffer, &small).is_err());
+    }
+
+    #[test]
     fn edge_pixels_carry_more_weight_than_uniform_background() {
         let source = vec![[0, 0, 0, 255], [255, 255, 255, 255]];
         let matching = vec![
@@ -254,6 +312,9 @@ mod tests {
             tiny_skia::PremultipliedColorU8::from_rgba(255, 255, 255, 255).unwrap(),
             tiny_skia::PremultipliedColorU8::from_rgba(0, 0, 0, 255).unwrap(),
         ];
-        assert!(pixel_error(&source, &reversed, 2) > pixel_error(&source, &matching, 2));
+        assert!(
+            pixel_error(&source, &reversed, 2).unwrap()
+                > pixel_error(&source, &matching, 2).unwrap()
+        );
     }
 }
