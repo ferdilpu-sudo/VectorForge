@@ -1,0 +1,50 @@
+name: VectorForge Windows source gates
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-gates-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend lint, test, build & contrast
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run h01:contrast
+      - run: npm run build
+
+  rust:
+    name: Rust check, test, clippy & rustfmt
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt -- --check
+      - run: cargo check --locked
+      - run: cargo test --locked
+      - run: cargo clippy --all-targets --locked -- -D warnings
