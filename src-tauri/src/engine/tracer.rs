@@ -1,11 +1,11 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use image::RgbaImage;
+use vtracer::compose::Compositing;
 use vtracer::{
     CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError,
     FitMode, Hierarchical as VTracerHierarchical, VectorDoc,
 };
-use vtracer::compose::Compositing;
 
 use crate::models::{
     AppError, ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
