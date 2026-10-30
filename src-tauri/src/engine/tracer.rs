@@ -545,12 +545,17 @@ mod tests {
         }
         let original = super::rgba_to_color_image(input.clone());
         let mut baseline_score = None;
-        for (label, smoothness, feedback, line_aware) in [
-            ("baseline_0", 0.0, false, false),
-            ("smooth_1", 1.0, false, false),
-            ("smooth_1_feedback", 1.0, true, false),
-            ("smooth_25_feedback", 2.5, true, false),
-            ("line_aware_feedback", 1.0, true, true),
+        // All runs share the same tracing/segmentation settings. Change one
+        // post-fit control at a time to isolate its effect on visual fidelity.
+        for (label, smoothness, guard, feedback, line_aware) in [
+            ("baseline_0", 0.0, false, false, false),
+            ("smooth_05", 0.5, false, false, false),
+            ("smooth_1", 1.0, false, false, false),
+            ("smooth_1_guard", 1.0, true, false, false),
+            ("smooth_1_feedback", 1.0, true, true, false),
+            ("smooth_25", 2.5, false, false, false),
+            ("smooth_25_feedback", 2.5, true, true, false),
+            ("line_aware_feedback", 1.0, true, true, true),
         ] {
             let mut options = params();
             options.smoothness = smoothness;
@@ -560,7 +565,7 @@ mod tests {
             } else {
                 GeometryMode::Classic
             };
-            options.quality_guard = true;
+            options.quality_guard = guard;
             let began = Instant::now();
             let doc = trace_image(input.clone(), &options, &CancelToken::new())
                 .map_err(|error| error.message)?
@@ -579,9 +584,18 @@ mod tests {
             if label == "baseline_0" {
                 baseline_score = Some(score);
             }
+            let reference_score = baseline_score.unwrap_or(score);
+            if feedback {
+                // The selection gate must not output a candidate worse than
+                // its own baseline beyond the declared acceptance threshold.
+                let limit = reference_score + 0.35 + reference_score * 0.01 + 1e-6;
+                assert!(
+                    score <= limit,
+                    "Raster Feedback quality exceeded baseline threshold for {label}: score={score}, limit={limit}"
+                );
+            }
             println!(
-                "QV010 label={label} score={score:.4} baseline={:.4} paths={} cubics={cubics} bytes={} elapsedMs={elapsed}",
-                baseline_score.unwrap_or(score),
+                "QV010 label={label} guard={guard} feedback={feedback} lineAware={line_aware} score={score:.4} baseline={reference_score:.4} paths={} cubics={cubics} bytes={} elapsedMs={elapsed}",
                 svg.path_count,
                 svg.svg.len(),
             );
