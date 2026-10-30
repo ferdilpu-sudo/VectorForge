@@ -53,6 +53,8 @@ pub struct TraceParams {
     pub geometry_mode: GeometryMode,
     #[serde(default)]
     pub quality_guard: bool,
+    #[serde(default)]
+    pub raster_feedback: bool,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -154,6 +156,7 @@ mod tests {
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
             quality_guard: false,
+            raster_feedback: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

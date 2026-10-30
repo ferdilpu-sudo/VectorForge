@@ -192,6 +192,20 @@ export function ParamPanel() {
             "Reject excessive contour drift from smoothing. Does not evaluate segmentation or color fidelity.",
           )}
         </p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={params.rasterFeedback}
+            onChange={(e) => setParams({ ...params, rasterFeedback: e.target.checked })}
+          />
+          {t("Evaluasi Visual Raster (Eksperimen)", "Raster Visual Feedback (Experimental)")}
+        </label>
+        <p className="helper">
+          {t(
+            "Bandingkan render SVG dengan raster asal (maks. 8 MP). Dapat memperlambat tracing; jika perubahan merusak visual, bentuk sebelum smoothing dipakai.",
+            "Compare SVG rendering with source raster (up to 8 MP). Slower tracing; revert smoothing when visual fidelity degrades.",
+          )}
+        </p>
         {field("paletteLimit", t("Batas Jumlah Warna", "Color palette limit"))}
         <p className="helper">
           {t(

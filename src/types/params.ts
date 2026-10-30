@@ -11,6 +11,7 @@ export interface TraceParams {
   paletteLimit: number;
   geometryMode: "classic" | "line-aware";
   qualityGuard: boolean;
+  rasterFeedback: boolean;
   mode: "spline" | "polygon";
   hierarchical: "stacked" | "cutout";
 }
@@ -32,6 +33,7 @@ export const defaults: TraceParams = {
   paletteLimit: 0,
   geometryMode: "classic",
   qualityGuard: false,
+  rasterFeedback: false,
   mode: "spline",
   hierarchical: "stacked",
 };
@@ -58,6 +60,7 @@ export function validParams(p: TraceParams): boolean {
     ["color-cluster", "watershed"].includes(p.segmentationMode) &&
     ["classic", "line-aware"].includes(p.geometryMode) &&
     typeof p.qualityGuard === "boolean" &&
+    typeof p.rasterFeedback === "boolean" &&
     ["spline", "polygon"].includes(p.mode) &&
     ["stacked", "cutout"].includes(p.hierarchical)
   );
