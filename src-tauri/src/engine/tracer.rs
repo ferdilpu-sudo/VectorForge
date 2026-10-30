@@ -433,6 +433,43 @@ mod tests {
     }
 
     #[test]
+    fn raster_feedback_spline_traces_real_svg_paths() -> Result<(), String> {
+        let source = RgbaImage::from_fn(96, 64, |x, y| {
+            if (12..82).contains(&x) && (14..52).contains(&y) {
+                Rgba([20, 28, 35, 255])
+            } else {
+                Rgba([250, 247, 241, 255])
+            }
+        });
+        let mut options = params();
+        options.raster_feedback = true;
+        options.smoothness = 0.5;
+        options.quality_guard = true;
+        let document = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let svg = crate::engine::write_alpha_svg(&document).svg;
+        assert!(svg.contains("<path"));
+        assert!(!svg.contains("<image"));
+        Ok(())
+    }
+
+    #[test]
+    fn raster_feedback_8mp_limit_is_explicit() {
+        let source = vtracer::ColorImage {
+            width: 8_000_001,
+            height: 1,
+            pixels: Vec::new(),
+        };
+        let mut options = params();
+        options.raster_feedback = true;
+        let error = super::trace_inner(&source, &options, &CancelToken::new())
+            .err()
+            .expect("oversized raster feedback must report an error");
+        assert_eq!(error.code, crate::models::ErrorCode::InvalidParams);
+    }
+
+    #[test]
     fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
         let source = RgbaImage::from_fn(392, 120, |x, y| {
             let foreground = (0..8).any(|index| {
