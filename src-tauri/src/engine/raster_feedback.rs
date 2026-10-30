@@ -155,7 +155,7 @@ fn pixel_error(
 ) -> Result<f64, AppError> {
     if width == 0
         || reference.is_empty()
-        || reference.len() % width != 0
+        || !reference.len().is_multiple_of(width)
         || reference.len() != rendered.len()
     {
         return Err(evaluation_error(

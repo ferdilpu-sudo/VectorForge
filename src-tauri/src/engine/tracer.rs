@@ -620,8 +620,7 @@ mod tests {
         let mut options = params();
         options.raster_feedback = true;
         let error = super::trace_inner(&source, &options, &CancelToken::new())
-            .err()
-            .expect("oversized raster feedback must report an error");
+            .expect_err("oversized raster feedback must report an error");
         assert_eq!(error.code, crate::models::ErrorCode::InvalidParams);
     }
 
