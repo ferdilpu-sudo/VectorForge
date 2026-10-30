@@ -235,7 +235,9 @@ mod tests {
         let moved = line(2.0);
         assert!(!accepted(&source, &moved, false, 0.6, 0.2));
 
-        let FittedGeom::Beziers(mut broken) = line(0.0) else { unreachable!() };
+        let FittedGeom::Beziers(mut broken) = line(0.0) else {
+            unreachable!()
+        };
         broken[0][1].y = f64::NAN;
         assert!(!accepted(&source, &FittedGeom::Beziers(broken), false, 0.6, 0.2));
     }
@@ -244,7 +246,9 @@ mod tests {
     fn accepts_identical_and_small_control_point_repair() {
         let source = line(0.0);
         assert!(accepted(&source, &source, false, 0.6, 0.2));
-        let FittedGeom::Beziers(mut slight) = line(0.0) else { unreachable!() };
+        let FittedGeom::Beziers(mut slight) = line(0.0) else {
+            unreachable!()
+        };
         slight[0][1].y = 0.1;
         assert!(accepted(&source, &FittedGeom::Beziers(slight), false, 0.6, 0.2));
     }
