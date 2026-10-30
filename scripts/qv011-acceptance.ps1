@@ -73,14 +73,26 @@ Invoke-Check "08-cargo-fmt" $rustDir "cargo" @("fmt", "--", "--check")
 $index = 0
 foreach ($image in $ImagePaths) {
     $index++
-    $resolved = (Resolve-Path -LiteralPath $image -ErrorAction Stop).Path
-    if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
-        throw "Image fixture is not a file: $image"
-    }
     $name = "09-image-" + $index.ToString("00")
+    $resolvedItem = Resolve-Path -LiteralPath $image -ErrorAction SilentlyContinue
+    if ($null -eq $resolvedItem -or -not (Test-Path -LiteralPath $resolvedItem.Path -PathType Leaf)) {
+        $logFile = Join-Path $runDir ($name + ".log")
+        "Image fixture not found. Check the -ImagePaths argument." |
+            Out-File -FilePath $logFile -Encoding UTF8
+        $results.Add([pscustomobject]@{
+            Gate = $name
+            Status = "FAIL"
+            ExitCode = 2
+            Seconds = 0
+            LogFile = $logFile
+        })
+        Write-Host ("[FAIL] {0}: image fixture not found" -f $name)
+        continue
+    }
     $qaScript = Join-Path $PSScriptRoot "qv010-quality-qa.ps1"
     Invoke-Check $name $repoRoot "powershell.exe" @(
-        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $qaScript, "-ImagePath", $resolved
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $qaScript,
+        "-ImagePath", $resolvedItem.Path
     )
 }
 
