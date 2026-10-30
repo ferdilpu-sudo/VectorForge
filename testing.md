@@ -45,6 +45,21 @@ Metrik visual perlu hasil pengukuran nyata; jangan menandai smoothness meningkat
 
 Tes QV-006 belum diuji lokal karena toolchain Rust dan environment aplikasi Windows tidak tersedia dalam sesi assistant. Pengguna harus menjalankan gate Windows; PR tetap Draft hingga bukti hasil. Akurasi kontur profesional, straight-edge fitting, primitive fitting, dan quality scoring **belum diterapkan** oleh milestone ini.
 
+## QV-007 — Line-aware Geometry (belum diuji Windows)
+
+| ID | Tes | Acceptance |
+|---|---|---|
+| TEST-QV007-01 | FittedGeom cubic hampir lurus | Handle ditransformasikan jadi 1/3 dan 2/3 chord, endpoint tetap |
+| TEST-QV007-02 | Kurva organik, tepi pendek, handle overshoot, NaN | Dilewati tanpa perubahan, tidak panic |
+| TEST-QV007-03 | Closed ring dan sudut | Titik sudut dan seam tidak berpindah |
+| TEST-QV007-04 | Polygon | Tidak menambahkan curve pass; geometri polyline tidak berubah |
+| TEST-QV007-05 | Segmented rectangles cutout | Seluruh objek tetap ditemukan setelah mode line-aware |
+| TEST-QV007-06 | JSON preset lama dan enum baru | `geometryMode=classic` default; `line-aware` serialized kebab-case |
+| TEST-QV007-07 | Frontend preset dan preview request | Logo Presisi mengirim `geometryMode=line-aware`; preset lama classic |
+| TEST-QV007-08 | File asli + gambar organik dan alpha | Bandingkan dengan mode classic, straight-edge quality dan topology di preview 1024/2048 serta SVG full-res |
+
+Belum ada hasil QA Windows untuk QV-007; tes ini sudah ditulis tetapi belum dijalankan. Perbandingan kualitas tidak boleh diganti dengan angka path-count saja. PR tetap Draft; QV-008 quality guard serta full manual-grade vector reconstruction masih deferred.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |

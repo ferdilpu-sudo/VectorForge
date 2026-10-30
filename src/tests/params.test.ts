@@ -54,6 +54,18 @@ describe("parameter contract", () => {
     expect(validParams({ ...defaults, paletteLimit: 1.5 })).toBe(false);
     expect(validParams({ ...defaults, segmentationMode: "invalid" as "watershed" })).toBe(false);
   });
+  it("keeps legacy geometry classic and enables line-aware only on precision logo", () => {
+    expect(defaults.geometryMode).toBe("classic");
+    expect(builtIns.find((item) => item.id === "builtin-logo")?.params.geometryMode).toBe("classic");
+    expect(
+      builtIns.find((item) => item.id === "builtin-professional-logo")?.params.geometryMode,
+    ).toBe("line-aware");
+    expect(
+      builtIns.find((item) => item.id === "builtin-professional-illustration")?.params.geometryMode,
+    ).toBe("classic");
+    expect(validParams({ ...defaults, geometryMode: "line-aware" })).toBe(true);
+    expect(validParams({ ...defaults, geometryMode: "wrong" as "classic" })).toBe(false);
+  });
   it("rejects duplicate preset names ignoring case and surrounding spaces", () => {
     expect(validPresetName("  seimbang  ", builtIns)).toBe(false);
     expect(validPresetName(" ", builtIns)).toBe(false);

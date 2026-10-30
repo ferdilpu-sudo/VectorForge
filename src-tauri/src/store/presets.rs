@@ -394,6 +394,14 @@ mod tests {
             .iter()
             .find(|preset| preset.id == "builtin-professional-illustration");
         assert_eq!(logo.map(|preset| preset.params.smoothness), Some(0.0));
+        assert_eq!(
+            logo.map(|preset| preset.params.geometry_mode),
+            Some(crate::models::GeometryMode::LineAware)
+        );
+        assert_eq!(
+            illustration.map(|preset| preset.params.geometry_mode),
+            Some(crate::models::GeometryMode::Classic)
+        );
         assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
         assert_eq!(
             illustration.map(|preset| preset.params.segmentation_mode),
@@ -432,6 +440,7 @@ mod tests {
             .ok_or_else(|| "legacy custom preset missing".to_owned())?;
         assert_eq!(legacy.params.segmentation_mode, SegmentationMode::ColorCluster);
         assert_eq!(legacy.params.palette_limit, 0);
+        assert_eq!(legacy.params.geometry_mode, crate::models::GeometryMode::Classic);
         Ok(())
     }
 

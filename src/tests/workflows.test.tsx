@@ -294,6 +294,31 @@ describe("professional segmentation preview integration", () => {
   });
 });
 
+describe("line-aware geometry preview integration", () => {
+  it("includes geometryMode in the native preview request", async () => {
+    const preset = builtIns.find(
+      (candidate) => candidate.id === "builtin-professional-logo",
+    );
+    if (!preset) throw new Error("precision logo preset missing");
+    act(() => {
+      useProject.setState({ presetId: preset.id, params: { ...preset.params } });
+    });
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          geometryMode: "line-aware",
+          mode: "spline",
+        }),
+      }),
+    );
+    expect(result.current.url).toMatch(/^blob:/);
+  });
+});
+
 describe("batch event lifecycle", () => {
   it("resyncs after start, filters stale sequence/run events, and cleans listeners", async () => {
     const handle = {
