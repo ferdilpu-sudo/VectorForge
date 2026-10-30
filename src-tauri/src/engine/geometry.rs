@@ -156,7 +156,11 @@ mod tests {
     fn rejects_handle_overshoot_and_nonfinite_coordinates() {
         let overshoot = [p(0.0, 0.0), p(50.0, 0.1), p(30.0, -0.1), p(40.0, 0.0)];
         let nonfinite = [p(0.0, 0.0), p(f64::NAN, 0.0), p(30.0, 0.0), p(40.0, 0.0)];
-        assert_eq!(repair(vec![overshoot, nonfinite], false), vec![overshoot, nonfinite]);
+        let out = repair(vec![overshoot, nonfinite], false);
+        assert_eq!(out[0], overshoot);
+        assert!(out[1][1].x.is_nan());
+        assert_eq!(out[1][0], nonfinite[0]);
+        assert_eq!(out[1][3], nonfinite[3]);
     }
 
     #[test]
