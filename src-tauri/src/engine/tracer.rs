@@ -13,6 +13,7 @@ use crate::models::{
 use super::alpha::split_by_source_alpha;
 use super::geometry::PreserveStraightEdges;
 use super::quality_guard::GuardedContourPass;
+use super::raster_feedback::{MAX_FEEDBACK_PIXELS, prefer_candidate};
 
 pub fn trace_image(
     image: RgbaImage,
@@ -42,6 +43,14 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
+    if params.raster_feedback
+        && source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidParams,
+            "Evaluasi raster maksimal 8 megapiksel. Nonaktifkan opsi untuk sumber lebih besar.",
+        ));
+    }
     let mut config = config_from_params(params);
     // With the guard enabled, simplification must run inside the guarded pass,
     // not as an independent unguarded curve pass.
@@ -71,9 +80,39 @@ fn trace_inner(
         .segment_with_progress(source, cancel, &mut progress)
         .map_err(vtracer_error)?;
     let segmentation = split_by_source_alpha(segmentation, source, cancel)?;
-    pipeline
+    let candidate = pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
-        .map_err(vtracer_error)
+        .map_err(vtracer_error)?;
+
+    if !params.raster_feedback
+        || params.mode != TraceMode::Spline
+        || (params.smoothness == 0.0 && params.geometry_mode == GeometryMode::Classic)
+    {
+        return Ok(candidate);
+    }
+    if cancel.is_cancelled() {
+        return Err(cancelled_error());
+    }
+
+    // Reuse exactly the same segmentation, avoiding a second expensive frontend.
+    // The baseline differs only in post-segmentation geometry fitting.
+    let mut baseline_params = *params;
+    baseline_params.smoothness = 0.0;
+    baseline_params.geometry_mode = GeometryMode::Classic;
+    baseline_params.quality_guard = false;
+    baseline_params.raster_feedback = false;
+    let baseline_pipeline = config_from_params(&baseline_params).build().map_err(vtracer_error)?;
+    let baseline = baseline_pipeline
+        .finish_with_progress(&segmentation, cancel, &mut progress)
+        .map_err(vtracer_error)?;
+    if cancel.is_cancelled() {
+        return Err(cancelled_error());
+    }
+    if prefer_candidate(source, &candidate, &baseline)? {
+        Ok(candidate)
+    } else {
+        Ok(baseline)
+    }
 }
 
 fn config_from_params(params: &TraceParams) -> Config {
@@ -167,6 +206,7 @@ mod tests {
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
             quality_guard: false,
+            raster_feedback: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -260,6 +300,7 @@ mod tests {
             palette_limit: 0,
             geometry_mode: crate::models::GeometryMode::Classic,
             quality_guard: false,
+            raster_feedback: false,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -389,6 +430,43 @@ mod tests {
             crate::engine::write_alpha_svg(&guarded).svg
         );
         Ok(())
+    }
+
+    #[test]
+    fn raster_feedback_spline_traces_real_svg_paths() -> Result<(), String> {
+        let source = RgbaImage::from_fn(96, 64, |x, y| {
+            if (12..82).contains(&x) && (14..52).contains(&y) {
+                Rgba([20, 28, 35, 255])
+            } else {
+                Rgba([250, 247, 241, 255])
+            }
+        });
+        let mut options = params();
+        options.raster_feedback = true;
+        options.smoothness = 0.5;
+        options.quality_guard = true;
+        let document = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let svg = crate::engine::write_alpha_svg(&document).svg;
+        assert!(svg.contains("<path"));
+        assert!(!svg.contains("<image"));
+        Ok(())
+    }
+
+    #[test]
+    fn raster_feedback_8mp_limit_is_explicit() {
+        let source = vtracer::ColorImage {
+            width: 8_000_001,
+            height: 1,
+            pixels: Vec::new(),
+        };
+        let mut options = params();
+        options.raster_feedback = true;
+        let error = super::trace_inner(&source, &options, &CancelToken::new())
+            .err()
+            .expect("oversized raster feedback must report an error");
+        assert_eq!(error.code, crate::models::ErrorCode::InvalidParams);
     }
 
     #[test]

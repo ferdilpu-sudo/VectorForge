@@ -76,6 +76,12 @@ describe("parameter contract", () => {
     expect(validParams({ ...defaults, qualityGuard: true })).toBe(true);
     expect(validParams({ ...defaults, qualityGuard: 1 as unknown as boolean })).toBe(false);
   });
+  it("keeps raster feedback opt-in and validates boolean flags", () => {
+    expect(defaults.rasterFeedback).toBe(false);
+    expect(builtIns.every((preset) => preset.params.rasterFeedback === false)).toBe(true);
+    expect(validParams({ ...defaults, rasterFeedback: true })).toBe(true);
+    expect(validParams({ ...defaults, rasterFeedback: "yes" as unknown as boolean })).toBe(false);
+  });
   it("rejects duplicate preset names ignoring case and surrounding spaces", () => {
     expect(validPresetName("  seimbang  ", builtIns)).toBe(false);
     expect(validPresetName(" ", builtIns)).toBe(false);

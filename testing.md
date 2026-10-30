@@ -75,6 +75,22 @@ Belum ada hasil QA Windows untuk QV-007; tes ini sudah ditulis tetapi belum dija
 
 **Status:** tes tertulis, belum ada hasil `cargo test`, lint, rustfmt, ataupun pengujian visual di Windows untuk branch QV-008. Ini guard pada kontur hasil tracing, bukan pengganti raster feedback atau metrik SSIM.
 
+## QV-009 — Raster Feedback (Windows QA belum dilakukan)
+
+| ID | Tes | Kriteria |
+|---|---|---|
+| TEST-QV009-01 | JSON lama tanpa rasterFeedback | False secara default; preset dan ekspor lama tetap kompatibel |
+| TEST-QV009-02 | TS parameter dan native preview IPC | Opsi boolean valid, diteruskan dari panel ke request |
+| TEST-QV009-03 | SVG hitam vs putih terhadap raster hitam | Candidate yang cocok dipilih, mismatch ditolak |
+| TEST-QV009-04 | Opaque dan alpha=0 | Hidden RGB transparan tidak dihitung; alpha yang salah mendapat penalti |
+| TEST-QV009-05 | Segmentasi sama (color/palette/alpha), dua finish | Baseline vs candidate berbagi segmentasi tanpa pemrosesan ulang front-end |
+| TEST-QV009-06 | Input >8MP dan SVG evaluasi >8MiB | Error eksplisit saat opt-in, output tidak di-downscale diam-diam |
+| TEST-QV009-07 | Parameter polygon atau perubahan nol | Guard tidak mengubah output karena tidak ada perubahan geometri yang perlu dibandingkan |
+| TEST-QV009-08 | Gallery Computer + dua ilustrasi AI | Compare guard ON/OFF dengan smoothness 0,5/1/2,5; kontur, area huruf, alpha, path count, warna, latency dan peak memory |
+| TEST-QV009-09 | Ekspor SVG/PDF/EPS dan batch | Seluruh format memakai keputusan yang sama pada file full-resolution, EPS tetap flatten putih |
+
+QA Windows belum dijalankan. Fitur ini merupakan reference-based comparison terhadap dua kandidat VectorDoc *dengan segmentasi identik*, bukan classifier kualitas desain yang komprehensif. Nilai error dan ambang masih membutuhkan verifikasi empiris pada dataset representatif, bukan diklaim sebagai ukuran universal.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |

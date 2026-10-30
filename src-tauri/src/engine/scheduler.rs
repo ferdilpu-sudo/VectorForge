@@ -263,6 +263,7 @@ mod tests {
                     palette_limit: 0,
                     geometry_mode: crate::models::GeometryMode::Classic,
                     quality_guard: false,
+                    raster_feedback: false,
                     mode: TraceMode::Spline,
                     hierarchical: HierarchicalMode::Stacked,
                 },

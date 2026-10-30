@@ -16,6 +16,7 @@ interface TraceParams {
   paletteLimit: number; // integer 0–64, default 0 (= no quantization cap)
   geometryMode: 'classic' | 'line-aware'; // default classic; spline only
   qualityGuard: boolean; // default false; guard applied only in spline mode
+  rasterFeedback: boolean; // default false; opt-in source comparison, max input 8MP
   mode: 'spline' | 'polygon'; // default spline
   hierarchical: 'stacked' | 'cutout'; // default stacked
 }
@@ -54,6 +55,14 @@ Seluruh field baru memiliki default serde yang kompatibel dengan JSON preset lam
 `qualityGuard=false` adalah default kompatibilitas preset lama; jika true dan mode `spline`, VTracer `Config.simplify` dimatikan dan digantikan oleh satu `GuardedContourPass`. Pass ini menerapkan `SimplifyCurves` secara terkontrol dan opsional `PreserveStraightEdges`, lalu menilai kandidat terhadap kontur yang belum diubah. Kandidat ditolak jika endpoint berpindah, koordinat tak finite, sampled bidirectional nearest-polyline deviation >0,6 piksel, rata-rata jarak >0,2 piksel, orientasi area berubah, atau selisih area cincin >max(0,5 px², 1,5%). Bila simplifikasi gagal, pass mencoba perapian garis saja jika `geometryMode=line-aware`, lalu kembali ke kontur asli bila kandidat tetap gagal.
 
 Untuk membatasi kompleksitas kuadrat, kontur dengan lebih dari 96 kubik tidak diubah oleh pass guard. Ini fallback konservatif, **bukan** pengukuran kualitas raster global. Sumber input, clustering, color quantization, dan kesalahan besar area sejak sebelum pass tidak dideteksi. Mode `polygon` tetap tidak mengaktifkan pass. `builtin-professional-logo` dan `builtin-professional-illustration` opt-in menggunakan guard, sedangkan preset lain tetap non-guard. PresetsFile v1 tetap dibaca dengan `qualityGuard=false` bila field belum ada. Jangan mengklaim SSIM atau pixel-fidelity meningkat tanpa pengujian render nyata.
+
+## Kontrak QV-009 (Raster Feedback Gate)
+
+`rasterFeedback=false` (default) tidak mengubah perilaku tracing, preview, batch atau ekspor. Saat true pada input hingga **8.000.000 piksel**, `spline` dan geometri yang akan berubah (`smoothness>0` atau `geometryMode=line-aware`), kedua kandidat menjalankan **segmentasi yang sama** melalui cache hasil `segment_with_progress` lalu dua `finish_with_progress`. Baseline: `smoothness=0`, `geometryMode=classic`, `qualityGuard=false`; kandidat: parameter user dengan guard QV-008 bila aktif. Pengaturan warna/alpha/cluster tetap identik.
+
+Setiap VectorDoc diserialisasi ke SVG path asli, dirender kembali menggunakan `resvg=0.45.1` + `tiny-skia=0.11.4` (resvg sudah merupakan dependency transitif svg2pdf v0.13). Resolusi evaluasi: maksimal 384 piksel sisi panjang, **tidak** mengganti resolusi output ekspor. Error: rerender/parse gagal, SVG evaluasi >8 MiB, atau input >8MP → `AppError` eksplisit; tidak ada fallback tersembunyi. Metrik: rata-rata perbedaan absolut premultiplied RGBA (termasuk alpha), bobot 50% seluruh piksel + 50% area tepi sumber (kontras >=20). Kandidat diterima bila error ≤ error baseline + 0,35 + 1% error baseline; jika lebih buruk dipilih baseline. Pemeriksaan ini berbasis aproksimasi sampel source 2×2 dan raster SVG; **bukan** SSIM, perceptual QA sempurna, atau pengganti inspeksi kontur beresolusi penuh. Ini hanya menguji perubahan pasca-segmentasi; cacat segmentasi yang sama pada kedua kandidat tidak terdeteksi.
+
+`rasterFeedback` tetap false di semua preset bawaan, termasuk dua preset profesional, karena overhead dua compositing + dua rendering harus diuji CPU/memori. JSON preset versi 1 lama tanpa field baru dimuat sebagai false melalui `#[serde(default)]`, tanpa migrasi format. Jika user memilih raster feedback pada PNG >8 MP, aplikasi memberi error dan meminta mode dimatikan; tidak mengecilkan hasil ekspor diam-diam.
 
 ## Import dan destination
 

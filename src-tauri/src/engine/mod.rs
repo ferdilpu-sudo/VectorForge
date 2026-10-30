@@ -3,6 +3,7 @@ mod decode;
 mod geometry;
 mod preview;
 mod quality_guard;
+mod raster_feedback;
 mod scheduler;
 mod svg;
 mod tracer;

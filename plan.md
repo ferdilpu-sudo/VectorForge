@@ -101,6 +101,17 @@ User memerintahkan **lanjut** setelah QV-007 disiapkan. Milestone ini menambahka
 
 PR baru ditumpuk di atas #4; seluruh PR sebelumnya tetap Draft, tidak ada perubahan `main`.
 
+## QV-009 — Raster Feedback Quality Gate (30 Oktober 2026)
+
+User memerintahkan **lanjut** setelah QV-008 dikirim sebagai Draft PR #5. Milestone ini mengimplementasikan pemeriksaan kesetiaan *render SVG vs raster* secara opsional; bukan retrace ulang dengan segmentasi baru. Branch: `feature/pro-vector-raster-feedback-qv009`, stacked di atas PR #5. Tidak ada merge ke main.
+
+- **AC14-1:** `rasterFeedback=false` default dan semua preset built-in tetap tidak berubah; `#[serde(default)]` backward-compatible dengan preset v1.
+- **AC14-2:** candidate dan baseline memakai segmentation yang sama, color/alpha/hierarchy identik; perbedaan hanya post-fit geometry. Setelah finish candidate, baseline dibuat dengan `smoothness=0`, `geometryMode=classic`, `qualityGuard=false` lalu difinish dari segmentasi yang sama.
+- **AC14-3:** SVG kandidat dan baseline dirender via resvg pada sisi maksimal 384 px, dibandingkan dengan source RGBA premultiplied (sampling 2×2, edge-weighted). Kandidat yang menurunkan skor >0,35 + 1% baseline dipilih sebagai kalah dan baseline yang diekspor.
+- **AC14-4:** guard aktif maksimal 8 MP sumber dan SVG evaluasi 8 MiB; input di atas batas menghasilkan error eksplisit, tidak auto-upscale/downscale output; source >8 MP tetap dapat diekspor normal dengan fitur dimatikan. Batalkan pekerjaan sebelum tahap baseline bila cancel dipicu.
+- **AC14-5:** tes synthetic raster-vs-SVG, matching/mismatching fill, semi-transparent source, parameter/preset legacy, preview native request; **belum diuji pada Windows**.
+- **Status:** kode dikirim ke branch, qa Rust/frontend Windows belum ada; PR Draft. Benchmark 1 MP/4 MP/8 MP di laptop Windows CPU-only, dua gambar AI dan PNG Gallery Computer (0/0,5/1/2,5), alpha parsial, SVG/PDF/EPS dan batch wajib diuji sebelum merge. Risiko metric source dan raster render anti-aliasing berbeda, evaluasi pada 384 px kurang peka pada detail sangat kecil, overhead dua render dan komposisi belum terukur.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

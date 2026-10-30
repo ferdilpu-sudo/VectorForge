@@ -339,6 +339,26 @@ describe("contour quality guard preview integration", () => {
   });
 });
 
+describe("raster feedback preview integration", () => {
+  it("forwards the opt-in raster feedback flag to native tracing", async () => {
+    act(() =>
+      useProject.setState({
+        params: { ...defaults, smoothness: 1.0, rasterFeedback: true },
+      }),
+    );
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({ rasterFeedback: true, smoothness: 1.0 }),
+      }),
+    );
+    expect(result.current.url).toMatch(/^blob:/);
+  });
+});
+
 describe("batch event lifecycle", () => {
   it("resyncs after start, filters stale sequence/run events, and cleans listeners", async () => {
     const handle = {
