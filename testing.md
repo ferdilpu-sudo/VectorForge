@@ -91,6 +91,21 @@ Belum ada hasil QA Windows untuk QV-007; tes ini sudah ditulis tetapi belum dija
 
 QA Windows belum dijalankan. Fitur ini merupakan reference-based comparison terhadap dua kandidat VectorDoc *dengan segmentasi identik*, bukan classifier kualitas desain yang komprehensif. Nilai error dan ambang masih membutuhkan verifikasi empiris pada dataset representatif, bukan diklaim sebagai ukuran universal.
 
+## QV-010 — Raster Quality Diagnostics (Windows QA belum dilakukan)
+
+| ID | Pemeriksaan | Bukti |
+|---|---|---|
+| TEST-QV010-01 | Buffer raster panjang berbeda, width=0 | Error eksplisit, tidak ada zip partial scoring |
+| TEST-QV010-02 | Ukuran buffer RGBA/dimensi sumber salah | Diagnostic score menolak input invalid |
+| TEST-QV010-03 | Fixture real PNG lokal | `scripts/qv010-quality-qa.ps1 -ImagePath <path>`: keluaran `QV010 label=...` |
+| TEST-QV010-04 | Smoothing 0 vs 1 vs 2,5 dan feedback OFF/ON | Laporan skor error (lebih kecil lebih baik), count path/kubik, SVG bytes, elapsedMs |
+| TEST-QV010-05 | Vector authenticity | SVG hasil tracing tidak mengandung `<image>` |
+| TEST-QV010-06 | Gallery Computer dan dua AI images | Kontur/huruf/hole utuh dan penilaian manual 200–400% |
+| TEST-QV010-07 | Windows frontend/native gates | npm lint/test/build, cargo check/test/clippy/rustfmt --locked sesuai instruksi |
+| TEST-QV010-08 | Benchmark waktu/memori | Bandingkan 1/4/8 MP, single vs batch; laporkan peak proses dan overhead ON/OFF |
+
+Status: **kode tes ditulis, tidak ada bukti Windows run** untuk PR #7 maupun PR sebelumnya. Benchmark & skor objektif adalah alat diagnosis, bukan bukti mutu profesional secara otomatis. Laporan score menggunakan rumus QV-009 (RGB premultiplied + edge-weighted), bukan SSIM.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |
