@@ -5,6 +5,7 @@ use vtracer::{
     CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError,
     FitMode, Hierarchical as VTracerHierarchical, VectorDoc,
 };
+use vtracer::compose::Compositing;
 
 use crate::models::{
     AppError, ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
@@ -80,9 +81,27 @@ fn trace_inner(
     }
 
     let mut progress = |_| {};
-    let segmentation = pipeline
+    let mut segmentation = pipeline
         .segment_with_progress(source, cancel, &mut progress)
         .map_err(vtracer_error)?;
+
+    let has_alpha = source.pixels.chunks_exact(4).any(|rgba| rgba[3] != 255);
+    if has_alpha {
+        // VTracer's RGB-only AutoQuantize and MergeAdjacent can overwrite
+        // opacity. Run color fitting BEFORE the source-alpha split; then do
+        // not fit a second time after the alpha levels have been restored.
+        for fitter in &pipeline.color_fitters {
+            fitter.fit(&mut segmentation);
+        }
+        pipeline.color_fitters.clear();
+
+        // Mosaic's RGB-only merge_similar synthesizes fully opaque colors.
+        // With any source transparency, preserve each partition's paint
+        // exactly instead of merging cross-alpha neighbours.
+        if let Compositing::Mosaic { merge_diff, .. } = &mut pipeline.compositing {
+            *merge_diff = -1;
+        }
+    }
     let segmentation = split_by_source_alpha(segmentation, source, cancel)?;
     let candidate = pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
@@ -105,9 +124,16 @@ fn trace_inner(
     baseline_params.geometry_mode = GeometryMode::Classic;
     baseline_params.quality_guard = false;
     baseline_params.raster_feedback = false;
-    let baseline_pipeline = config_from_params(&baseline_params)
+    let mut baseline_pipeline = config_from_params(&baseline_params)
         .build()
         .map_err(vtracer_error)?;
+    if has_alpha {
+        // The cached segmentation was already color-fitted above.
+        baseline_pipeline.color_fitters.clear();
+        if let Compositing::Mosaic { merge_diff, .. } = &mut baseline_pipeline.compositing {
+            *merge_diff = -1;
+        }
+    }
     let baseline = baseline_pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
         .map_err(vtracer_error)?;
@@ -393,6 +419,34 @@ mod tests {
             "semi-transparent shape lost: {alphas:?}"
         );
         assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn palette_and_cutout_keep_distinct_alphas_for_same_rgb() -> Result<(), String> {
+        let input = RgbaImage::from_fn(144, 96, |x, y| {
+            if (8..66).contains(&x) && (12..80).contains(&y) {
+                Rgba([60, 130, 210, 128])
+            } else if (78..136).contains(&x) && (12..80).contains(&y) {
+                Rgba([60, 130, 210, 255])
+            } else {
+                Rgba([0, 0, 0, 0])
+            }
+        });
+        let mut options = params();
+        options.segmentation_mode = SegmentationMode::Watershed;
+        options.hierarchical = HierarchicalMode::Cutout;
+        options.palette_limit = 1;
+        let result = trace_image(input, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "trace unexpectedly empty".to_owned())?;
+        let alphas: Vec<u8> = result
+            .shapes
+            .iter()
+            .map(|shape| shape.paint.color().a)
+            .collect();
+        assert!(alphas.contains(&128), "partial alpha lost: {alphas:?}");
+        assert!(alphas.contains(&255), "opaque region lost: {alphas:?}");
         Ok(())
     }
 
