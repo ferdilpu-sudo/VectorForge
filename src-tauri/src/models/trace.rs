@@ -25,6 +25,14 @@ pub enum SegmentationMode {
     Watershed,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GeometryMode {
+    #[default]
+    Classic,
+    LineAware,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceParams {
@@ -41,6 +49,8 @@ pub struct TraceParams {
     pub segmentation_mode: SegmentationMode,
     #[serde(default)]
     pub palette_limit: u8,
+    #[serde(default)]
+    pub geometry_mode: GeometryMode,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -126,7 +136,9 @@ fn validate_uuid(value: &str, label: &str) -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{HierarchicalMode, PreviewRequest, SegmentationMode, TraceMode, TraceParams};
+    use super::{
+        GeometryMode, HierarchicalMode, PreviewRequest, SegmentationMode, TraceMode, TraceParams,
+    };
 
     fn params() -> TraceParams {
         TraceParams {
@@ -138,6 +150,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -159,10 +172,12 @@ mod tests {
         assert_eq!(parsed.smoothness, 0.0);
         assert_eq!(parsed.segmentation_mode, SegmentationMode::ColorCluster);
         assert_eq!(parsed.palette_limit, 0);
+        assert_eq!(parsed.geometry_mode, GeometryMode::Classic);
         parsed.validate().map_err(|error| error.message)?;
 
         let serialized = serde_json::to_value(parsed).map_err(|error| error.to_string())?;
         assert_eq!(serialized["smoothness"], 0.0);
+        assert_eq!(serialized["geometryMode"], "classic");
         Ok(())
     }
 
@@ -193,6 +208,18 @@ mod tests {
         params.palette_limit = 65;
         assert!(params.validate().is_err());
         Ok(())
+    }
+
+    #[test]
+    fn line_aware_geometry_mode_serializes_and_validates() -> Result<(), String> {
+        let mut params = params();
+        params.geometry_mode = GeometryMode::LineAware;
+        let text = serde_json::to_string(&params).map_err(|error| error.to_string())?;
+        assert!(text.contains("\"geometryMode\":\"line-aware\""));
+        let restored: TraceParams =
+            serde_json::from_str(&text).map_err(|error| error.to_string())?;
+        assert_eq!(restored.geometry_mode, GeometryMode::LineAware);
+        restored.validate().map_err(|error| error.message)
     }
 
     #[test]

@@ -155,6 +155,29 @@ export function ParamPanel() {
             </option>
           </select>
         </label>
+        <label className="field">
+          {t("Rekonstruksi Geometri", "Geometry reconstruction")}
+          <select
+            value={params.geometryMode}
+            onChange={(e) =>
+              setParams({
+                ...params,
+                geometryMode: e.target.value as "classic" | "line-aware",
+              })
+            }
+          >
+            <option value="classic">{t("Klasik", "Classic")}</option>
+            <option value="line-aware">
+              {t("Jaga Garis Lurus (Eksperimen)", "Preserve straight edges (experimental)")}
+            </option>
+          </select>
+        </label>
+        <p className="helper">
+          {t(
+            "Menormalkan handle Bézier yang hampir lurus tanpa memindahkan titik sudut; berlaku hanya untuk Spline.",
+            "Straightens nearly linear Bézier handles without moving corner anchors; Spline only.",
+          )}
+        </p>
         {field("paletteLimit", t("Batas Jumlah Warna", "Color palette limit"))}
         <p className="helper">
           {t(

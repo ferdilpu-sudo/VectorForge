@@ -1,5 +1,6 @@
 mod alpha;
 mod decode;
+mod geometry;
 mod preview;
 mod scheduler;
 mod svg;

@@ -75,6 +75,19 @@ User memerintahkan "eksekusi" setelah menerima roadmap Professional Vector Engin
 
 Urutan dependensi PR: #1 `fix/vector-quality-missing-shapes` → #2 `feature/ai-smooth-vector-m1` → PR milestone QV-006. `main` tidak disentuh.
 
+## QV-007 — Professional Geometry (30 Oktober 2026)
+
+User memerintahkan **lanjut** setelah QV-006 disiapkan sebagai Draft PR #3. Implementasi milestone awal: modul `engine/geometry.rs` berisi pass `PreserveStraightEdges` pada spline, aktif secara opt-in via `geometryMode`. Pass berjalan setelah simplify dan sebelum compositing, mempertahankan anchor, menormalkan dua handle pada chord ketika deviasi <=0,6 px dan panjang >=8 px. Pada `Cutout` pass berbagi boundary sama. Sumber v1 dan preset lain menggunakan `classic` secara default; preset Logo Presisi memilih `line-aware`.
+
+- **AC12-1:** mode `classic` identik dengan pipeline sebelumnya; mode `line-aware` hanya di spline.
+- **AC12-2:** semua endpoint dan corner anchor tidak digeser; curve organik atau pendek tidak diubah. Overshoot dan nonfinite tidak dimodifikasi.
+- **AC12-3:** JSON v1 tanpa field geometri kompatibel; preset lama dan preset baru sama antara frontend dan backend; IPC membawa nilai mode geometri ke preview, export, batch.
+- **AC12-4:** tes geometri sintetis, serialisasi, preview, dan bentuk terpisah. **Kode dikirim, Rust/frontend Windows QA BELUM ADA.**
+- **Gates:** `npm run lint`, `npm test`, `npm run build`, `cargo check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check`, dan visual ekspor/preset pada Gallery Computer, bentuk organik, dan gambar alpha.
+- **Risiko:** pass ini tidak memindahkan anchor yang bergelombang dan tidak bisa menjamin bentuk menggambar ulang manual; efek bisa kecil pada beberapa gambar. QV-008 otomatis quality guard dan primitive fitting multi-curve belum dikerjakan.
+
+PR baru ditumpuk di atas #3, bergantung juga pada Draft #1 dan #2. Tidak ada merge ke `main`.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

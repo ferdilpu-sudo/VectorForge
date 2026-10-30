@@ -14,6 +14,7 @@ interface TraceParams {
   smoothness: number; // finite 0–3 px, default 0; UI step 0.25
   segmentationMode: 'color-cluster' | 'watershed'; // default color-cluster
   paletteLimit: number; // integer 0–64, default 0 (= no quantization cap)
+  geometryMode: 'classic' | 'line-aware'; // default classic; spline only
   mode: 'spline' | 'polygon'; // default spline
   hierarchical: 'stacked' | 'cutout'; // default stacked
 }
@@ -40,6 +41,12 @@ Preset baru:
 - `builtin-professional-illustration` = colorPrecision 6, filterSpeckle 5, layerDifference 18, cornerThreshold 75, smoothness 0.5, cutout, watershed, paletteLimit 24.
 
 Seluruh field baru memiliki default serde yang kompatibel dengan JSON preset lama: `SegmentationMode::ColorCluster` dan `palette_limit=0`. Nilai paletteLimit >64 ditolak di Rust dan TypeScript; field terpisah tidak mengubah kebijakan alpha/EPS. PresetsFile tetap version 1. Nama custom lama yang sama dengan built-in baru tetap dapat dibaca untuk mencegah regressi data. Perubahan kualitas wajib dinilai dengan kasus nyata; nama `Professional` adalah pilihan UX **eksperimental**, bukan jaminan hasil seperti gambar manual.
+
+## Kontrak tambahan QV-007 (Line-aware Geometry)
+
+`geometryMode='classic'` (default) mengabaikan pass baru agar output lama tidak berubah. `'line-aware'` menambahkan `PreserveStraightEdges` sebagai `CurvePass` setelah `Config.simplify` dan sebelum compositing; hanya berlaku untuk `mode='spline'`. Pass mendeteksi kubik dengan kedua handle mendekati chord (maksimum deviasi tegak lurus 0,6 px, panjang chord minimal 8 px, proyeksi handle berurutan tanpa overshoot). Hanya handle yang diganti dengan titik 1/3 dan 2/3 pada chord, sehingga anchor/junction dan kontur tetap. Pada `cutout`, pass ditempatkan pada batas bersama sebelum shape dibuat, untuk menghindari pengeditan dua salinan path secara terpisah.
+
+`builtin-professional-logo` mengaktifkan `geometryMode='line-aware'`; semua preset sebelumnya dan `builtin-professional-illustration` menggunakan `classic`. Field `geometry_mode` Rust memiliki `#[serde(default)]`, sehingga file preset v1 lama tetap bisa dibaca tanpa migrasi versi. Ini adalah **perbaikan terbatas pada handle kubik yang hampir lurus**, bukan pendeteksi lingkaran/garis penuh, pemulihan simetri, atau mesin vector redraw manual. Tes visual terhadap logo dan ilustrasi wajib membandingkan bentuk serta kontur, bukan hanya jumlah kurva.
 
 ## Import dan destination
 

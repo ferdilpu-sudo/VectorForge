@@ -9,6 +9,7 @@ export interface TraceParams {
   segmentationMode: "color-cluster" | "watershed";
   // 0 disables palette reduction; positive values target a maximum color count.
   paletteLimit: number;
+  geometryMode: "classic" | "line-aware";
   mode: "spline" | "polygon";
   hierarchical: "stacked" | "cutout";
 }
@@ -28,6 +29,7 @@ export const defaults: TraceParams = {
   smoothness: 0,
   segmentationMode: "color-cluster",
   paletteLimit: 0,
+  geometryMode: "classic",
   mode: "spline",
   hierarchical: "stacked",
 };
@@ -52,6 +54,7 @@ export function validParams(p: TraceParams): boolean {
       );
     }) &&
     ["color-cluster", "watershed"].includes(p.segmentationMode) &&
+    ["classic", "line-aware"].includes(p.geometryMode) &&
     ["spline", "polygon"].includes(p.mode) &&
     ["stacked", "cutout"].includes(p.hierarchical)
   );
@@ -93,6 +96,7 @@ export const builtIns: Preset[] = [
       hierarchical: "cutout",
       segmentationMode: "color-cluster",
       paletteLimit: 0,
+      geometryMode: "line-aware",
     },
   ],
   [

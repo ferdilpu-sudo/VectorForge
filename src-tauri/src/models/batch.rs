@@ -190,6 +190,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

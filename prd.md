@@ -28,6 +28,10 @@ AC10 (tambahan setelah v1): gambar raster dari generator AI dapat ditrace memaka
 
 AC11 (eksperimental): pengguna dapat memilih `color-cluster` atau `watershed`, membatasi palet 0–64 warna (`0=off`), dan memakai preset opt-in `Professional Logo` / `Professional Illustration`. Kriteria kontrak: hasil preset lama tidak berubah; preset custom versi 1 tetap dapat dimuat; PNG berwarna dan alpha serta ekspor SVG/PDF/EPS mempertahankan kebijakan sebelumnya; mode baru tidak boleh menyebabkan hilangnya seluruh komponen/objek penting. Kriteria mutu pada fixture AI: bandingkan kontur, ketajaman garis, keutuhan lubang, warna dan jumlah node dengan baseline. Status **belum dibuktikan** sampai tes di Windows dan inspeksi manusia. Ini tahap segmentasi, belum mengimplementasikan primitive fitting, constrained Bézier, atau penilaian kualitas otomatis.
 
+## Professional Vector Engine — tahap geometri QV-007
+
+AC12 (eksperimental): pengguna dapat memilih `geometryMode='classic'` atau `'line-aware'`; preset Logo Presisi memakai `line-aware`, dan hasil mode lama tanpa perubahan. Mode baru memperbaiki handle Bézier pada segmen nyaris lurus tanpa memindahkan titik ujung atau simpul, sehingga kontur tidak berubah drastis dan shared boundaries cutout tetap konsisten. Acceptance memerlukan pengujian fixture bentuk lurus, lengkung organik, sudut, shape terpisah, dan PNG asli Gallery Computer pada zoom 200–400%. Ini belum mencakup fitting garis multi-curve, lingkaran, elips, primitive reconstruction penuh, atau pemeriksaan kualitas otomatis. Status belum dibuktikan oleh QA Windows.
+
 ## Parameter
 
 Sumber angka/default kanonis: `schema.md`. UI tidak menyalin default secara terpisah di banyak komponen. Semua format memakai parameter yang sama; EPS memiliki kebijakan transparansi yang dijelaskan di bawah.

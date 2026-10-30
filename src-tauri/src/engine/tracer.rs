@@ -7,10 +7,11 @@ use vtracer::{
 };
 
 use crate::models::{
-    AppError, ErrorCode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+    AppError, ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
 };
 
 use super::alpha::split_by_source_alpha;
+use super::geometry::PreserveStraightEdges;
 
 pub fn trace_image(
     image: RgbaImage,
@@ -40,7 +41,15 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    let pipeline = config_from_params(params).build().map_err(vtracer_error)?;
+    let mut pipeline = config_from_params(params).build().map_err(vtracer_error)?;
+    if params.geometry_mode == GeometryMode::LineAware && params.mode == TraceMode::Spline {
+        // Run after the ordinary curve simplifier, still before composition.
+        // VTracer applies curve passes to shared boundaries only once in cutout mode.
+        pipeline.curve_passes.push(Box::new(PreserveStraightEdges {
+            tolerance: 0.6,
+            min_length: 8.0,
+        }));
+    }
 
     let mut progress = |_| {};
     let segmentation = pipeline
@@ -125,7 +134,9 @@ mod tests {
         CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc,
     };
 
-    use crate::models::{HierarchicalMode, SegmentationMode, TraceMode, TraceParams};
+    use crate::models::{
+        GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+    };
 
     use super::{config_from_params, trace_image};
 
@@ -139,6 +150,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -230,6 +242,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -300,6 +313,38 @@ mod tests {
         let alphas: Vec<u8> = doc.shapes.iter().map(|shape| shape.paint.color().a).collect();
         assert!(alphas.contains(&128), "semi-transparent shape lost: {alphas:?}");
         assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn line_aware_logo_keeps_separated_foreground_regions() -> Result<(), String> {
+        let source = RgbaImage::from_fn(220, 92, |x, y| {
+            let dark = (0..4).any(|index| {
+                let left = 16 + index * 52;
+                x >= left && x < left + 25 && (20..74).contains(&y)
+            });
+            if dark {
+                Rgba([28, 31, 35, 255])
+            } else {
+                Rgba([248, 246, 241, 255])
+            }
+        });
+        let mut params = logo_preset();
+        params.geometry_mode = GeometryMode::LineAware;
+        params.hierarchical = HierarchicalMode::Cutout;
+        let doc = trace_image(source, &params, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let regions: Vec<(f64, f64, f64, f64)> = (0..4)
+            .map(|index| {
+                let x = (16 + index * 52) as f64;
+                (x - 3.0, x + 30.0, 17.0, 77.0)
+            })
+            .collect();
+        let hit = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+            r < 125 && g < 125 && b < 125 && a > 0
+        });
+        assert!(hit.iter().all(|value| *value), "missing letter-like regions: {hit:?}");
         Ok(())
     }
 
