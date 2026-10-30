@@ -302,6 +302,72 @@ mod tests {
         assert!(render_score(&invalid_buffer, &small).is_err());
     }
 
+    fn thin_stroke_doc() -> VectorDoc {
+        let mut doc = solid_doc(255, 255, 255);
+        let point = |x, y| PointF64 { x, y };
+        doc.shapes.push(Shape {
+            paint: Paint::Solid(Color::new(0, 0, 0)),
+            path: MultiPath {
+                subpaths: vec![SubPath {
+                    commands: vec![
+                        PathCmd::MoveTo(point(29.0, 10.0)),
+                        PathCmd::LineTo(point(32.0, 10.0)),
+                        PathCmd::LineTo(point(32.0, 54.0)),
+                        PathCmd::LineTo(point(29.0, 54.0)),
+                        PathCmd::Close,
+                    ],
+                }],
+            },
+        });
+        doc
+    }
+
+    #[test]
+    fn raster_feedback_rejects_missing_thin_stroke() -> Result<(), String> {
+        let mut pixels = Vec::with_capacity(64 * 64 * 4);
+        for y in 0..64 {
+            for x in 0..64 {
+                let color = if (29..32).contains(&x) && (10..54).contains(&y) {
+                    0
+                } else {
+                    255
+                };
+                pixels.extend_from_slice(&[color, color, color, 255]);
+            }
+        }
+        let source = ColorImage {
+            width: 64,
+            height: 64,
+            pixels,
+        };
+        let correct = thin_stroke_doc();
+        let missing = solid_doc(255, 255, 255);
+        assert!(
+            prefer_candidate(&source, &correct, &missing)
+                .map_err(|error| error.message.clone())?,
+            "the candidate with the stroke should be preferred"
+        );
+        assert!(
+            !prefer_candidate(&source, &missing, &correct)
+                .map_err(|error| error.message.clone())?,
+            "dropping a thin stroke must be detected at native QA scale"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn alpha_disagreement_is_not_hidden_by_matching_rgb() {
+        let reference = [[30, 20, 10, 128]];
+        let matching = [tiny_skia::PremultipliedColorU8::from_rgba(30, 20, 10, 128)
+            .expect("valid premultiplied pixel")];
+        let opaque = [tiny_skia::PremultipliedColorU8::from_rgba(30, 20, 10, 255)
+            .expect("valid premultiplied pixel")];
+        let exact = pixel_error(&reference, &matching, 1).expect("valid buffer");
+        let mismatch = pixel_error(&reference, &opaque, 1).expect("valid buffer");
+        assert_eq!(exact, 0.0);
+        assert!(mismatch > 0.0, "alpha changes must affect the score");
+    }
+
     #[test]
     fn edge_pixels_carry_more_weight_than_uniform_background() {
         let source = vec![[0, 0, 0, 255], [255, 255, 255, 255]];
