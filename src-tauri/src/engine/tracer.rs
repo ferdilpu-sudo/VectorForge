@@ -366,6 +366,32 @@ mod tests {
     }
 
     #[test]
+    fn guarded_polygon_tracing_matches_unguarded_output() -> Result<(), String> {
+        let source = RgbaImage::from_fn(96, 64, |x, y| {
+            if (10..70).contains(&x) && (10..46).contains(&y) {
+                Rgba([20, 25, 30, 255])
+            } else {
+                Rgba([245, 243, 239, 255])
+            }
+        });
+        let mut options = params();
+        options.mode = TraceMode::Polygon;
+        options.geometry_mode = GeometryMode::LineAware;
+        let classic = trace_image(source.clone(), &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing classic output".to_owned())?;
+        options.quality_guard = true;
+        let guarded = trace_image(source, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing guarded output".to_owned())?;
+        assert_eq!(
+            crate::engine::write_alpha_svg(&classic).svg,
+            crate::engine::write_alpha_svg(&guarded).svg
+        );
+        Ok(())
+    }
+
+    #[test]
     fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
         let source = RgbaImage::from_fn(392, 120, |x, y| {
             let foreground = (0..8).any(|index| {
