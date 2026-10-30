@@ -25,6 +25,14 @@ pub enum SegmentationMode {
     Watershed,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GeometryMode {
+    #[default]
+    Classic,
+    LineAware,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceParams {
@@ -41,6 +49,8 @@ pub struct TraceParams {
     pub segmentation_mode: SegmentationMode,
     #[serde(default)]
     pub palette_limit: u8,
+    #[serde(default)]
+    pub geometry_mode: GeometryMode,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -138,6 +148,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }

@@ -140,9 +140,11 @@ pub fn built_in_presets() -> Vec<Preset> {
                 smoothness: 0.0,
                 segmentation_mode: crate::models::SegmentationMode::ColorCluster,
                 palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
                 hierarchical: HierarchicalMode::Cutout,
                 segmentation_mode: SegmentationMode::ColorCluster,
                 palette_limit: 0,
+                geometry_mode: crate::models::GeometryMode::LineAware,
                 ..defaults
             },
             created_at: BUILTIN_CREATED_AT.to_owned(),
@@ -178,6 +180,7 @@ fn default_params() -> TraceParams {
         smoothness: 0.0,
         segmentation_mode: crate::models::SegmentationMode::ColorCluster,
         palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -313,6 +316,7 @@ mod tests {
                 smoothness: 0.0,
                 segmentation_mode: crate::models::SegmentationMode::ColorCluster,
                 palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },

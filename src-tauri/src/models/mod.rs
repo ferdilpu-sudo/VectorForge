@@ -21,7 +21,8 @@ pub use preferences::{
 };
 
 pub use trace::{
-    HierarchicalMode, PreviewRequest, PreviewResult, SegmentationMode, TraceMode, TraceParams,
+    GeometryMode, HierarchicalMode, PreviewRequest, PreviewResult, SegmentationMode, TraceMode,
+    TraceParams,
     TraceStats,
     validate_request_id,
 };

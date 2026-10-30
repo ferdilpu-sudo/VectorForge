@@ -7,10 +7,11 @@ use vtracer::{
 };
 
 use crate::models::{
-    AppError, ErrorCode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+    AppError, ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
 };
 
 use super::alpha::split_by_source_alpha;
+use super::geometry::PreserveStraightEdges;
 
 pub fn trace_image(
     image: RgbaImage,
@@ -40,7 +41,15 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    let pipeline = config_from_params(params).build().map_err(vtracer_error)?;
+    let mut pipeline = config_from_params(params).build().map_err(vtracer_error)?;
+    if params.geometry_mode == GeometryMode::LineAware && params.mode == TraceMode::Spline {
+        // Run after the ordinary curve simplifier, still before composition.
+        // VTracer applies curve passes to shared boundaries only once in cutout mode.
+        pipeline.curve_passes.push(Box::new(PreserveStraightEdges {
+            tolerance: 0.6,
+            min_length: 8.0,
+        }));
+    }
 
     let mut progress = |_| {};
     let segmentation = pipeline
@@ -139,6 +148,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
@@ -230,6 +240,7 @@ mod tests {
             smoothness: 0.0,
             segmentation_mode: crate::models::SegmentationMode::ColorCluster,
             palette_limit: 0,
+            geometry_mode: crate::models::GeometryMode::Classic,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
