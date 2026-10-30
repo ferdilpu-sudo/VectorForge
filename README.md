@@ -47,6 +47,16 @@ Pada branch `feature/pro-vector-raster-feedback-qv009`, buka pengaturan lanjutan
 
 Ini mode beta opt-in, belum lolos QA Windows/performa; lakukan pengujian pada salinan input dan jangan menganggap outputnya sudah setara gambar ulang ilustrator.
 
+## QV-010 — Laporan kualitas raster dari file lokal
+
+Pada branch `feature/pro-vector-quality-audit-qv010`, jalankan tes diagnostik ignored pada gambar PNG/JPG yang sah digunakan:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\qv010-quality-qa.ps1 -ImagePath "C:\path\to\image.png"
+```
+
+Tes ini bersifat offline; gambar tidak diunggah atau disimpan dalam repo. Hasil per konfigurasi menampilkan `QV010 label`, `score` (kesalahan visual, lebih rendah lebih baik), `baseline`, `paths`, `cubics`, `bytes`, dan `elapsedMs`. Perlu Windows Rust toolchain; fixture maksimal 8 megapiksel. Visual inspeksi hasil ekspor tetap wajib, dan tes benchmark ini tidak otomatis membuktikan semua output profesional.
+
 ## Gate source
 
 Frontend:

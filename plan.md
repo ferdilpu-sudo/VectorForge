@@ -112,6 +112,20 @@ User memerintahkan **lanjut** setelah QV-008 dikirim sebagai Draft PR #5. Milest
 - **AC14-5:** tes synthetic raster-vs-SVG, matching/mismatching fill, semi-transparent source, parameter/preset legacy, preview native request; **belum diuji pada Windows**.
 - **Status:** kode dikirim ke branch, qa Rust/frontend Windows belum ada; PR Draft. Benchmark 1 MP/4 MP/8 MP di laptop Windows CPU-only, dua gambar AI dan PNG Gallery Computer (0/0,5/1/2,5), alpha parsial, SVG/PDF/EPS dan batch wajib diuji sebelum merge. Risiko metric source dan raster render anti-aliasing berbeda, evaluasi pada 384 px kurang peka pada detail sangat kecil, overhead dua render dan komposisi belum terukur.
 
+## QV-010 — Raster Quality Diagnostics & Gate Hardening (30 Oktober 2026)
+
+User memerintahkan **lanjut** setelah PR #6 QV-009. Fokus QV-010 adalah **membuat evaluasi dapat diaudit**, bukan menambah algoritma tracing yang belum diuji pada Windows.
+
+- Skor raster sekarang memvalidasi panjang buffer referensi vs hasil render, width nonzero dan dimensi keseluruhan; pada ketidaksesuaian menghasilkan AppError. Memastikan tidak ada hasil skor parsial/menyesatkan ketika panjang buffer mismatch.
+- `render_score` internal menghitung metrik error relatif raster pada satu VectorDoc dengan pembanding PNG asli menggunakan skala maksimum 384 px, tanpa merubah dokumen.
+- Test real-image ignored `qv010_real_image_raster_feedback_quality_report` membaca `VECTORFORGE_QUALITY_IMAGE` lokal (max 8 MP), menjalankan baseline, smoothing+guard tanpa feedback, smoothing+feedback, dan line-aware+feedback; melaporkan score, jumlah shape, kubik, byte SVG serta latensi. Fixture tidak dimasukkan ke repo.
+- Script `scripts/qv010-quality-qa.ps1` memvalidasi path sumber dan menjalankan tes ignored dalam lingkungan lokal, lalu membersihkan environment variable.
+- **Acceptance AC15:** tidak ada perbandingan skor buffer berbeda panjang; laporan finite, deterministik untuk input/config sama; tidak ada image raster tertanam pada SVG, dan baseline terukur. Quality report bukan SSIM, dan tidak membuktikan semua glyph/visual benar.
+- **QA belum dilakukan:** gunakan npm lint/test/build serta Cargo check/test/clippy/fmt di Windows. Jalankan script pada PNG Gallery Computer (1536x1024) dan minimal dua ilustrasi AI (<8 MP), bandingkan score + render SVG di aplikasi. Catat latency CPU, memori dan image sample. Jangan menganggap status PASS hanya dari commit.
+- **Risiko:** batas input 8 MP, komposisi ulang + render; benchmark perlu Windows. QV-010 tidak memodifikasi parameter preset atau output saat fitur Raster Feedback OFF.
+
+Stacked branch: `feature/pro-vector-quality-audit-qv010` berbasis QV-009 PR #6; tetap Draft sampai QA. `main` tidak disentuh.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.
