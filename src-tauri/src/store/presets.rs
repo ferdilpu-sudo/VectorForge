@@ -7,8 +7,7 @@ use uuid::Uuid;
 
 use crate::models::{
     AppError, ErrorCode, HierarchicalMode, PRESETS_VERSION, Preset, PresetsFile, SavePresetRequest,
-    SegmentationMode,
-    TraceMode, TraceParams,
+    SegmentationMode, TraceMode, TraceParams,
 };
 
 use super::fs::{read_versioned, write_json_atomic};
@@ -241,9 +240,7 @@ fn validate_user_presets(presets: &[Preset]) -> Result<(), AppError> {
         // before their introduction (presets.json remains version 1).
         if matches!(
             builtin.id.as_str(),
-            "builtin-ai-smooth"
-                | "builtin-professional-logo"
-                | "builtin-professional-illustration"
+            "builtin-ai-smooth" | "builtin-professional-logo" | "builtin-professional-illustration"
         ) {
             continue;
         }
@@ -395,7 +392,9 @@ mod tests {
     #[test]
     fn professional_presets_match_contract() {
         let presets = built_in_presets();
-        let logo = presets.iter().find(|preset| preset.id == "builtin-professional-logo");
+        let logo = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-professional-logo");
         let illustration = presets
             .iter()
             .find(|preset| preset.id == "builtin-professional-illustration");
@@ -409,18 +408,30 @@ mod tests {
             Some(crate::models::GeometryMode::Classic)
         );
         assert_eq!(logo.map(|preset| preset.params.quality_guard), Some(true));
-        assert_eq!(illustration.map(|preset| preset.params.quality_guard), Some(true));
-        assert_eq!(logo.map(|preset| preset.params.raster_feedback), Some(false));
+        assert_eq!(
+            illustration.map(|preset| preset.params.quality_guard),
+            Some(true)
+        );
+        assert_eq!(
+            logo.map(|preset| preset.params.raster_feedback),
+            Some(false)
+        );
         assert_eq!(
             illustration.map(|preset| preset.params.raster_feedback),
             Some(false)
         );
-        assert_eq!(logo.map(|preset| preset.params.hierarchical), Some(HierarchicalMode::Cutout));
+        assert_eq!(
+            logo.map(|preset| preset.params.hierarchical),
+            Some(HierarchicalMode::Cutout)
+        );
         assert_eq!(
             illustration.map(|preset| preset.params.segmentation_mode),
             Some(SegmentationMode::Watershed)
         );
-        assert_eq!(illustration.map(|preset| preset.params.palette_limit), Some(24));
+        assert_eq!(
+            illustration.map(|preset| preset.params.palette_limit),
+            Some(24)
+        );
     }
 
     #[test]
@@ -451,9 +462,15 @@ mod tests {
             .iter()
             .find(|preset| preset.id == "00000000-0000-4000-8000-000000000124")
             .ok_or_else(|| "legacy custom preset missing".to_owned())?;
-        assert_eq!(legacy.params.segmentation_mode, SegmentationMode::ColorCluster);
+        assert_eq!(
+            legacy.params.segmentation_mode,
+            SegmentationMode::ColorCluster
+        );
         assert_eq!(legacy.params.palette_limit, 0);
-        assert_eq!(legacy.params.geometry_mode, crate::models::GeometryMode::Classic);
+        assert_eq!(
+            legacy.params.geometry_mode,
+            crate::models::GeometryMode::Classic
+        );
         assert!(!legacy.params.quality_guard);
         Ok(())
     }

@@ -106,6 +106,32 @@ QA Windows belum dijalankan. Fitur ini merupakan reference-based comparison terh
 
 Status: **kode tes ditulis, tidak ada bukti Windows run** untuk PR #7 maupun PR sebelumnya. Benchmark & skor objektif adalah alat diagnosis, bukan bukti mutu profesional secara otomatis. Laporan score menggunakan rumus QV-009 (RGB premultiplied + edge-weighted), bukan SSIM.
 
+## QV-011 — Acceptance Matrix (Windows execution pending)
+
+| Test | Kriteria | Bukti |
+|---|---|---|
+| TEST-QV011-01 | Synthetic logo negative-space ring | Render 160×160: ring gelap, lubang terang, background terang; `<path>` nyata tanpa `<image>` |
+| TEST-QV011-02 | Raster Feedback ON, smooth 2.5 + line-aware | Mode aktif harus dapat dirender; tidak boleh menghapus ruang negatif |
+| TEST-QV011-03 | 9 automated gates | `npm ci`, lint, test, **h01:contrast**, build, `cargo check/test/clippy/fmt` merekam PASS/FAIL |
+| TEST-QV011-04 | QA images lokal | Setiap fixture pilihan pengguna menjalankan QV-010 dan menyimpan log lokal |
+| TEST-QV011-05 | Summary integrity | Satu `qa-summary.csv`, satu file log per gate, exit code nonzero jika gagal |
+| TEST-QV011-06 | Gallery Computer + minimal 2 AI source | Audit visual 200–400%, negative space, kontur, latensi dan memori; belum ada hasil Windows |
+| TEST-QV011-07 | Thin-stroke disappearance | Native-resolution SVG candidate with 3 px stroke must score better than white-only vector; missing-stroke candidate rejected |
+| TEST-QV011-08 | Alpha disagreement | Identical RGB with different alpha must produce strictly higher RGBA error |
+| TEST-QV011-09 | Real-image guard/feedback isolation | QV010 compares baseline_0, smooth_05, smooth_1, smooth_1_guard, smooth_1_feedback, smooth_25, smooth_25_feedback, line_aware_feedback |
+| TEST-QV011-10 | Raster Feedback decision invariant | For feedback=true, measured error must not exceed baseline + 0.35 + 1% baseline (floating tolerance 1e-6) |
+| TEST-QV011-11 | Transparent >8MP with feedback ON | Must return InvalidParams, not silently return empty geometry |
+| TEST-QV011-12 | Boundary <=8MP and feedback OFF | At 8MP allowed; >8MP rejected only when feedback ON |
+| TEST-QV011-13 | QA context reproducibility | `qa-context.json` records exact Git commit/branch and UTC alongside CSV and 9 logs |
+
+Contoh penggunaan dari root repo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\qv011-acceptance.ps1 -ImagePaths @("C:\\Images\\gallery.png", "C:\\Images\\ai-illustration-1.png")
+```
+
+Log disimpan di `%TEMP%\VectorForge-QA\QV011-<timestamp>\` bukan di repo, sehingga tidak mengotori working tree. Tidak ada data gambar disalin ke log; yang dicatat adalah metrik dan gate. Skrip tidak menggantikan visual QA. **STATUS: NOT RUN**.
+
 ## Matriks pengujian
 
 | Tes | Bukti yang dicari | Fase |

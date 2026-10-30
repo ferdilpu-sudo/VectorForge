@@ -126,6 +126,18 @@ User memerintahkan **lanjut** setelah PR #6 QV-009. Fokus QV-010 adalah **membua
 
 Stacked branch: `feature/pro-vector-quality-audit-qv010` berbasis QV-009 PR #6; tetap Draft sampai QA. `main` tidak disentuh.
 
+## QV-011 — Geometric Negative-Space Regression & Reproducible QA (30 Oktober 2026)
+
+User melanjutkan setelah QV-010 Draft PR #7. Langkah ini menjaga disiplin QA sebelum menambah algoritma: fixture geometri negatif (cincin berlubang), renderer-based assertion, dan skrip lokal untuk mengumpulkan hasil gate + log di satu tempat. PR ini stacked di atas #7; `main` tetap aman.
+
+- **AC16-1:** Fixture 160×160 memiliki kontur gelap mengelilingi lubang berwarna terang; pada Spline+Cutout+Smoothness 2,5+Line-aware+QualityGuard+RasterFeedback, SVG harus berisi path asli dan **tidak** mengandung `<image>`; render harus mempertahankan ring gelap, lubang terang, dan latar terang.
+- **AC16-2:** Skrip `scripts/qv011-acceptance.ps1` menjalankan 9 gate frontend/Rust, termasuk pemeriksaan kontras UI `h01:contrast`; log dan `qa-summary.csv` berisi PASS/FAIL, durasi, serta lokasi log. `qa-context.json` merekam HEAD Git, branch, waktu UTC dan versi PowerShell. Kegagalan dilaporkan; tidak menyembunyikan status salah satu gate.
+- **AC16-3:** Opsional daftar file PNG/JPG untuk menjalankan `qv010-quality-qa.ps1` secara lokal per fixture. Tidak mengunggah gambar atau artefak ke GitHub.
+- **AC16-4:** Tidak ada perubahan parameter, engine runtime atau semantik ekspor; penambahan hanya tes dan script QA. Kualitas manual belum dapat dibuktikan sampai Windows QA dijalankan.
+- **AC16-5:** Tambahkan tes kualitas untuk garis tipis (3 px pada fixture kecil) dan transparansi, serta matriks QV-010 yang dapat membedakan Guard OFF vs Guard ON, Raster Feedback OFF vs ON. Laporan menyertakan flag guard/feedback/line-aware dan menolak hasil feedback yang melampaui batas skor baseline. Nilai metrik adalah kesalahan visual, bukan SSIM; detail sub-piksel setelah downsampling masih berisiko terlewat.
+- **AC16-6:** Koreksi validasi batas input 8 MP Raster Feedback di awal `trace_image` sebelum short-circuit fully transparent; uji batas tepat 8 MP, di atas 8 MP, dan opt-in OFF. Perilaku default lama tetap tidak berubah.
+- **Status:** code committed; **Windows QA belum dilaporkan**, semua PR #2–#7 tetap Draft dan belum merge. Perbaiki gate gagal pada branch ini, jangan membuka milestone fitur baru sambil baseline belum terbukti.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

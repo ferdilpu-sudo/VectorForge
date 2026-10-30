@@ -1,6 +1,7 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use image::RgbaImage;
+use vtracer::compose::Compositing;
 use vtracer::{
     CancelToken, Clustering as VTracerClustering, ColorImage, Config, Error as VTracerError,
     FitMode, Hierarchical as VTracerHierarchical, VectorDoc,
@@ -23,6 +24,15 @@ pub fn trace_image(
     if cancel.is_cancelled() {
         return Err(cancelled_error());
     }
+    // Validate before the fully-transparent early return. Otherwise oversized
+    // transparent images silently bypass the documented 8 MP feedback limit.
+    if feedback_limit_exceeded(
+        params.raster_feedback,
+        image.width() as usize,
+        image.height() as usize,
+    ) {
+        return Err(feedback_limit_error());
+    }
 
     let source = rgba_to_color_image(image);
     if is_fully_transparent(&source) {
@@ -43,13 +53,8 @@ fn trace_inner(
     params: &TraceParams,
     cancel: &CancelToken,
 ) -> Result<VectorDoc, AppError> {
-    if params.raster_feedback
-        && source.width.saturating_mul(source.height) > MAX_FEEDBACK_PIXELS
-    {
-        return Err(AppError::new(
-            ErrorCode::InvalidParams,
-            "Evaluasi raster maksimal 8 megapiksel. Nonaktifkan opsi untuk sumber lebih besar.",
-        ));
+    if feedback_limit_exceeded(params.raster_feedback, source.width, source.height) {
+        return Err(feedback_limit_error());
     }
     let mut config = config_from_params(params);
     // With the guard enabled, simplification must run inside the guarded pass,
@@ -76,9 +81,27 @@ fn trace_inner(
     }
 
     let mut progress = |_| {};
-    let segmentation = pipeline
+    let mut segmentation = pipeline
         .segment_with_progress(source, cancel, &mut progress)
         .map_err(vtracer_error)?;
+
+    let has_alpha = source.pixels.chunks_exact(4).any(|rgba| rgba[3] != 255);
+    if has_alpha {
+        // VTracer's RGB-only AutoQuantize and MergeAdjacent can overwrite
+        // opacity. Run color fitting BEFORE the source-alpha split; then do
+        // not fit a second time after the alpha levels have been restored.
+        for fitter in &pipeline.color_fitters {
+            fitter.fit(&mut segmentation);
+        }
+        pipeline.color_fitters.clear();
+
+        // Mosaic's RGB-only merge_similar synthesizes fully opaque colors.
+        // With any source transparency, preserve each partition's paint
+        // exactly instead of merging cross-alpha neighbours.
+        if let Compositing::Mosaic { merge_diff, .. } = &mut pipeline.compositing {
+            *merge_diff = -1;
+        }
+    }
     let segmentation = split_by_source_alpha(segmentation, source, cancel)?;
     let candidate = pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
@@ -101,7 +124,16 @@ fn trace_inner(
     baseline_params.geometry_mode = GeometryMode::Classic;
     baseline_params.quality_guard = false;
     baseline_params.raster_feedback = false;
-    let baseline_pipeline = config_from_params(&baseline_params).build().map_err(vtracer_error)?;
+    let mut baseline_pipeline = config_from_params(&baseline_params)
+        .build()
+        .map_err(vtracer_error)?;
+    if has_alpha {
+        // The cached segmentation was already color-fitted above.
+        baseline_pipeline.color_fitters.clear();
+        if let Compositing::Mosaic { merge_diff, .. } = &mut baseline_pipeline.compositing {
+            *merge_diff = -1;
+        }
+    }
     let baseline = baseline_pipeline
         .finish_with_progress(&segmentation, cancel, &mut progress)
         .map_err(vtracer_error)?;
@@ -113,6 +145,17 @@ fn trace_inner(
     } else {
         Ok(baseline)
     }
+}
+
+fn feedback_limit_exceeded(enabled: bool, width: usize, height: usize) -> bool {
+    enabled && width.saturating_mul(height) > MAX_FEEDBACK_PIXELS
+}
+
+fn feedback_limit_error() -> AppError {
+    AppError::new(
+        ErrorCode::InvalidParams,
+        "Evaluasi raster maksimal 8 megapiksel. Nonaktifkan opsi untuk sumber lebih besar.",
+    )
 }
 
 fn config_from_params(params: &TraceParams) -> Config {
@@ -185,14 +228,15 @@ mod tests {
     use image::{Rgba, RgbaImage};
     use vtracer::ir::PathCmd;
     use vtracer::{
-        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical, VectorDoc,
+        CancelToken, Clustering as VTracerClustering, Hierarchical as VTracerHierarchical,
+        VectorDoc,
     };
 
     use crate::models::{
-        GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
+        ErrorCode, GeometryMode, HierarchicalMode, SegmentationMode, TraceMode, TraceParams,
     };
 
-    use super::{config_from_params, trace_image};
+    use super::{config_from_params, feedback_limit_exceeded, trace_image};
 
     fn params() -> TraceParams {
         TraceParams {
@@ -326,10 +370,7 @@ mod tests {
             })
             .collect();
 
-        for segmentation_mode in [
-            SegmentationMode::ColorCluster,
-            SegmentationMode::Watershed,
-        ] {
+        for segmentation_mode in [SegmentationMode::ColorCluster, SegmentationMode::Watershed] {
             let mut options = params();
             options.segmentation_mode = segmentation_mode;
             options.hierarchical = HierarchicalMode::Cutout;
@@ -368,9 +409,44 @@ mod tests {
         let doc = trace_image(source, &options, &CancelToken::new())
             .map_err(|error| error.message)?
             .ok_or_else(|| "unexpected empty trace".to_owned())?;
-        let alphas: Vec<u8> = doc.shapes.iter().map(|shape| shape.paint.color().a).collect();
-        assert!(alphas.contains(&128), "semi-transparent shape lost: {alphas:?}");
+        let alphas: Vec<u8> = doc
+            .shapes
+            .iter()
+            .map(|shape| shape.paint.color().a)
+            .collect();
+        assert!(
+            alphas.contains(&128),
+            "semi-transparent shape lost: {alphas:?}"
+        );
         assert!(alphas.contains(&255), "opaque shape lost: {alphas:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn palette_and_cutout_keep_distinct_alphas_for_same_rgb() -> Result<(), String> {
+        let input = RgbaImage::from_fn(144, 96, |x, y| {
+            if (8..66).contains(&x) && (12..80).contains(&y) {
+                Rgba([60, 130, 210, 128])
+            } else if (78..136).contains(&x) && (12..80).contains(&y) {
+                Rgba([60, 130, 210, 255])
+            } else {
+                Rgba([0, 0, 0, 0])
+            }
+        });
+        let mut options = params();
+        options.segmentation_mode = SegmentationMode::Watershed;
+        options.hierarchical = HierarchicalMode::Cutout;
+        options.palette_limit = 1;
+        let result = trace_image(input, &options, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "trace unexpectedly empty".to_owned())?;
+        let alphas: Vec<u8> = result
+            .shapes
+            .iter()
+            .map(|shape| shape.paint.color().a)
+            .collect();
+        assert!(alphas.contains(&128), "partial alpha lost: {alphas:?}");
+        assert!(alphas.contains(&255), "opaque region lost: {alphas:?}");
         Ok(())
     }
 
@@ -402,7 +478,10 @@ mod tests {
         let hit = painted_region_coverage(&doc, &regions, |r, g, b, a| {
             r < 125 && g < 125 && b < 125 && a > 0
         });
-        assert!(hit.iter().all(|value| *value), "missing letter-like regions: {hit:?}");
+        assert!(
+            hit.iter().all(|value| *value),
+            "missing letter-like regions: {hit:?}"
+        );
         Ok(())
     }
 
@@ -455,6 +534,83 @@ mod tests {
     }
 
     #[test]
+    fn qv011_quality_feedback_keeps_logo_hole_and_straight_ring() -> Result<(), String> {
+        use resvg::{tiny_skia, usvg};
+
+        // Opaque geometric logo fixture: a separated dark ring with a
+        // genuinely empty centre. An all-foreground result must fail this test.
+        let source = RgbaImage::from_fn(160, 160, |x, y| {
+            let outer = (30..130).contains(&x) && (30..130).contains(&y);
+            let hole = (60..100).contains(&x) && (60..100).contains(&y);
+            if outer && !hole {
+                Rgba([20, 24, 28, 255])
+            } else {
+                Rgba([246, 244, 239, 255])
+            }
+        });
+        let mut settings = params();
+        settings.hierarchical = HierarchicalMode::Cutout;
+        settings.smoothness = 2.5;
+        settings.geometry_mode = GeometryMode::LineAware;
+        settings.quality_guard = true;
+        settings.raster_feedback = true;
+        let result = trace_image(source, &settings, &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "missing vector geometry".to_owned())?;
+        let svg = crate::engine::write_alpha_svg(&result).svg;
+        assert!(svg.contains("<path"), "no vector geometry");
+        assert!(!svg.contains("<image"), "output must not embed a raster");
+
+        let tree = usvg::Tree::from_str(&svg, &usvg::Options::default())
+            .map_err(|error| error.to_string())?;
+        let mut pixmap = tiny_skia::Pixmap::new(160, 160)
+            .ok_or_else(|| "cannot allocate SVG renderer pixmap".to_owned())?;
+        resvg::render(
+            &tree,
+            tiny_skia::Transform::identity(),
+            &mut pixmap.as_mut(),
+        );
+        let at = |x: usize, y: usize| pixmap.pixels()[y * 160 + x];
+        let dark_ring = at(45, 45);
+        let center_hole = at(80, 80);
+        let background = at(10, 10);
+
+        assert!(
+            dark_ring.red() < 110 && dark_ring.green() < 110,
+            "ring foreground has disappeared"
+        );
+        assert!(
+            center_hole.red() > 200 && center_hole.green() > 200,
+            "negative-space hole has been filled"
+        );
+        assert!(
+            background.red() > 200 && background.green() > 200,
+            "outside background has changed"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn raster_feedback_limit_is_opt_in_and_inclusive_at_8mp() {
+        assert!(!feedback_limit_exceeded(false, 4_000, 2_001));
+        assert!(!feedback_limit_exceeded(true, 4_000, 2_000));
+        assert!(feedback_limit_exceeded(true, 4_000, 2_001));
+        assert!(feedback_limit_exceeded(true, usize::MAX, 2));
+    }
+
+    #[test]
+    fn transparent_source_above_8mp_must_not_bypass_feedback_limit() {
+        let mut options = params();
+        options.raster_feedback = true;
+        let transparent = RgbaImage::new(4_000, 2_001);
+        let result = trace_image(transparent, &options, &CancelToken::new());
+        assert!(matches!(
+            result,
+            Err(error) if error.code == ErrorCode::InvalidParams
+        ));
+    }
+
+    #[test]
     fn raster_feedback_8mp_limit_is_explicit() {
         let source = vtracer::ColorImage {
             width: 8_000_001,
@@ -464,8 +620,7 @@ mod tests {
         let mut options = params();
         options.raster_feedback = true;
         let error = super::trace_inner(&source, &options, &CancelToken::new())
-            .err()
-            .expect("oversized raster feedback must report an error");
+            .expect_err("oversized raster feedback must report an error");
         assert_eq!(error.code, crate::models::ErrorCode::InvalidParams);
     }
 
@@ -488,12 +643,17 @@ mod tests {
         }
         let original = super::rgba_to_color_image(input.clone());
         let mut baseline_score = None;
-        for (label, smoothness, feedback, line_aware) in [
-            ("baseline_0", 0.0, false, false),
-            ("smooth_1", 1.0, false, false),
-            ("smooth_1_feedback", 1.0, true, false),
-            ("smooth_25_feedback", 2.5, true, false),
-            ("line_aware_feedback", 1.0, true, true),
+        // All runs share the same tracing/segmentation settings. Change one
+        // post-fit control at a time to isolate its effect on visual fidelity.
+        for (label, smoothness, guard, feedback, line_aware) in [
+            ("baseline_0", 0.0, false, false, false),
+            ("smooth_05", 0.5, false, false, false),
+            ("smooth_1", 1.0, false, false, false),
+            ("smooth_1_guard", 1.0, true, false, false),
+            ("smooth_1_feedback", 1.0, true, true, false),
+            ("smooth_25", 2.5, false, false, false),
+            ("smooth_25_feedback", 2.5, true, true, false),
+            ("line_aware_feedback", 1.0, true, true, true),
         ] {
             let mut options = params();
             options.smoothness = smoothness;
@@ -503,7 +663,7 @@ mod tests {
             } else {
                 GeometryMode::Classic
             };
-            options.quality_guard = true;
+            options.quality_guard = guard;
             let began = Instant::now();
             let doc = trace_image(input.clone(), &options, &CancelToken::new())
                 .map_err(|error| error.message)?
@@ -512,7 +672,9 @@ mod tests {
             let score = crate::engine::raster_feedback::render_score(&original, &doc)
                 .map_err(|error| error.message)?;
             let svg = crate::engine::write_alpha_svg(&doc);
-            let cubics = doc.shapes.iter()
+            let cubics = doc
+                .shapes
+                .iter()
                 .flat_map(|shape| &shape.path.subpaths)
                 .flat_map(|subpath| &subpath.commands)
                 .filter(|command| matches!(command, PathCmd::CubicTo(..)))
@@ -522,9 +684,18 @@ mod tests {
             if label == "baseline_0" {
                 baseline_score = Some(score);
             }
+            let reference_score = baseline_score.unwrap_or(score);
+            if feedback {
+                // The selection gate must not output a candidate worse than
+                // its own baseline beyond the declared acceptance threshold.
+                let limit = reference_score + 0.35 + reference_score * 0.01 + 1e-6;
+                assert!(
+                    score <= limit,
+                    "Raster Feedback quality exceeded baseline threshold for {label}: score={score}, limit={limit}"
+                );
+            }
             println!(
-                "QV010 label={label} score={score:.4} baseline={:.4} paths={} cubics={cubics} bytes={} elapsedMs={elapsed}",
-                baseline_score.unwrap_or(score),
+                "QV010 label={label} guard={guard} feedback={feedback} lineAware={line_aware} score={score:.4} baseline={reference_score:.4} paths={} cubics={cubics} bytes={} elapsedMs={elapsed}",
                 svg.path_count,
                 svg.svg.len(),
             );

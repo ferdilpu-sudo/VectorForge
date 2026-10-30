@@ -24,6 +24,7 @@
 | D18 | QV-008 tambahkan contour quality guard konservatif secara opt-in | Bundel spline simplification dan line-aware pass di bawah evaluator deviasi geometri pra-composition; rollback kandidat terlalu berbeda terhadap fitted contour asal. Hindari retrace/resvg dan dependency baru sebelum benchmark. Ini **bukan** pixel-level fidelity gate karena segmentasi tidak dievaluasi. |
 | D19 | QV-009 opt-in raster-feedback rerender at bounded scale | Tambahkan resvg 0.45.1 sebagai direct dependency yang sudah tersimpan dalam Cargo.lock via svg2pdf 0.13.0. Segmentasi dihitung sekali; dua candidate VectorDoc dirender dan dibandingkan dengan source premultiplied RGBA + edge emphasis. Batasi input 8 MP dan SVG evaluasi 8 MiB dengan error jelas, default false untuk semua preset hingga QA performa. Bukan mengganti engine atau menghasilkan format raster. |
 | D20 | QV-010 pisahkan laporan kualitas dari keputusan ekspor | Audit berbasis fixture lokal via tes ignored dan validasi panjang raster saat scoring. Tidak membuat API telemetry atau upload aset. Hasil laporan digunakan untuk keputusan QA sebelum mengizinkan opsi Raster Feedback aktif secara default. |
+| D21 | QV-011 prioritaskan gate QA dan preservasi ruang negatif daripada menambah fitur tracing | Tambahkan synthetic rendering test untuk ring berlubang dan one-command Windows runner yang menulis log lokal. Tidak menambah dependency/SDK, tidak mengubah engine, dan tidak mengaktifkan fitur eksperimental sebelum tes pengguna lulus. |
 
 ## Pertanyaan teknis yang wajib diselesaikan B01
 
