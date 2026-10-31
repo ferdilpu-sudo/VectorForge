@@ -23,6 +23,8 @@ function presetLabel(
       return t("Foto Detail", "Detailed Photo");
     case "builtin-poster":
       return t("Poster Halus", "Smooth Poster");
+    case "builtin-ai-smooth":
+      return t("AI Ilustrasi Halus (Bawaan)", "AI Smooth Illustration (Built-in)");
     default:
       return fallback;
   }
@@ -116,6 +118,18 @@ export function ParamPanel() {
           <option value="polygon">Polygon</option>
         </select>
       </label>
+      {field("smoothness", t("Kehalusan Kurva", "Curve smoothness"))}
+      <p className="helper">
+        {params.mode === "polygon"
+          ? t(
+              "Kehalusan kurva hanya berlaku pada mode Spline.",
+              "Curve smoothing only applies in Spline mode.",
+            )
+          : t(
+              "0 = bentuk asli; nilai lebih besar merapikan kurva, tetapi bisa mengurangi detail.",
+              "0 = original curves; higher values simplify paths but may remove detail.",
+            )}
+      </p>
       <details>
         <summary>{t("Pengaturan Lanjutan", "Advanced settings")}</summary>
         {field("layerDifference", t("Selisih Layer", "Layer difference"))}

@@ -241,6 +241,32 @@ describe("preview lifecycle", () => {
   });
 });
 
+describe("AI Smooth preview integration", () => {
+  it("submits the smoothing tolerance in a native preview request", async () => {
+    const ai = builtIns.find((preset) => preset.id === "builtin-ai-smooth");
+    if (!ai) throw new Error("AI Smooth preset missing");
+
+    act(() => useProject.setState({
+      presetId: ai.id,
+      params: { ...ai.params },
+    }));
+
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          smoothness: 1.5,
+          mode: "spline",
+        }),
+      }),
+    );
+    expect(result.current.url).toMatch(/^blob:/);
+  });
+});
+
 describe("batch event lifecycle", () => {
   it("resyncs after start, filters stale sequence/run events, and cleans listeners", async () => {
     const handle = {

@@ -113,6 +113,21 @@ pub fn built_in_presets() -> Vec<Preset> {
             created_at: BUILTIN_CREATED_AT.to_owned(),
             built_in: true,
         },
+        Preset {
+            id: "builtin-ai-smooth".to_owned(),
+            name: "AI Smooth Illustration".to_owned(),
+            params: TraceParams {
+                color_precision: 6,
+                filter_speckle: 5,
+                layer_difference: 20,
+                corner_threshold: 75,
+                smoothness: 1.5,
+                mode: TraceMode::Spline,
+                ..defaults
+            },
+            created_at: BUILTIN_CREATED_AT.to_owned(),
+            built_in: true,
+        },
     ]
 }
 
@@ -123,6 +138,7 @@ fn default_params() -> TraceParams {
         layer_difference: 16,
         corner_threshold: 60,
         length_threshold: 4.0,
+        smoothness: 0.0,
         mode: TraceMode::Spline,
         hierarchical: HierarchicalMode::Stacked,
     }
@@ -178,6 +194,11 @@ fn validate_user_presets(presets: &[Preset]) -> Result<(), AppError> {
     }
 
     for builtin in built_in_presets() {
+        // This name was not reserved before QV-005. A v1 user preset
+        // with the same name must remain readable after upgrading.
+        if builtin.id == "builtin-ai-smooth" {
+            continue;
+        }
         if names.contains(&builtin.name.to_lowercase()) {
             return Err(AppError::new(
                 ErrorCode::DataCorrupt,
@@ -243,6 +264,7 @@ mod tests {
                 layer_difference: 16,
                 corner_threshold: 60,
                 length_threshold: 4.0,
+                smoothness: 0.0,
                 mode: TraceMode::Spline,
                 hierarchical: HierarchicalMode::Stacked,
             },
@@ -260,10 +282,56 @@ mod tests {
                 "builtin-balanced",
                 "builtin-logo",
                 "builtin-photo",
-                "builtin-poster"
+                "builtin-poster",
+                "builtin-ai-smooth"
             ]
         );
         assert!(!dir.0.join("presets.json").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn ai_smooth_preset_is_opt_in_and_old_presets_stay_unchanged() {
+        let presets = built_in_presets();
+        let balanced = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-balanced");
+        let ai = presets
+            .iter()
+            .find(|preset| preset.id == "builtin-ai-smooth");
+        assert_eq!(balanced.map(|preset| preset.params.smoothness), Some(0.0));
+        assert_eq!(ai.map(|preset| preset.params.smoothness), Some(1.5));
+    }
+
+    #[test]
+    fn existing_v1_user_preset_named_like_new_builtin_remains_readable() -> Result<(), String> {
+        let dir = TempDir::create()?;
+        let data = serde_json::json!({
+            "version": 1,
+            "presets": [{
+                "id": "00000000-0000-4000-8000-000000000123",
+                "name": "AI Smooth Illustration",
+                "params": {
+                    "colorPrecision": 6,
+                    "filterSpeckle": 4,
+                    "layerDifference": 16,
+                    "cornerThreshold": 60,
+                    "lengthThreshold": 4,
+                    "mode": "spline",
+                    "hierarchical": "stacked"
+                },
+                "createdAt": "2026-10-01T00:00:00Z",
+                "builtIn": false
+            }]
+        });
+        fs::write(dir.0.join("presets.json"), data.to_string())
+            .map_err(|error| error.to_string())?;
+        let presets = list_presets(&dir.0).map_err(|error| error.message)?;
+        let user = presets
+            .iter()
+            .find(|preset| preset.id == "00000000-0000-4000-8000-000000000123")
+            .ok_or_else(|| "legacy user preset not found".to_owned())?;
+        assert_eq!(user.params.smoothness, 0.0);
         Ok(())
     }
 

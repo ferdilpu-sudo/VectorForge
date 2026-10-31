@@ -4,6 +4,8 @@ export interface TraceParams {
   layerDifference: number;
   cornerThreshold: number;
   lengthThreshold: number;
+  // Curve simplification tolerance in source pixels; 0 preserves legacy output.
+  smoothness: number;
   mode: "spline" | "polygon";
   hierarchical: "stacked" | "cutout";
 }
@@ -20,6 +22,7 @@ export const defaults: TraceParams = {
   layerDifference: 16,
   cornerThreshold: 60,
   lengthThreshold: 4,
+  smoothness: 0,
   mode: "spline",
   hierarchical: "stacked",
 };
@@ -29,6 +32,7 @@ export const ranges = {
   layerDifference: [0, 128, 1],
   cornerThreshold: [0, 180, 1],
   lengthThreshold: [3.5, 10, 0.1],
+  smoothness: [0, 3, 0.25],
 } as const;
 export function validParams(p: TraceParams): boolean {
   return (
@@ -58,6 +62,18 @@ export const builtIns: Preset[] = [
     { colorPrecision: 8, filterSpeckle: 2, layerDifference: 8 },
   ],
   ["poster", "Poster Halus", { colorPrecision: 7, cornerThreshold: 90 }],
+  [
+    "ai-smooth",
+    "AI Smooth Illustration",
+    {
+      colorPrecision: 6,
+      filterSpeckle: 5,
+      layerDifference: 20,
+      cornerThreshold: 75,
+      smoothness: 1.5,
+      mode: "spline",
+    },
+  ],
 ].map(([id, name, params]) => ({
   id: `builtin-${id}`,
   name: String(name),

@@ -25,6 +25,9 @@ pub struct TraceParams {
     pub layer_difference: u16,
     pub corner_threshold: u16,
     pub length_threshold: f64,
+    // Old preset JSON omits this field. Zero leaves VTracer simplification disabled.
+    #[serde(default)]
+    pub smoothness: f64,
     pub mode: TraceMode,
     pub hierarchical: HierarchicalMode,
 }
@@ -36,7 +39,9 @@ impl TraceParams {
             && self.layer_difference <= 128
             && self.corner_threshold <= 180
             && self.length_threshold.is_finite()
-            && (3.5..=10.0).contains(&self.length_threshold);
+            && (3.5..=10.0).contains(&self.length_threshold)
+            && self.smoothness.is_finite()
+            && (0.0..=3.0).contains(&self.smoothness);
 
         if valid {
             Ok(())
@@ -116,9 +121,42 @@ mod tests {
             layer_difference: 16,
             corner_threshold: 60,
             length_threshold: 4.0,
+            smoothness: 0.0,
             mode: TraceMode::Spline,
             hierarchical: HierarchicalMode::Stacked,
         }
+    }
+
+    #[test]
+    fn legacy_trace_params_default_to_no_smoothing() -> Result<(), String> {
+        let legacy = r#"{
+            "colorPrecision":6,
+            "filterSpeckle":4,
+            "layerDifference":16,
+            "cornerThreshold":60,
+            "lengthThreshold":4,
+            "mode":"spline",
+            "hierarchical":"stacked"
+        }"#;
+        let parsed: TraceParams =
+            serde_json::from_str(legacy).map_err(|error| error.to_string())?;
+        assert_eq!(parsed.smoothness, 0.0);
+        parsed.validate().map_err(|error| error.message)?;
+
+        let serialized = serde_json::to_value(parsed).map_err(|error| error.to_string())?;
+        assert_eq!(serialized["smoothness"], 0.0);
+        Ok(())
+    }
+
+    #[test]
+    fn smoothness_range_rejects_nonfinite_and_out_of_bounds() {
+        let mut params = params();
+        for invalid in [-0.1, 3.1, f64::NAN, f64::INFINITY] {
+            params.smoothness = invalid;
+            assert!(params.validate().is_err());
+        }
+        params.smoothness = 1.5;
+        assert!(params.validate().is_ok());
     }
 
     #[test]

@@ -49,6 +49,19 @@ Perubahan terpisah dari `main`:
 
 **Inspeksi visual sumber & SVG — 29 Oktober 2026:** pengguna mengirim screenshot tampilan tab Hasil dan SVG ekspor untuk Gallery Computer. Pemeriksaan independen atas SVG: dimensi 1536×1024; 24 elemen `<path>`, tidak ada `<image>`; seluruh simbol laptop, huruf GALLERY dan COMPUTER terlihat ketika SVG dirender pada 1536×1024; SSIM seluruh gambar ~0,985 terhadap PNG asli. **PASS terbatas pada fixture ini**: reproduksi kehilangan sebagian besar huruf tidak terjadi pada kondisi screenshot terbaru. Kekurangan yang terlihat: gradasi/tekstur disederhanakan dan warna krem background tertanam sebagai path penuh (SVG tidak transparan). Ini tidak membuktikan bug awal telah terselesaikan untuk semua preset atau ukuran preview. Tetap menunggu npm gates dan pemeriksaan perilaku pada preview 1024 versus 2048 sebelum merge.
 
+## QV-005 — AI Image → Smooth Vector (29 Oktober 2026)
+
+User melanjutkan pengembangan setelah usulan mode AI Image to Smooth Vector. Milestone pertama: expose curve simplification VTracer secara opsional dan tambah preset AI illustration; preprocessing adaptif/gradient reconstruction masih **DEFERRED**. Basis: branch `fix/vector-quality-missing-shapes` (PR #1 Draft); branch kerja `feature/ai-smooth-vector-m1`, tidak langsung menyentuh `main`.
+
+- **AC10-1:** parameter `smoothness` 0–3 px, default 0; mode spline memakai VTracer `Config.simplify = Some(value)` hanya saat >0; polygon tetap `None`.
+- **AC10-2:** preset `builtin-ai-smooth` tersedia di Rust dan TypeScript; validasi dan slider terlokalisasi.
+- **AC10-3:** preset JSON lama tanpa `smoothness` dibaca sebagai 0; `PresetsFile` tetap versi 1; semua export dan preview berbagi parameter kanonis.
+- **AC10-4:** tests kontrak, mapping engine, preset, dan request preview terpasang; quality check visual memakai PNG AI asli dengan detail, teks, transparansi. Output lebih smooth belum diklaim tanpa metrik/penilaian.
+- **Status:** KODE DITULIS, BELUM DIUJI WINDOWS. Gate: `cargo test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check`, `npm run lint`, `npm test`, `npm run build`; preview 1024/2048, SVG/PDF/EPS, preset lama dan gambar alpha harus diperiksa. PR disiapkan Draft.
+
+
+**QA Windows 29 Oktober 2026 (dilaporkan pengguna):** `cargo test`: **86 PASS / 0 FAIL / 2 ignored**, `cargo clippy --all-targets -- -D warnings`: **PASS**, `cargo fmt -- --check`: **FAIL** dengan empat perubahan format pada `preview.rs` dan `presets.rs`. Patch formatting diterapkan dalam commit berikutnya; rerun `cargo fmt -- --check` **belum dilaporkan**. Gate frontend `npm run lint`, `npm test`, `npm run build` dan evaluasi visual gambar AI **belum dilaporkan**.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

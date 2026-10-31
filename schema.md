@@ -11,6 +11,7 @@ interface TraceParams {
   layerDifference: number; // integer 0–128, default 16
   cornerThreshold: number; // integer 0–180, default 60
   lengthThreshold: number; // finite 3.5–10, default 4; UI step 0.1
+  smoothness: number; // finite 0–3 px, default 0; UI step 0.25
   mode: 'spline' | 'polygon'; // default spline
   hierarchical: 'stacked' | 'cutout'; // default stacked
 }
@@ -24,7 +25,9 @@ interface Preset {
 interface SavePresetRequest { name: string; params: TraceParams }
 ```
 
-SavePreset v1 membuat baru; tidak ada update built-in atau overwrite nama diam-diam. Built-in IDs stabil: builtin-balanced, builtin-logo, builtin-photo, builtin-poster. Seimbang default; Logo & Flat override colorPrecision=4/filterSpeckle=8/layerDifference=32; Foto Detail =8/2/8; Poster Halus colorPrecision=7/cornerThreshold=90/mode=spline. Field lainnya selalu default.
+SavePreset v1 membuat baru; tidak ada update built-in atau overwrite nama diam-diam. Built-in IDs stabil: builtin-balanced, builtin-logo, builtin-photo, builtin-poster, builtin-ai-smooth. Seimbang default; Logo & Flat override colorPrecision=4/filterSpeckle=8/layerDifference=32; Foto Detail =8/2/8; Poster Halus colorPrecision=7/cornerThreshold=90/mode=spline; AI Smooth Illustration colorPrecision=6/filterSpeckle=5/layerDifference=20/cornerThreshold=75/smoothness=1.5/mode=spline. Field lainnya selalu default.
+
+Kontrak tambahan QV-005: `smoothness` mengontrol toleransi simplify kurva VTracer dalam piksel input tracing (bukan skala layar), hanya aktif pada mode `spline`. `smoothness=0` setara konfigurasi engine lama (`simplify=None`). Backend menerima JSON preset lama yang belum memiliki field tersebut dengan nilai default 0 (`#[serde(default)]`). Field negatif, di atas 3, NaN dan Infinity ditolak; versi `PresetsFile` tetap 1 karena perubahan bersifat aditif dan kompatibel. Jika nama preset user versi 1 secara kebetulan sama dengan nama preset AI Smooth yang baru, file tetap dibaca (nama baru tidak dianggap reserved historis), namun penyimpanan preset baru tetap menolak duplikasi nama. Preview dan ekspor harus memakai nilai yang sama; kualitas visual belum dijamin tanpa evaluasi fixture.
 
 ## Import dan destination
 
