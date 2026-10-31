@@ -26,6 +26,29 @@ Status 2 Oktober 2026: P0, frontend P1/G1, backend P2 B01–B06, boundary harden
 | H02 | Build installer Windows dan smoke test | H01 | DONE 2026-10-02: NSIS/MSI build + install/run/import/preview/export/uninstall PASS |
 | G3 | Release readiness | H02 | DOING 2026-10-02: bukti gate rilis, acceptance mapping, signing/lisensi/OS, final RC verification |
 
+## QV-001–QV-003 — Visual quality defect (26 Oktober 2026)
+
+Status: **IMPLEMENTED / PARTIAL WINDOWS QA PASS** pada branch `fix/vector-quality-missing-shapes`.
+User memerintahkan "execute" setelah menerima patch plan P0: missing shapes.
+Perubahan terpisah dari `main`:
+- Preview signature mencakup fileId, parameter, dan previewMaxSide; respons yang terlambat/salah tidak tampil sebagai hasil terbaru.
+- Result mode menampilkan status eksplisit ketika SVG belum tersedia; Reset Parameter menggunakan preset aktif.
+- Fixture sintetis multi-bentuk menolak hilangnya sebagian besar objek. Tes opsional Gallery Computer menggunakan `VECTORFORGE_QUALITY_IMAGE` tanpa mengunggah foto berlogo ke repo publik.
+- Split alpha sumber opaque dilewati tanpa mengubah mask; bukan klaim bahwa perubahan ini memperbaiki bug satu huruf.
+- Tes preview tanpa resize dibandingkan dengan jalur trace resolusi penuh; tes belum dijalankan pada Windows.
+
+**QA Windows 29 Oktober 2026 (hasil dilaporkan pengguna):** `cargo test` 81 PASS, 0 FAIL, 2 ignored; `cargo clippy --all-targets -- -D warnings` FAIL karena dua lint `chunks_exact_to_as_chunks` pada `src-tauri/src/engine/alpha.rs` (baris 64 dan 267). Kedua baris diganti ke `as_chunks::<4>()` dan `as_chunks_mut::<4>()` pada patch berikutnya; hasil rerun Clippy dan `cargo fmt -- --check` belum dilaporkan. Jangan menandai Clippy PASS sebelum dijalankan ulang.
+
+**QA Windows 29 Oktober 2026 (rerun):** pengguna melaporkan `cargo test` **81 PASS, 0 FAIL, 2 ignored**; `cargo clippy --all-targets -- -D warnings` **PASS** (5,87 detik). `cargo fmt -- --check` **FAIL** dengan 9 perbedaan tata letak pada `alpha.rs`, `preview.rs`, dan `tracer.rs`. Perbedaan tersebut sudah diterapkan pada commit formatting lanjutan; rerun `cargo fmt -- --check` **belum dilaporkan**.
+
+**QA Windows 29 Oktober 2026 (format rerun):** `git pull --ff-only` fast-forward ke commit `0f4a710`, lalu `cargo fmt -- --check` selesai tanpa output (**PASS** menurut log pengguna). Gate Rust saat ini: `cargo test` 81 PASS / 0 FAIL / 2 ignored, Clippy PASS, rustfmt PASS. Hasil belum mencakup fixture logo yang ignored, frontend npm gates, dan inspeksi visual.
+
+**QA Windows 29 Oktober 2026 (real-image fixture):** pengguna menjalankan `Test-Path` pada `Gallery Computer charcoal laptop logo.png` (**True**) dan `cargo test gallery_computer_wordmark_retains_all_seven_dark_letters -- --ignored --nocapture`: **1 PASS, 0 FAIL, 82 filtered out**, durasi tes 1,68 detik. Ini menunjukkan bentuk gelap GALLERY dan emas COMPUTER terdeteksi pada area yang diharapkan; belum membuktikan kesesuaian setiap huruf secara visual. `cargo test` umum tetap 81 PASS / 0 FAIL / 2 ignored; Clippy dan rustfmt PASS.
+
+**Belum terselesaikan:** akar penyebab laporan hanya satu huruf belum terbukti dan perlu reproduksi/inspeksi visual. Jangan beri status QA lengkap atau merge sampai frontend npm gates, preview 1024/2048, ekspor SVG, serta perbandingan visual pada Windows lulus.
+
+**Inspeksi visual sumber & SVG — 29 Oktober 2026:** pengguna mengirim screenshot tampilan tab Hasil dan SVG ekspor untuk Gallery Computer. Pemeriksaan independen atas SVG: dimensi 1536×1024; 24 elemen `<path>`, tidak ada `<image>`; seluruh simbol laptop, huruf GALLERY dan COMPUTER terlihat ketika SVG dirender pada 1536×1024; SSIM seluruh gambar ~0,985 terhadap PNG asli. **PASS terbatas pada fixture ini**: reproduksi kehilangan sebagian besar huruf tidak terjadi pada kondisi screenshot terbaru. Kekurangan yang terlihat: gradasi/tekstur disederhanakan dan warna krem background tertanam sebagai path penuh (SVG tidak transparan). Ini tidak membuktikan bug awal telah terselesaikan untuk semua preset atau ukuran preview. Tetap menunggu npm gates dan pemeriksaan perilaku pada preview 1024 versus 2048 sebelum merge.
+
 ## Batas fase
 
 P1 menggunakan mock engine deterministic, bukan tracing Rust. Browser File API untuk demo boleh, tetapi file browser tidak dianggap memiliki path desktop yang valid. Siapkan antarmuka adapter sesuai architecture agar fase integrasi tidak merombak komponen.

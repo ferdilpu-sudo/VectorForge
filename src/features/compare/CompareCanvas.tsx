@@ -226,6 +226,16 @@ export function CompareCanvas({
               {mode === "compare" && (
                 <div className="split-line" style={{ left: `${split}%` }} />
               )}
+              {mode === "result" && !preview.url && (
+                <div className="trace-empty" role="status">
+                  {preview.error ||
+                    (preview.busy
+                      ? t("Memperbarui preview…", "Updating preview…")
+                      : preview.needsRefresh
+                        ? t("Klik Perbarui untuk melihat hasil vektor.", "Click Refresh to generate a vector preview.")
+                        : t("Preview vektor belum tersedia.", "Vector preview is not available."))}
+                </div>
+              )}
             </div>
             <div className="canvas-label left-label">
               {mode === "result" ? t("HASIL", "RESULT") : t("ASLI", "ORIGINAL")}
@@ -233,12 +243,14 @@ export function CompareCanvas({
             {mode === "compare" && (
               <div className="canvas-label right-label">{t("HASIL", "RESULT")}</div>
             )}
-            <div className="preview-caption">
-              {t(
-                "Preview vektor dari engine lokal",
-                "Vector preview from the local engine",
-              )}
-            </div>
+            {preview.url && mode !== "original" && (
+              <div className="preview-caption">
+                {t(
+                  "Preview vektor dari engine lokal",
+                  "Vector preview from the local engine",
+                )}
+              </div>
+            )}
             {mode === "compare" && (
               <input
                 className="compare-range"
@@ -255,14 +267,16 @@ export function CompareCanvas({
       </div>
       <div className="canvas-footer">
         <span role="status">
-          {preview.busy
-            ? t("Memperbarui preview…", "Updating preview…")
-            : preview.error ||
-              (file
-                ? preview.stale
-                  ? t("Preview belum diperbarui", "Preview not updated")
-                  : t("Preview siap", "Preview ready")
-                : t("Siap menerima gambar", "Ready for an image"))}
+          {preview.error ||
+            (preview.busy
+              ? t("Memperbarui preview…", "Updating preview…")
+              : !file
+                ? t("Siap menerima gambar", "Ready for an image")
+                : preview.needsRefresh
+                  ? t("Klik Perbarui untuk membuat preview", "Click Refresh to generate a preview")
+                  : preview.stale
+                    ? t("Preview belum diperbarui", "Preview not updated")
+                    : t("Preview siap", "Preview ready"))}
         </span>
         <div className="zoom-controls">
           <button

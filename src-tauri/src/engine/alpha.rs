@@ -56,6 +56,19 @@ fn split_with_budget(
     cancel: &CancelToken,
     budget_bytes: usize,
 ) -> Result<Segmentation, AppError> {
+    check_cancel(cancel)?;
+    // An opaque source does not need an alpha-mask split. Preserve the
+    // segmentation exactly and avoid the additional mask allocations.
+    if source
+        .pixels
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .all(|rgba| rgba[3] == 255)
+    {
+        return Ok(segmentation);
+    }
+
     let mut result = Segmentation::new(segmentation.width, segmentation.height);
     let mut planned_mask_bytes = 0usize;
 
@@ -247,6 +260,26 @@ mod tests {
             .collect();
         alphas.sort_unstable();
         assert_eq!(alphas, vec![128, 255]);
+        Ok(())
+    }
+
+    #[test]
+    fn opaque_source_keeps_existing_segmentation_masks() -> Result<(), String> {
+        let (segmentation, mut source) = fixture();
+        for rgba in source.pixels.as_chunks_mut::<4>().0 {
+            rgba[3] = 255;
+        }
+        let before_offset = segmentation.layers[0].mask.offset;
+        let before_width = segmentation.layers[0].mask.image.width;
+        let before_height = segmentation.layers[0].mask.image.height;
+        let result = split_with_budget(segmentation, &source, &CancelToken::new(), 0)
+            .map_err(|error| error.message)?;
+        assert_eq!(result.layers.len(), 1);
+        assert_eq!(result.layers[0].mask.offset.x, before_offset.x);
+        assert_eq!(result.layers[0].mask.offset.y, before_offset.y);
+        assert_eq!(result.layers[0].mask.image.width, before_width);
+        assert_eq!(result.layers[0].mask.image.height, before_height);
+        assert_eq!(result.layers[0].paint.color().a, 255);
         Ok(())
     }
 

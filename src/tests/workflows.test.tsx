@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const native = vi.hoisted(() => {
@@ -14,6 +14,7 @@ const native = vi.hoisted(() => {
   return {
     generatePreview: vi.fn(),
     cancelPreview: vi.fn(),
+    saveSettings: vi.fn(),
     subscribeBatchEvents: vi.fn(
       async (
         progress: (value: import("../types/project").BatchProgress) => void,
@@ -39,6 +40,7 @@ vi.mock("../services/api", () => ({
   api: {
     generatePreview: native.generatePreview,
     cancelPreview: native.cancelPreview,
+    saveSettings: native.saveSettings,
     subscribeBatchEvents: native.subscribeBatchEvents,
     startBatch: native.startBatch,
     getBatch: native.getBatch,
@@ -49,9 +51,10 @@ vi.mock("../services/api", () => ({
 
 import { useBatch } from "../features/batch/useBatch";
 import { usePreview } from "../features/compare/usePreview";
+import { ParamPanel } from "../features/params/ParamPanel";
 import { defaultSettings } from "../services/preferences";
 import { useProject } from "../stores/project.store";
-import { defaults } from "../types/params";
+import { builtIns, defaults } from "../types/params";
 import type { BatchProgress, Destination } from "../types/project";
 
 let serial = 0;
@@ -115,6 +118,7 @@ beforeEach(() => {
     elapsedMs: 1,
   }));
   native.cancelPreview.mockResolvedValue(undefined);
+  native.saveSettings.mockImplementation(async (settings) => settings);
 
   useProject.setState({
     files: [
@@ -148,7 +152,7 @@ afterEach(() => {
 });
 
 describe("preview lifecycle", () => {
-  it("cancels obsolete native work and retains the prior image until replacement arrives", async () => {
+  it("hides stale results when parameters change and releases old URLs", async () => {
     const { result } = renderHook(() => usePreview(0));
 
     await act(async () => {
@@ -163,14 +167,77 @@ describe("preview lifecycle", () => {
       }),
     );
 
-    expect(result.current.url).toBe(previous);
+    expect(result.current.url).toBe("");
+    expect(result.current.stale).toBe(true);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(301);
     });
 
     expect(native.cancelPreview).toHaveBeenCalled();
+    expect(result.current.url).toMatch(/^blob:/);
     expect(result.current.url).not.toBe(previous);
+    expect(result.current.stale).toBe(false);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith(previous);
+  });
+
+  it("invalidates on preview resolution changes even when params stay the same", async () => {
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    const previous = result.current.url;
+
+    act(() => {
+      useProject.setState((state) => ({
+        settings: { ...state.settings, previewMaxSide: 2048 },
+      }));
+    });
+    expect(result.current.url).toBe("");
+    expect(result.current.stale).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxSide: 2048 }),
+    );
+    expect(result.current.url).not.toBe(previous);
+  });
+
+  it("does not accept a mismatched native preview response", async () => {
+    native.generatePreview.mockResolvedValueOnce({
+      requestId: "00000000-0000-4000-8000-000000000099",
+      fileId: useProject.getState().activeId,
+      svg: "<svg/>",
+    });
+    const { result } = renderHook(() => usePreview(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(result.current.url).toBe("");
+    expect(result.current.error).toContain("Respons preview");
+  });
+
+  it("keeps manual preview stale until Refresh is requested", async () => {
+    useProject.setState((state) => ({
+      settings: { ...state.settings, autoPreview: false },
+    }));
+    const { result, rerender } = renderHook(
+      ({ manual }) => usePreview(manual),
+      { initialProps: { manual: 0 } },
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(native.generatePreview).not.toHaveBeenCalled();
+    expect(result.current.needsRefresh).toBe(true);
+
+    rerender({ manual: 1 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(301);
+    });
+    expect(result.current.url).toMatch(/^blob:/);
+    expect(result.current.needsRefresh).toBe(false);
   });
 });
 
@@ -214,5 +281,22 @@ describe("batch event lifecycle", () => {
     unmount();
     expect(native.unlisten).toHaveBeenCalledTimes(1);
     expect(useProject.getState().batchBusy).toBe(false);
+  });
+});
+
+describe("preset reset contract", () => {
+  it("resets the selected Logo & Flat preset without switching to Balanced", () => {
+    const logo = builtIns.find((preset) => preset.id === "builtin-logo");
+    if (!logo) throw new Error("Logo & Flat preset missing");
+    act(() => {
+      useProject.setState({
+        presetId: logo.id,
+        params: { ...logo.params, colorPrecision: 8 },
+      });
+    });
+    render(<ParamPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Reset Parameter" }));
+    expect(useProject.getState().presetId).toBe(logo.id);
+    expect(useProject.getState().params).toEqual(logo.params);
   });
 });

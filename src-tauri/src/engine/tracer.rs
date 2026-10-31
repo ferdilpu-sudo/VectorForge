@@ -104,7 +104,8 @@ fn cancelled_error() -> AppError {
 #[cfg(test)]
 mod tests {
     use image::{Rgba, RgbaImage};
-    use vtracer::CancelToken;
+    use vtracer::ir::PathCmd;
+    use vtracer::{CancelToken, VectorDoc};
 
     use crate::models::{HierarchicalMode, TraceMode, TraceParams};
 
@@ -132,6 +133,143 @@ mod tests {
         assert_eq!(config.layer_difference, 16);
         assert_eq!(config.corner_threshold, 60);
         assert_eq!(config.length_threshold, 4.0);
+    }
+
+    // A path_count > 0 assertion cannot detect a logo reduced to one glyph.
+    // Require visible dark geometry within every separated foreground region.
+    fn painted_region_coverage(
+        doc: &VectorDoc,
+        regions: &[(f64, f64, f64, f64)],
+        accept_color: impl Fn(u8, u8, u8, u8) -> bool,
+    ) -> Vec<bool> {
+        let mut found = vec![false; regions.len()];
+        for shape in &doc.shapes {
+            let color = shape.paint.color();
+            if !accept_color(color.r, color.g, color.b, color.a) {
+                continue;
+            }
+            for subpath in &shape.path.subpaths {
+                for command in &subpath.commands {
+                    let mut mark = |x: f64, y: f64| {
+                        for (hit, &(min_x, max_x, min_y, max_y)) in found.iter_mut().zip(regions) {
+                            if x >= min_x && x <= max_x && y >= min_y && y <= max_y {
+                                *hit = true;
+                            }
+                        }
+                    };
+                    match command {
+                        PathCmd::MoveTo(point) | PathCmd::LineTo(point) => {
+                            mark(point.x, point.y);
+                        }
+                        PathCmd::CubicTo(a, b, c) => {
+                            mark(a.x, a.y);
+                            mark(b.x, b.y);
+                            mark(c.x, c.y);
+                        }
+                        PathCmd::Close => {}
+                    }
+                }
+            }
+        }
+        found
+    }
+
+    fn logo_preset() -> TraceParams {
+        TraceParams {
+            color_precision: 4,
+            filter_speckle: 8,
+            layer_difference: 32,
+            corner_threshold: 60,
+            length_threshold: 4.0,
+            mode: TraceMode::Spline,
+            hierarchical: HierarchicalMode::Stacked,
+        }
+    }
+
+    #[test]
+    fn logo_preset_retains_all_eight_separated_opaque_shapes() -> Result<(), String> {
+        let source = RgbaImage::from_fn(392, 120, |x, y| {
+            let foreground = (0..8).any(|index| {
+                let left = 20 + index * 44;
+                x >= left && x < left + 26 && (30..84).contains(&y)
+            });
+            if foreground {
+                Rgba([22, 25, 29, 255])
+            } else {
+                Rgba([249, 248, 245, 255])
+            }
+        });
+        let doc = trace_image(source, &logo_preset(), &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        let regions: Vec<(f64, f64, f64, f64)> = (0..8)
+            .map(|index| {
+                let x = (20 + 44 * index) as f64;
+                (x - 3.0, x + 29.0, 27.0, 87.0)
+            })
+            .collect();
+        let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+            r < 125 && g < 125 && b < 125 && a > 0
+        });
+        assert!(
+            covered.iter().all(|value| *value),
+            "missing shapes: {covered:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "Set VECTORFORGE_QUALITY_IMAGE to a local, authorized 1536x1024 Gallery Computer PNG"]
+    fn gallery_computer_wordmark_retains_all_seven_dark_letters() -> Result<(), String> {
+        let path = std::env::var("VECTORFORGE_QUALITY_IMAGE")
+            .map_err(|_| "VECTORFORGE_QUALITY_IMAGE not set".to_owned())?;
+        let source = image::open(path)
+            .map_err(|error| error.to_string())?
+            .to_rgba8();
+        if source.dimensions() != (1536, 1024) {
+            return Err(format!("expected 1536x1024, got {:?}", source.dimensions()));
+        }
+        let doc = trace_image(source, &logo_preset(), &CancelToken::new())
+            .map_err(|error| error.message)?
+            .ok_or_else(|| "unexpected empty trace".to_owned())?;
+        // Seven letter bounds are measured on the user-supplied 1536x1024
+        // source. The image remains local; no branded fixture is committed.
+        let regions = [
+            (302.0, 447.0, 577.0, 718.0),
+            (469.0, 605.0, 581.0, 715.0),
+            (638.0, 721.0, 581.0, 715.0),
+            (756.0, 838.0, 581.0, 715.0),
+            (874.0, 956.0, 581.0, 715.0),
+            (999.0, 1102.0, 581.0, 715.0),
+            (1117.0, 1236.0, 581.0, 715.0),
+        ];
+        let covered = painted_region_coverage(&doc, &regions, |r, g, b, a| {
+            r < 125 && g < 125 && b < 125 && a > 0
+        });
+        assert!(
+            covered.iter().all(|value| *value),
+            "missing GALLERY letters: {covered:?}"
+        );
+
+        // Check the second, gold wordmark separately.
+        let gold_regions = [
+            (436.0, 492.0, 746.0, 805.0),
+            (528.0, 588.0, 746.0, 805.0),
+            (626.0, 686.0, 747.0, 804.0),
+            (728.0, 771.0, 747.0, 804.0),
+            (808.0, 855.0, 747.0, 805.0),
+            (893.0, 938.0, 747.0, 804.0),
+            (977.0, 1015.0, 747.0, 804.0),
+            (1056.0, 1101.0, 747.0, 804.0),
+        ];
+        let gold_covered = painted_region_coverage(&doc, &gold_regions, |r, g, b, a| {
+            a > 0 && r > 110 && i16::from(r) - i16::from(g) > 12 && i16::from(g) - i16::from(b) > 14
+        });
+        assert!(
+            gold_covered.iter().all(|value| *value),
+            "missing COMPUTER letters: {gold_covered:?}"
+        );
+        Ok(())
     }
 
     #[test]
